@@ -308,13 +308,24 @@ def test_script_quality(req: StartCampaignRequest):
 def start_campaign(req: StartCampaignRequest, background_tasks: BackgroundTasks):
     """Start een nieuwe campagne-pipeline voor een app."""
     _assert_app_belongs_to_tenant(req.app_id, req.tenant_id)
+
+    # Bereken display_name vóór opslaan zodat API direct de juiste naam teruggeeft
+    try:
+        app = load_app(req.app_id)
+        app_name = app.get("name", req.app_id)
+    except Exception:
+        app_name = req.app_id
+    repo = FileCampaignRepository(tenant_id=req.tenant_id)
+    existing_count = len(repo.list(req.tenant_id))
+
     bundle = CampaignBundle(
         app_id=req.app_id,
         tenant_id=req.tenant_id,
         platform=req.platform,
         status=CampaignStatus.GENERATING,
+        display_name=f"Campagne {existing_count + 1} — {app_name}",
     )
-    FileCampaignRepository(tenant_id=req.tenant_id).save(bundle)
+    repo.save(bundle)
 
     campaign_id = bundle.id
 
