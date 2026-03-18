@@ -86,7 +86,7 @@ function statusBadge(status) {
   return `<span class="badge status-${s}">${icons[s]||'·'} ${labels[s]||status||'onbekend'}</span>`;
 }
 
-function formatUSD(v) { return '$' + (Number(v)||0).toFixed(2); }
+function formatEUR(v) { return '€' + (Number(v)||0).toFixed(2); }
 function shortId(id) { return id ? id.substring(0,10) : '-'; }
 function videoUrl(path) {
   if (!path) return '';
@@ -137,7 +137,7 @@ function switchTab(tab) {
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tab);
   });
-  const titles = { overview:'Dashboard', apps:'Apps', content:'Content', campaigns:'Campagnes', experiments:'Experimenten', health:'Health', maturity:'Maturity', costs:'Kosten', insights:'Learning Insights', opnemen:'Video Opnemen' };
+  const titles = { overview:'Dashboard', apps:'Apps', content:'Content', campaigns:'Campagnes', experiments:'Experimenten', health:'Systeemstatus', maturity:'Volwassenheid', costs:'Kosten', insights:'Leerinzichten', opnemen:'Video Opnemen' };
   document.getElementById('page-title').textContent = titles[tab] || tab;
   refreshTab(tab);
 }
@@ -232,7 +232,7 @@ async function loadOverview() {
       <div class="kpi-label">Wacht op Review</div>
     </div>
     <div class="card p-4 text-center card-glow">
-      <div class="kpi-value text-accent">${formatUSD(spent)}</div>
+      <div class="kpi-value text-accent">${formatEUR(spent)}</div>
       <div class="kpi-label">Vandaag Besteed</div>
     </div>
     <div class="card p-4 text-center card-glow">
@@ -287,11 +287,13 @@ async function loadOverview() {
   if (recentCamps.length > 0) {
     campEl.innerHTML = recentCamps.map(c => {
       const appName = allApps.find(a => (a.id||a.app_id) === c.app_id)?.name || c.app_id || '';
+      const title = c.display_name || c.idea_title || shortId(c.id);
+      const showApp = appName && !title.includes(appName);
       return `
       <div class="flex items-center justify-between py-2.5 border-b border-border/40 last:border-0 group cursor-pointer" onclick="switchTab('campaigns');showCampaignDetail('${c.id}')">
         <div class="flex-1 min-w-0">
-          <span class="text-sm font-medium truncate block group-hover:text-accent transition-colors">${escapeHtml(c.display_name || c.idea_title || shortId(c.id))}</span>
-          <span class="text-xs text-muted">${escapeHtml(appName)}</span>
+          <span class="text-sm font-medium truncate block group-hover:text-accent transition-colors">${escapeHtml(title)}</span>
+          ${showApp ? `<span class="text-xs text-muted">${escapeHtml(appName)}</span>` : ''}
         </div>
         <div class="flex items-center gap-3 ml-3 flex-shrink-0">
           ${statusBadge(c.status)}
@@ -528,7 +530,7 @@ async function loadContent() {
   document.getElementById('stat-total').textContent = allContent.length;
   document.getElementById('stat-published').textContent = allContent.filter(c => c.status === 'published').length;
   document.getElementById('stat-pending').textContent = allContent.filter(c => c.status === 'pending_approval').length;
-  document.getElementById('stat-cost').textContent = formatUSD(allContent.reduce((s,c) => s + (c.total_cost_usd||0), 0));
+  document.getElementById('stat-cost').textContent = formatEUR(allContent.reduce((s,c) => s + (c.total_cost_usd||0), 0));
 
   renderContent();
 }
@@ -577,7 +579,7 @@ function renderContent() {
 
         <div class="flex items-center justify-between mt-3 pt-3 border-t border-border">
           <div class="flex gap-1">${(c.hashtags||[]).slice(0,3).map(h => `<span class="text-[0.6rem] text-accent">${h}</span>`).join(' ')}</div>
-          <span class="text-xs text-muted">${formatUSD(c.total_cost_usd)}</span>
+          <span class="text-xs text-muted">${formatEUR(c.total_cost_usd)}</span>
         </div>
       </div>`).join('');
   } else {
@@ -591,7 +593,7 @@ function renderContent() {
         </div>
         <div class="flex items-center gap-4">
           ${c.has_video ? '<span class="text-xs text-success">Video</span>' : '<span class="text-xs text-muted">Geen video</span>'}
-          <span class="text-xs text-muted">${formatUSD(c.total_cost_usd)}</span>
+          <span class="text-xs text-muted">${formatEUR(c.total_cost_usd)}</span>
           <span class="text-xs text-muted">${timeAgo(c.created_at)}</span>
         </div>
       </div>`).join('');
@@ -650,7 +652,7 @@ function showContentDetail(idx) {
 
     <div class="mt-4 flex items-center justify-between text-xs text-muted pt-3 border-t border-border">
       <span>Campagne: ${shortId(c.campaign_id)}</span>
-      <span>Kosten: ${formatUSD(c.total_cost_usd)}</span>
+      <span>Kosten: ${formatEUR(c.total_cost_usd)}</span>
       ${c.published_at && c.published_at !== 'None' ? `<span>Gepubliceerd: ${timeAgo(c.published_at)}</span>` : ''}
     </div>
   `;
@@ -701,7 +703,7 @@ function renderCampaigns(list) {
       <td><span class="text-xs text-muted">${dur}</span></td>
       <td>${statusBadge(c.status)}</td>
       <td class="text-right">${c.viral_score ? `<span class="text-sm font-semibold" style="color:${c.viral_score.composite_score >= 80 ? '#16a34a' : c.viral_score.composite_score >= 65 ? '#d97706' : '#dc2626'}">${c.viral_score.composite_score}</span><span class="text-xs text-muted">/100</span>` : '<span class="text-muted">-</span>'}</td>
-      <td class="text-right"><span class="text-xs text-muted">${formatUSD(c.total_cost_usd)}</span></td>
+      <td class="text-right"><span class="text-xs text-muted">${formatEUR(c.total_cost_usd)}</span></td>
       <td class="text-right"><span class="text-xs text-muted whitespace-nowrap">${timeAgo(c.created_at)}</span></td>
     </tr>`;
   }).join('');
@@ -716,7 +718,7 @@ async function showCampaignDetail(id) {
     <div class="grid grid-cols-3 gap-4 mb-4">
       <div><span class="text-xs text-muted">Status</span><br>${statusBadge(data.status)}</div>
       <div><span class="text-xs text-muted">Platform</span><br><span class="text-sm">${data.platform || '-'}</span></div>
-      <div><span class="text-xs text-muted">Kosten</span><br><span class="text-sm font-semibold">${formatUSD(data.total_cost_usd)}</span></div>
+      <div><span class="text-xs text-muted">Kosten</span><br><span class="text-sm font-semibold">${formatEUR(data.total_cost_usd)}</span></div>
     </div>
     ${data.idea && data.idea.title ? `<div class="mb-3"><h4 class="text-xs text-muted uppercase tracking-wider mb-1">Idee</h4><div class="bg-bg p-3 rounded-lg text-sm"><strong>${data.idea.title}</strong><p class="text-muted mt-1">${data.idea.hook || data.idea.description || ''}</p></div></div>` : ''}
     ${data.script && data.script.scenes ? `<div class="mb-3"><h4 class="text-xs text-muted uppercase tracking-wider mb-1">Script (${data.script.scenes.length} scenes)</h4><div class="bg-bg p-3 rounded-lg text-xs text-muted max-h-40 overflow-y-auto">${data.script.scenes.map((s,i) => `<div class="mb-2"><span class="text-accent">Scene ${i+1}:</span> ${s.voiceover || s.description || JSON.stringify(s)}</div>`).join('')}</div></div>` : ''}
@@ -1007,7 +1009,7 @@ function renderIdeaCards(ideas) {
       ${idea.hook_options && idea.hook_options.length > 0 ? `
         <div class="mt-2 pt-2 border-t border-border/50">
           <p class="text-[0.6rem] text-muted uppercase tracking-wider mb-1">Hook voorbeeld:</p>
-          <p class="text-xs italic text-white/70">"${idea.hook_options[0]}"</p>
+          <p class="text-xs italic text-gray-600">"${idea.hook_options[0]}"</p>
         </div>
       ` : ''}
     </div>
@@ -1083,7 +1085,7 @@ function startProgressStream(campaignId) {
   progressEl.innerHTML = `
     <div class="flex justify-between items-center mb-2">
       <span class="text-xs font-semibold text-accent uppercase tracking-wider">Pipeline Voortgang</span>
-      <button onclick="closeProgress()" class="text-muted hover:text-white text-sm">&times;</button>
+      <button onclick="closeProgress()" class="text-muted hover:text-gray-900 text-sm">&times;</button>
     </div>
     <div id="progress-steps" class="space-y-1.5 max-h-48 overflow-y-auto"></div>
     <div class="mt-3">
@@ -1214,7 +1216,7 @@ async function loadExperiments() {
 
 async function showComparison(expId) {
   const data = await api(`/api/experiments/${expId}/comparison`);
-  if (!data) { toast('Comparison niet beschikbaar', 'warning'); return; }
+  if (!data) { toast('Vergelijking niet beschikbaar', 'warning'); return; }
   document.getElementById('comparison-content').innerHTML = `
     <div class="grid grid-cols-2 gap-4 mb-4">
       <div><span class="text-xs text-muted">Dimensie</span><br><strong>${data.dimension || '-'}</strong></div>
@@ -1284,8 +1286,8 @@ async function loadHealth() {
         <div class="flex-1"><span class="text-sm">${a.message || a.alert_type || 'Alert'}</span>
         <span class="badge ${a.severity==='critical'?'status-failed':'status-pending'} ml-2">${a.severity||''}</span></div>
         <div class="flex gap-1">
-          <button onclick="ackAlert('${a.alert_id||a.id}')" class="btn btn-outline btn-sm">ACK</button>
-          <button onclick="resolveAlert('${a.alert_id||a.id}')" class="btn btn-success btn-sm">Resolve</button>
+          <button onclick="ackAlert('${a.alert_id||a.id}')" class="btn btn-outline btn-sm">Bevestig</button>
+          <button onclick="resolveAlert('${a.alert_id||a.id}')" class="btn btn-success btn-sm">Opgelost</button>
         </div>
       </div>`).join('');
   } else {
@@ -1312,11 +1314,11 @@ async function loadHealth() {
 
 async function ackAlert(id) {
   await fetch(`${API}/api/health/alerts/${id}/acknowledge`, {method:'POST'});
-  toast('Alert acknowledged', 'success'); loadHealth(); loadBadges();
+  toast('Alert bevestigd', 'success'); loadHealth(); loadBadges();
 }
 async function resolveAlert(id) {
   await fetch(`${API}/api/health/alerts/${id}/resolve`, {method:'POST'});
-  toast('Alert resolved', 'success'); loadHealth(); loadBadges();
+  toast('Alert opgelost', 'success'); loadHealth(); loadBadges();
 }
 
 // ═══════ MATURITY TAB ════════════════════════════════════════════════
@@ -1404,20 +1406,20 @@ async function loadCosts() {
   const mRemain = monthly?.monthly_remaining_usd || (mLimit - mSpent);
   const dLimit = monthly?.daily_limit_usd || 1;
 
-  document.getElementById('cost-daily').textContent = formatUSD(dSpent);
-  document.getElementById('cost-monthly').textContent = formatUSD(mSpent);
-  document.getElementById('cost-remaining').textContent = formatUSD(mRemain);
+  document.getElementById('cost-daily').textContent = formatEUR(dSpent);
+  document.getElementById('cost-monthly').textContent = formatEUR(mSpent);
+  document.getElementById('cost-remaining').textContent = formatEUR(mRemain);
   document.getElementById('cost-remaining').className = `kpi-value ${mRemain < 10 ? 'text-danger' : 'text-success'}`;
 
   const dailyPct = Math.min((dSpent / dLimit) * 100, 100);
   const monthlyPct = Math.min((mSpent / mLimit) * 100, 100);
   document.getElementById('cost-bars').innerHTML = `
     <div>
-      <div class="flex justify-between text-xs mb-1.5"><span class="text-muted">Dag Budget</span><span>${formatUSD(dSpent)} / ${formatUSD(dLimit)}</span></div>
+      <div class="flex justify-between text-xs mb-1.5"><span class="text-muted">Dag Budget</span><span>${formatEUR(dSpent)} / ${formatEUR(dLimit)}</span></div>
       <div class="progress-bar"><div class="progress-fill ${dailyPct > 80 ? 'bg-danger' : 'bg-accent'}" style="width:${dailyPct}%"></div></div>
     </div>
     <div>
-      <div class="flex justify-between text-xs mb-1.5"><span class="text-muted">Maand Budget</span><span>${formatUSD(mSpent)} / ${formatUSD(mLimit)}</span></div>
+      <div class="flex justify-between text-xs mb-1.5"><span class="text-muted">Maand Budget</span><span>${formatEUR(mSpent)} / ${formatEUR(mLimit)}</span></div>
       <div class="progress-bar"><div class="progress-fill ${monthlyPct > 80 ? 'bg-danger' : 'bg-accent'}" style="width:${monthlyPct}%"></div></div>
     </div>`;
 
@@ -1425,7 +1427,7 @@ async function loadCosts() {
   const tbody = document.getElementById('cost-records');
   tbody.innerHTML = records.length > 0 ? records.slice(0,25).map(r => `
     <tr><td class="text-xs">${r.step||r.operation||'-'}</td><td class="text-xs">${r.provider||'-'}</td>
-    <td class="text-xs font-mono">${r.model||'-'}</td><td class="text-xs">${formatUSD(r.cost_usd||r.amount)}</td>
+    <td class="text-xs font-mono">${r.model||'-'}</td><td class="text-xs">${formatEUR(r.cost_usd||r.amount)}</td>
     <td class="text-xs text-muted">${r.tokens_used||'-'}</td></tr>`).join('')
     : '<tr><td colspan="5" class="text-center text-muted py-4">Geen records vandaag</td></tr>';
 
@@ -1457,7 +1459,7 @@ async function loadInsights() {
   if (!appId) {
     container.innerHTML = `<div class="card p-8 text-center text-muted">
       <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-      <p class="text-sm">Selecteer een app om insights te bekijken</p>
+      <p class="text-sm">Selecteer een app om leerinzichten te bekijken</p>
     </div>`;
     return;
   }
@@ -1466,7 +1468,7 @@ async function loadInsights() {
 
   const data = await api(`/api/apps/${appId}/insights`);
   if (!data) {
-    container.innerHTML = '<div class="card p-8 text-center text-muted"><p>Geen insights beschikbaar</p></div>';
+    container.innerHTML = '<div class="card p-8 text-center text-muted"><p>Geen leerinzichten beschikbaar</p></div>';
     return;
   }
 
@@ -1486,13 +1488,13 @@ async function loadInsights() {
       </div>
       <div class="card p-4 text-center">
         <div class="text-sm font-semibold">${data.best_format || '-'}</div>
-        <div class="kpi-label">Best Format</div>
+        <div class="kpi-label">Beste Formaat</div>
       </div>
     </div>
 
     <div class="grid grid-cols-2 gap-4">
       <div class="card p-5">
-        <h3 class="text-sm font-semibold mb-3 text-muted uppercase tracking-wider">Top Performing Hooks</h3>
+        <h3 class="text-sm font-semibold mb-3 text-muted uppercase tracking-wider">Best Presterende Hooks</h3>
         ${data.top_hooks.length > 0 ? data.top_hooks.map(h => `
           <div class="flex items-center gap-2 py-2 border-b border-border/40 last:border-0">
             <span class="w-2 h-2 rounded-full bg-success flex-shrink-0"></span>
