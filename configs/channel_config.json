@@ -1,0 +1,39 @@
+{
+  "channels": {
+    "tiktok": {
+      "enabled": true,
+      "video_format": {
+        "resolution": "1080x1920",
+        "fps": 30,
+        "codec": "h264",
+        "max_duration_sec": 180,
+        "min_duration_sec": 5,
+        "max_file_size_mb": 287,
+        "aspect_ratio": "9:16"
+      },
+      "posting": {
+        "optimal_times": ["07:00", "12:00", "18:30", "21:00"],
+        "timezone": "Europe/Amsterdam",
+        "max_posts_per_day": 3,
+        "hashtag_limit": 30
+      },
+      "api": {
+        "base_url": "https://open.tiktokapis.com/v2",
+        "upload_endpoint": "/post/publish/video/init/",
+        "analytics_endpoint": "/research/video/query/"
+      }
+    },
+    "instagram": {
+      "enabled": false,
+      "note": "Fase 2 — nog niet actief"
+    },
+    "youtube": {
+      "enabled": false,
+      "note": "Fase 2 — nog niet actief"
+    },
+    "linkedin": {
+      "enabled": false,
+      "note": "Fase 2 — nog niet actief"
+    }
+  }
+}

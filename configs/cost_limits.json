@@ -1,0 +1,13 @@
+{
+  "limits": {
+    "max_cost_per_campaign_usd": 1.00,
+    "max_cost_per_video_usd": 0.50,
+    "max_monthly_budget_usd": 50.00,
+    "alert_threshold_pct": 80
+  },
+  "video_provider_budget": {
+    "kling_max_seconds_per_day": 120,
+    "runway_max_seconds_per_day": 30,
+    "elevenlabs_max_chars_per_day": 50000
+  }
+}

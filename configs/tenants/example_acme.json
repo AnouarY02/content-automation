@@ -1,0 +1,19 @@
+{
+  "tenant_id": "acme",
+  "name": "Acme Corp",
+  "api_key": "mk_acme_jmpxPKMRHEnRGEUK2qs5jTOpvtFnNcXUQRw1_eUgoMo",
+  "app_ids": ["acme_tiktok", "acme_instagram"],
+  "active": true,
+  "created_at": "2026-03-10T00:00:00",
+  "thresholds": {
+    "iv_composite": 80.0,
+    "iv_replication": 72.0,
+    "iv_stability": 92.0,
+    "iv_adoption": 75.0,
+    "validated_composite": 55.0,
+    "validated_replication": 45.0,
+    "quality_block_threshold": 45.0,
+    "quality_warn_threshold": 68.0,
+    "quality_pass_threshold": 68.0
+  }
+}

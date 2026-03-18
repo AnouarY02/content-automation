@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "ay-content-automation"
+version = "0.1.0"
+description = "AY Marketing OS — Content Automation backend"
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["tests*", "desktop*", "frontend*"]
+
+# Optioneel: installeer als editable package zodat andere modules
+# (zoals C:/AY-automatisering/maturity/) zonder sys.path-hacks kunnen importeren.
+#
+#   pip install -e C:/AY-automatisering/content-automation
+#
+# Na installatie kan het sys.path-blok in maturity/__init__.py verwijderd worden.

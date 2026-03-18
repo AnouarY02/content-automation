@@ -1,0 +1,66 @@
+VARIANT GENERATIE INSTRUCTIE — HOOK TYPE CHALLENGER
+
+Je genereert een CHALLENGER variant van een bestaand TikTok script.
+Het enige dat mag veranderen is het HOOK TYPE (de eerste 2-5 seconden).
+Alle overige scènes, boodschappen en CTA's blijven functioneel identiek.
+
+---
+
+EXPERIMENT CONTEXT:
+{hypothesis_context}
+
+MERK CONTEXT:
+{brand_context}
+
+IDEE TITEL: {idea_title}
+
+---
+
+HOOK TYPE DEFINITIES:
+
+bold_claim:
+  Definitie: Begin met een directe, meetbare, verrassende bewering. Geen vraag. Geen intro.
+  Patroon: "[Concreet getal/feit] dat [doelgroep] niet verwacht"
+  Voorbeeld: "Dit verdrievoudigde onze omzet in 14 dagen."
+
+curiosity_gap:
+  Definitie: Wek nieuwsgierigheid door iets te noemen zonder het te onthullen.
+  Patroon: "De reden dat [X] mislukt heeft niets te maken met [wat mensen denken]"
+  Voorbeeld: "Wat 9 van de 10 founders fout doen met hun eerste hire."
+
+question:
+  Definitie: Stel een specifieke vraag die de doelgroep directe herkenning geeft.
+  Patroon: "Herken jij [specifiek pijnpunt dat precies de doelgroep raakt]?"
+  Voorbeeld: "Heb jij ook het gevoel dat je harder werkt maar minder bereikt?"
+
+social_proof:
+  Definitie: Begin met bewijs: aantallen, percentages, behaalde resultaten.
+  Patroon: "[N] mensen/bedrijven gebruiken dit al om [resultaat] te bereiken."
+  Voorbeeld: "500 founders verdubbelden hun MRR met deze ene aanpassing."
+
+contrast:
+  Definitie: Creëer een spanningsveld door twee tegengestelde situaties naast elkaar te zetten.
+  Patroon: "Terwijl [groep A dit doet], doet [groep B dat]."
+  Voorbeeld: "Terwijl jij dit leest, groeit iemand anders 10x sneller."
+
+tutorial:
+  Definitie: Directe belofte van concrete waarde in stappen of een specifieke tijdslimiet.
+  Patroon: "Zo [bereik je X] in [Y stappen/minuten]:"
+  Voorbeeld: "Zo verhoog je je engagement rate in 3 minuten:"
+
+---
+
+GEVRAAGD HOOK TYPE: {challenger_hook_type}
+HUIDIG HOOK TYPE (control): {control_hook_type}
+
+---
+
+INSTRUCTIES:
+1. Herschrijf UITSLUITEND de eerste scène (hook) naar het type {challenger_hook_type}
+2. De hook moet MAXIMAAL 5 seconden duren (in de video)
+3. Alle overige scènes: kopieer de inhoud exact, pas alleen aan als het grammaticaal noodzakelijk is
+4. Markeer de herschreven scène met "is_variant_hook": true
+5. Voeg toe aan de root van het JSON object: "experiment_hook_type": "{challenger_hook_type}"
+
+Geef het COMPLETE script terug als JSON, met dezelfde structuur als het originele script.
+Geen uitleg. Alleen het JSON object.

@@ -1,0 +1,38 @@
+{
+  "app_id": "app_001",
+  "app_name": "Voorbeeld App",
+  "last_updated": "2026-03-09",
+  "tone_of_voice": "direct, energiek, geen jargon, spreekt de doelgroep aan als gelijke",
+  "target_audience": "Freelancers en ZZP'ers, 25-40 jaar, druk, resultaatgericht",
+  "usp": "Bespaart 3 uur per week op administratie",
+  "visual_style": {
+    "color_scheme": "donkere achtergrond (#0A0A0A), witte tekst, accent kleur #6C63FF",
+    "font_style": "modern, bold, geen serif",
+    "video_pacing": "snel, cuts elke 2-3 seconden",
+    "on_screen_text": "altijd hook zichtbaar in eerste 2 seconden"
+  },
+  "top_performing_hooks": [
+    "Je verliest elke week 3 uur aan dit...",
+    "Dit wist ik niet voor ik dit gebruikte",
+    "Freelancers: stop met dit te doen"
+  ],
+  "avoided_topics": [
+    "Prijs direct noemen in eerste 3 seconden",
+    "Te technische termen",
+    "Vergelijkingen met directe concurrenten"
+  ],
+  "best_cta": "Probeer gratis via link in bio",
+  "content_formats": {
+    "best_performing": "problem-solution",
+    "secondary": "before-after",
+    "experimental": "talking-head-tutorial"
+  },
+  "performance_history": {
+    "avg_views": 0,
+    "best_post_type": "problem-solution",
+    "optimal_post_time": "18:30",
+    "avg_engagement_rate": 0,
+    "total_posts": 0
+  },
+  "learned_insights": []
+}

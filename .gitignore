@@ -1,0 +1,76 @@
+# ════════════════════════════════════════════════════════════
+# AY Marketing OS — .gitignore
+# ════════════════════════════════════════════════════════════
+
+# ── Secrets & Environment ──
+.env
+.env.local
+.env.production
+data/tokens/
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Generated assets (videos, audio, images) ──
+assets/generated/
+assets/published/
+assets/raw/
+assets/app_screenshots/
+
+# ── Test video/image files in root ──
+test_video*.mp4
+frame_*.jpg
+preview_*.jpg
+
+# ── Logs ──
+logs/
+*.log
+
+# ── Data (runtime state, caches, campaigns) ──
+data/campaigns/
+data/experiments/
+data/analytics/
+data/cost_tracking/
+data/health/
+data/maturity/
+data/alerts/
+data/audit/
+data/dead_letter/
+data/db/
+data/pexels_cache/
+data/pixabay_cache/
+# Brand memory: keep only app_001.json (voorbeeld)
+data/brand_memory/app_76*.json
+data/brand_memory/app_cc*.json
+data/brand_memory/daypulse.json
+
+# ── IDE & OS ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Virtual environments ──
+venv/
+.venv/
+env/
+
+# ── Node (als frontend ooit npm krijgt) ──
+node_modules/
+
+# ── Misc ──
+*.egg
+*.whl
+.claude/
+.coverage
+*.mp4

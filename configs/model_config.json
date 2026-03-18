@@ -1,0 +1,79 @@
+{
+  "models": {
+    "idea_generation": {
+      "provider": "openai",
+      "model": "gpt-4o-mini",
+      "max_tokens": 3000,
+      "temperature": 0.85,
+      "use_cache": true
+    },
+    "script_writing": {
+      "provider": "openai",
+      "model": "gpt-4o",
+      "max_tokens": 8000,
+      "temperature": 0.8,
+      "response_format": "json_object",
+      "use_cache": true
+    },
+    "visual_direction": {
+      "provider": "openai",
+      "model": "gpt-4o-mini",
+      "max_tokens": 1024,
+      "temperature": 0.7,
+      "use_cache": true
+    },
+    "caption_writing": {
+      "provider": "openai",
+      "model": "gpt-4o-mini",
+      "max_tokens": 1500,
+      "temperature": 0.8,
+      "use_cache": false
+    },
+    "viral_check": {
+      "provider": "openai",
+      "model": "gpt-4o-mini",
+      "max_tokens": 3000,
+      "temperature": 0.4,
+      "use_cache": false
+    },
+    "performance_analysis": {
+      "provider": "openai",
+      "model": "gpt-4o-mini",
+      "max_tokens": 1024,
+      "temperature": 0.3,
+      "use_cache": true
+    },
+    "campaign_optimization": {
+      "provider": "openai",
+      "model": "gpt-4o-mini",
+      "max_tokens": 2048,
+      "temperature": 0.5,
+      "use_cache": true
+    },
+    "image_generation": {
+      "provider": "openai",
+      "model": "gpt-image-1",
+      "size": "1024x1792",
+      "quality": "medium"
+    },
+    "tts_voiceover": {
+      "provider": "openai",
+      "model": "tts-1",
+      "voice": "onyx"
+    }
+  },
+  "cost_tracking": {
+    "gpt4o_input_per_1k": 0.0025,
+    "gpt4o_output_per_1k": 0.01,
+    "gpt4o_mini_input_per_1k": 0.00015,
+    "gpt4o_mini_output_per_1k": 0.0006,
+    "gpt41_input_per_1k": 0.002,
+    "gpt41_output_per_1k": 0.008,
+    "gpt41_mini_input_per_1k": 0.0004,
+    "gpt41_mini_output_per_1k": 0.0016,
+    "haiku_input_per_1k": 0.00025,
+    "haiku_output_per_1k": 0.00125,
+    "sonnet_input_per_1k": 0.003,
+    "sonnet_output_per_1k": 0.015
+  }
+}

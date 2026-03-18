@@ -1,0 +1,39 @@
+Analyseer de performance van de volgende posts en geef strategische inzichten:
+
+POSTS DATA:
+{posts_data}
+
+BRAND MEMORY (huidige staat):
+{brand_memory}
+
+Analyseer en geef output in JSON:
+{
+  "analysis_date": "YYYY-MM-DD",
+  "app_id": "{app_id}",
+  "summary": "1-2 zinnen samenvatting van wat je ziet",
+  "top_performers": [
+    {
+      "post_id": "...",
+      "why_it_worked": "Specifieke reden waarom het goed presteerde",
+      "replicable_elements": ["element1", "element2"]
+    }
+  ],
+  "underperformers": [
+    {
+      "post_id": "...",
+      "likely_cause": "Waarom het waarschijnlijk niet werkte",
+      "lessons": ["les1", "les2"]
+    }
+  ],
+  "brand_memory_updates": {
+    "add_to_top_hooks": ["nieuwe effectieve hook"],
+    "add_to_avoided": ["iets dat niet werkt"],
+    "update_optimal_time": "HH:MM of null",
+    "update_best_format": "format of null"
+  },
+  "next_campaign_recommendations": [
+    "Specifieke aanbeveling 1",
+    "Specifieke aanbeveling 2",
+    "Specifieke aanbeveling 3"
+  ]
+}

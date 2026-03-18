@@ -1,0 +1,122 @@
+Schrijf een caption en hashtag set voor de volgende TikTok video:
+
+VIDEO SCRIPT:
+{script_summary}
+
+PLATFORM: {platform}
+BRAND VOICE: {brand_voice}
+CREATOR PERSONA: {persona_context}
+TARGET AUDIENCE: {target_audience}
+DOEL VAN DE POST: {post_goal}
+
+Schrijf de caption in de stem van de creator persona — eerste persoon, eigen ervaring, geen reclametaal.
+
+═══════════════════════════════════════════════════
+CAPTION = TWEEDE HOOK — DIT IS NET ZO BELANGRIJK ALS DE VIDEO
+═══════════════════════════════════════════════════
+
+De caption is NIET een samenvatting van de video.
+De caption is een TWEEDE REDEN om te engagen.
+
+TikTok's algoritme kijkt naar:
+- SAVES (caption die nuttig genoeg is om op te slaan)
+- SHARES (caption die je naar iemand stuurt)
+- COMMENTS (caption die een reactie uitlokt)
+- TIME ON POST (caption die lang genoeg is om te lezen = meer watch time)
+
+═══════════════════════════════════════════════════
+CAPTION STRUCTUUR — VOLG DIT EXACT
+═══════════════════════════════════════════════════
+
+REGEL 1: HOOK LINE (stopt scrollen, maakt nieuwsgierig)
+- Dit is het ENIGE dat mensen zien voordat ze op "meer" klikken
+- Moet ANDERS zijn dan de video hook (niet herhalen!)
+- Moet een REDEN geven om de caption uit te klappen
+
+REGEL 2-4: WAARDE of HERKENNING
+- Voeg iets toe dat NIET in de video zit
+- Een extra tip, een persoonlijk moment, of een shocking feit
+- Dit maakt de caption SAVE-waardig
+
+LAATSTE REGEL: ENGAGEMENT TRIGGER
+- Niet gewoon "link in bio" — combineer met een VRAAG
+- De vraag moet MAKKELIJK te beantwoorden zijn (lage drempel)
+- Of een "tag iemand" trigger
+
+═══════════════════════════════════════════════════
+ENGAGEMENT TRIGGERS — GEBRUIK MINSTENS 2
+═══════════════════════════════════════════════════
+
+SAVE TRIGGERS:
+- "sla op voor later" / "bookmark dit"
+- Een concrete tip/hack in de caption die je wilt onthouden
+- "dit heb je nodig als je [situatie]"
+
+SHARE TRIGGERS:
+- "stuur dit naar iemand die [herkenbare situatie]"
+- "tag je [collega/vriend/partner] die dit nodig heeft"
+- Content die zo herkenbaar is dat je het MOET doorsturen
+
+COMMENT TRIGGERS:
+- Makkelijke vraag: "hoeveel uur ben jij kwijt?" / "welke ken je?"
+- Mening vragen: "of ben ik de enige?"
+- Poll-achtig: "team A of team B?"
+- Herkenning: iets waar mensen "JAAA" op willen reageren
+
+═══════════════════════════════════════════════════
+STIJL — SPREEKTAAL, GEEN MARKETING
+═══════════════════════════════════════════════════
+
+- Schrijf zoals iemand van 20-30 op TikTok typt
+- Spreektaal: "serieus", "echt", "gewoon", "ngl", "fr"
+- Mag emoji's gebruiken (subtiel, max 3-4)
+- Korte zinnen. Puntig.
+- GEEN "ontdek de kracht van..." / "transformeer je..."
+- GEEN corporate taal
+- CTA = tip van een vriend: "link in bio, dankme later"
+
+GOEDE caption hook lines:
+- "dit had ik echt eerder moeten weten"
+- "niemand praat hierover maar dit bespaart je UREN"
+- "oke wacht dit is eigenlijk insane"
+- "als je dit nog niet weet ben je te laat"
+- "het feit dat dit bestaat en ik het nu pas weet"
+
+═══════════════════════════════════════════════════
+OUTPUT FORMAT
+═══════════════════════════════════════════════════
+
+{
+  "caption_options": [
+    {
+      "version": "A",
+      "caption": "Volledige caption (max 120 woorden). Hook line → waarde/herkenning → engagement trigger + CTA",
+      "hook_line": "Eerste regel die scrollen stopt (ANDERS dan video hook)",
+      "save_trigger": "Wat maakt deze caption save-waardig?",
+      "share_trigger": "Waarom zou iemand dit delen?",
+      "comment_trigger": "Welke vraag/stelling triggert comments?",
+      "emoji_strategy": "Subtiel | Expressief",
+      "tone": "energiek | informatief | grappig | confronterend"
+    },
+    {
+      "version": "B",
+      "caption": "Alternatieve versie — andere hook, andere tone",
+      "hook_line": "Andere hook (gebruik een ander patroon dan versie A)",
+      "save_trigger": "...",
+      "share_trigger": "...",
+      "comment_trigger": "...",
+      "emoji_strategy": "...",
+      "tone": "..."
+    }
+  ],
+  "hashtags": {
+    "primary": ["#hashtag1", "#hashtag2", "#hashtag3"],
+    "secondary": ["#hashtag4", "#hashtag5"],
+    "niche": ["#hashtag6", "#hashtag7"],
+    "viral_tags": ["#fyp", "#viral", "#foryou"],
+    "total_count": 15,
+    "placement": "first_comment"
+  },
+  "recommended_version": "A",
+  "reasoning": "Waarom deze versie meer engagement triggert"
+}

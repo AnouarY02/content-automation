@@ -1,0 +1,61 @@
+Je vergelijkt TikTok content met historische top-performers van hetzelfde merk.
+Je taak is patroonherkenning — GEEN causaliteitsclaims.
+Elke conclusie is "waarschijnlijk" tenzij hetzelfde patroon in 3+ posts voorkomt.
+Geef output ALTIJD als valid JSON zonder extra tekst eromheen.
+
+---
+
+TOP-PERFORMERS (geordend op score, hoog naar laag):
+{top_performers}
+
+---
+
+NIEUW ASSET:
+Script:
+{new_script}
+
+Caption:
+{new_caption}
+
+---
+
+ANALYSEER:
+
+1. Welke CONCRETE patronen deelt het nieuwe asset met de top-performers?
+   Denk aan: hook structuur, openingszin stijl, CTA type, caption lengte,
+   gebruik van getallen/statistieken, vraagstelling, opbouwpatroon.
+
+2. Wat WIJKT AF van de top-performers?
+   Benoem alleen echte, specifieke verschillen — niet "het is anders".
+
+3. PRESTATIEBANDVOORSPELLING:
+   Gebaseerd op patroonovereenkomst — NIET op je oordeel van kwaliteit.
+   - top_10%:     Sterk op ≥3 patronen die consistent terugkomen bij top-performers
+   - top_25%:     Goed op ≥2 patronen
+   - average:     Gedeeltelijke overeenkomst of gemixte patronen
+   - below_average: Weinig overeenkomst met top-performers
+
+4. CONFIDENCE (0.0-1.0):
+   Verlaag confidence als:
+   - Minder dan 3 top-performers beschikbaar (→ max 0.4)
+   - Patronen inconsistent zijn tussen top-performers (→ max 0.5)
+   - Het nieuwe asset sterk afwijkt van alle voorbeelden (→ max 0.6)
+
+---
+
+Geef output als dit exacte JSON formaat:
+{{
+  "similarity_score": <0.0-1.0, twee decimalen>,
+  "matching_patterns": [
+    "<concreet patroon 1>",
+    "<concreet patroon 2>"
+  ],
+  "differentiating_factors": [
+    "<concreet verschil 1>"
+  ],
+  "predicted_band": "top_10%|top_25%|average|below_average",
+  "confidence": <0.0-1.0, twee decimalen>,
+  "confidence_caveats": [
+    "<reden voor lagere confidence indien van toepassing>"
+  ]
+}}

@@ -1,0 +1,973 @@
+Schrijf een volledig video script op basis van het volgende campagne-idee:
+
+CAMPAGNE IDEE:
+{campaign_idea}
+
+APP CONTEXT:
+{app_context}
+
+BRAND VOICE:
+{brand_voice}
+
+PLATFORM: {platform}
+DOELDUUR: {target_duration_sec} seconden
+VIDEO TYPE: {video_type}
+
+{extra_instruction}
+
+══════════════════════════════════════════════════
+⚡ TOP PRIORITEIT — LEES DIT EERST
+══════════════════════════════════════════════════
+
+Het script wordt voorgelezen door een TEXT-TO-SPEECH stem. Dit betekent:
+
+1. SCHRIJF ZOALS IEMAND PRAAT, NIET ZOALS IEMAND SCHRIJFT.
+   Stel je voor dat je een spraakbericht stuurt naar je beste vriend.
+   Geen perfecte zinnen. Geen structuur. Gewoon praten.
+
+2. GEBRUIK LANGE DOORLOPENDE ZINNEN MET KOMMA'S.
+   FOUT: "Tien uur. Per week. Weg. Aan admin."
+   → Korte zinnen = stilte na elke punt = klinkt als robot
+   GOED: "Tien uur per week aan admin, dat is gewoon weg man"
+   → Eén doorlopende gedachte, vloeit als gesproken taal
+
+3. GEEN "...", MINIMAAL "—", GEEN PUNTEN TUSSEN KORTE WOORDEN.
+   "..." maakt lange stiltes. "—" maakt korte stiltes. Allebei klinken AI-achtig.
+   Gebruik komma's om door te praten.
+
+4. VISUAL SEARCH QUERIES: MAX 4 SIMPELE ENGELSE WOORDEN.
+   GOED: "woman frustrated desk office" / "woman smiling phone"
+   FOUT: "young nurse frustrated talking to camera" ← vindt niks
+
+5. KLINKT HET ALS EEN RECLAME? DAN IS HET FOUT.
+   "Dat is echt een game changer" ← VERBODEN
+   "Dit verandert alles" ← VERBODEN
+   "Het bespaart me zoveel tijd" ← VERBODEN (te generiek)
+   WEL: "ik ging van tien uur naar twee, dat is echt bizar"
+
+6. CONSISTENT TEMPO — GEEN SNEL-LANGZAAM WISSELING.
+   De TTS-stem leest de tekst voor op basis van zinsbouw.
+   Als jij wisselende zinslengte schrijft (kort-lang-kort-lang), klinkt
+   het alsof de stem steeds van tempo wisselt. Dat is AI-achtig.
+   REGEL: houd zinslengte CONSISTENT binnen een scene.
+   - Hook: korte, punchy zinnen (5-10 woorden per zin)
+   - Body/feature: medium zinnen (10-18 woorden per zin)
+   - CTA: korte actie-zinnen (5-12 woorden)
+   FOUT: "Ik was het zat. En toen ontdekte ik per ongeluk iets dat mijn
+   hele werkwijze compleet overhoop gooide en ik kon het niet geloven
+   want het werkte echt. Bizar."
+   → 3 woorden, dan 25 woorden, dan 1 woord = wisselend tempo
+   GOED: "Ik was het echt helemaal zat, elke dag hetzelfde verhaal.
+   En toen vond ik per ongeluk iets wat alles veranderde.
+   Drie weken later was ik tien uur per week kwijt, gewoon weg."
+   → 10, 10, 12 woorden = stabiel tempo
+
+7. VERMIJD WOORDEN DIE TTS SLECHT UITSPREEKT.
+   De TTS-stem heeft moeite met sommige woorden/constructies:
+   - Engelse woorden in Nederlandse zinnen (gebruik Nederlands equivalent)
+   - Afkortingen zonder punten ("bv" → "bijvoorbeeld", "ivm" → "in verband met")
+   - Samengestelde woorden die ook los gelezen kunnen worden
+   - Cijfers (schrijf altijd UIT: "10" → "tien", "520" → "vijfhonderdtwintig")
+   - Speciale tekens (&, @, #, €) → schrijf het woord ("en", "bij", "euro")
+
+══════════════════════════════════════════════════
+❌ ABSOLUTE VERBODEN — WORDEN DIRECT AFGESTRAFT
+══════════════════════════════════════════════════
+
+VERBOD 0 — VERBODEN ZINNEN OVERAL IN HET SCRIPT (automatisch -20 punten):
+  "hoort niet normaal te voelen" ← VERSLETEN tagline, vermijd compleet
+  "dat is niet normaal" ← idem
+  "dit is voor jou" / "dan is dit voor jou" ← slotzin verbod
+  "probeer het zelf" ← slotzin verbod
+
+VERBOD 1 — NOOIT BEGINNEN MET EEN VRAAG:
+De eerste zin van scene 1 mag NOOIT een vraagzin zijn.
+Verwijderd: "Wist je dat...", "Heb jij ook...", "Ken je dat gevoel...", "Heb je ooit..."
+Verwijderd: Elke zin die eindigt op een vraagteken (?) als openingszin.
+WAAROM: Vragen zijn zwak als hook. Ze geven de kijker reden om "nee" te denken en weg te swipen.
+GOED: Begin met een STATEMENT, SHOCK, of BOLD CLAIM die de kijker in de verdediging duwt.
+VOORBEELD GOED: "Week 2. Dat is wanneer jij stopt." / "10 uur. Tien uur per week. Weg."
+
+VERBOD 2 — LOOP VEREIST EXACT ECHO (MEEST GEMISTE REGEL):
+De ALLERLAATSTE ZIN van scene 4 MOET het EXACTE GETAL of de EXACTE WOORDGROEP
+uit de EERSTE ZIN van scene 1 bevatten.
+
+VERPLICHTE PROCEDURE:
+1. Schrijf je eerste zin op: "[EERSTE ZIN]"
+2. Haal het KEY GETAL of FRASE eruit: "[KEY ELEMENT]"
+3. De allerlaatste zin MOET dit exact bevatten. Template:
+   "Maar als jij ook [KEY ELEMENT] [actie]... dan hoor jij dit."
+   OF: "Ben jij ook [KEY ELEMENT] kwijt? Type ↓"
+
+GOED VOORBEELD:
+  Eerste zin: "Tien uur per week. Dat verlies je aan admin."
+  Key element: "tien uur per week"
+  Laatste zin: "Hoeveel van jullie zijn ook tien uur per week kwijt? Type het getal ↓"
+  → "tien uur per week" EXACT terug → loop_potential = 90+
+
+FOUT VOORBEELD (de meest gemaakte fout):
+  Eerste zin: "Tien uur per week. Dat verlies je aan admin."
+  Laatste zin: "dan hoort dat niet normaal te voelen." ← TAGLINE, geen echo!
+  Laatste zin: "probeer het zelf" ← TAGLINE, verboden!
+  Laatste zin: "dit is voor jou" ← TAGLINE, verboden!
+
+ABSOLUTE VERBODEN ALS ALLERLAATSTE ZIN:
+  "dan hoort dat niet normaal te voelen." ← VERBODEN
+  "dan is dit voor jou" ← VERBODEN
+  "probeer het zelf" ← VERBODEN
+  "dit verandert alles" ← VERBODEN
+  "link in bio" ← VERBODEN als laatste zin
+  ELKE ZIN die geen KEY ELEMENT bevat ← VERBODEN
+
+VERBOD 3 — GEEN BEREKEND GETAL = GEEN GOEDKEURING:
+Er MOET een doorgerekend impact-getal in de VOICEOVER staan.
+Niet: "veel tijd" / "behoorlijk wat" / "een werkdag" (te vaag)
+Wel: [KLEIN GETAL] + "per dienst/dag" → reken door → [GROOT GETAL] + "per jaar/van je leven"
+VOORBEELD: "10 uur per week... in een jaar is dat 520 uur. Dat zijn 65 volle werkdagen."
+→ Schrijf de berekening hardop uit in de voiceover (niet alleen in metadata).
+
+VERBOD 4 — CTA MOET EENVOUDIG BEANTWOORDBAAR ZIJN:
+De comment-uitnodiging in scene 4 MOET beantwoordbaar zijn met 1-3 woorden of een getal.
+VERBODEN CTA (vereist lange zin → geen comments):
+  "Wat zijn jouw ervaringen met...?" ← te open
+  "Hoe ga jij om met...?" ← te lang
+  "Welke dingen...?" ← te vaag
+VERPLICHTE CTA-FORMULES (ultra-laagdrempelig):
+  "Hoeveel uur verlies jij? Type het getal ↓" → mensen typen "8", "12", "20"
+  "Type 1 als je dit herkent ↓" → mensen typen "1" of "1111"
+  "Ben jij ook [X]? Ja of nee ↓" → mensen typen "ja" of "nee"
+  "Stuur dit naar [SPECIFIEKE PERSOON] ↓" → actie-trigger (geen antwoord nodig)
+REGEL: Test je CTA — kan iemand antwoorden ZONDER de telefoon van scherm weg te tikken?
+
+══════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════
+CREATOR PERSONA — JIJ BENT DEZE PERSOON
+═══════════════════════════════════════════════════
+
+{persona_context}
+
+JIJ BENT DEZE PERSOON. Je schrijft NIET als een merk.
+Je schrijft als iemand die dit ZELF heeft meegemaakt en het deelt met vrienden.
+
+VERPLICHTE PERSONA-REGELS:
+
+1. EERSTE PERSOON — altijd "ik", "mij", "mijn"
+   FOUT: "Daypulse helpt je jouw doelen te halen"
+   GOED: "Ik ontdekte dit ding per ongeluk en het is echt bizar hoeveel het hielp"
+
+2. EIGEN VERHAAL — jij hebt dit zelf ondervonden
+   FOUT: "Studies tonen aan dat..."
+   GOED: "Ik was echt die persoon die elke zondagavond zei: morgen begin ik echt"
+
+3. EERLIJK OVER FALEN — laat zien dat je ook faalde
+   FOUT: "Ik was altijd al goed in doelen stellen"
+   GOED: "Serieus, ik heb dit waarschijnlijk vijftig keer geprobeerd. Vijftig."
+
+4. DISCOVERY, NIET RECLAME — je ontdekte dit toevallig
+   FOUT: "Daypulse is de beste app voor productiviteit"
+   FOUT: "En toen zag ik dit ding op mijn FYP" ← HERKENDE UGC-FORMULE. Iedereen gebruikt dit. Score -10.
+   FOUT: "ik vond dit per ongeluk" ← te vaag, geen enkel detail
+   FOUT: "echt per ongeluk op mijn FYP" ← herkende template, klinkt gespeeld
+   GOED: "Mijn zus stuurde me dit ding om 2 uur 's nachts en zei 'probeer dit gewoon even' — ik dacht ze was gek"
+   GOED: "Ik heb dit bij een andere verpleegster gezien die na haar dienst gewoon haar tas pakte en weg was. Ik vroeg haar wat ze deed."
+   GOED: "Ik googelde wanhopig op 'hoe stop ik met te laat komen na dienst' en dit was het eerste resultaat"
+   REGEL: Discovery moet SPECIFIEK zijn. Wie/wat/wanneer — geen generieke "zag het toevallig".
+
+5. SPREEKTAAL VAN DE PERSONA — gebruik haar stijl
+   Denk: dit is een WhatsApp-voicenote aan je beste vriendin, geen presentatie.
+
+RESULTAAT: De kijker GELOOFT dat dit een echte persoon is die haar eigen ervaring deelt.
+
+═══════════════════════════════════════════════════
+TIKTOK ALGORITME — BEGRIJP DIT EERST
+═══════════════════════════════════════════════════
+
+TikTok's algoritme beloont:
+1. WATCH TIME — mensen moeten tot het EINDE kijken
+2. REWATCHES — de video moet een reden geven om OPNIEUW te kijken
+3. SHARES — mensen moeten dit STUREN naar iemand
+4. SAVES — mensen moeten dit OPSLAAN voor later
+5. COMMENTS — mensen moeten REAGEREN
+
+Jouw script moet ALLE 5 triggeren. Niet 1 of 2. Alle 5.
+
+═══════════════════════════════════════════════════
+HOOK (SCENE 1) — DE EERSTE 1.5 SECONDEN
+═══════════════════════════════════════════════════
+
+Dit is 80% van je succes. Als de hook zwak is, ziet NIEMAND de rest.
+
+WAT MAAKT EEN HOOK 90+ (vs. 80)?
+Een 80-hook pakt de aandacht. Een 90-hook maakt dat je NIET KAN WEGKIJKEN.
+Het verschil: de 90-hook bevat iets dat TEGENSTRIJDIG, SHOCKING of ULTRA-HERKENBAAR is.
+
+90+ TECHNIEKEN:
+- COUNTER-INTUÏTIEF FEIT: "Mijn psycholoog zei dat doelen stellen slechter is dan helemaal geen doel hebben."
+- SHOCKING BEREKENING: "Ik heb drie jaar lang elke maandag 'volgende week begin ik echt' gezegd. Dat is 156 keer. Honderdzesenveertigt. Keer."
+- ULTRA-SPECIFIEKE HERKENNING: "Als jij na je nachtdienst thuiskomt, de kast opentrekt, en dan gewoon... op de bank gaat zitten in je ziekenhuiskleren omdat je te moe bent om te douchen — dan is dit voor jou."
+  → Zo specifiek dat de doelgroep denkt "hoe weet deze persoon dit PRECIES?"
+
+VERPLICHTE HOOK-TECHNIEKEN (gebruik minstens 2):
+
+1. PATTERN INTERRUPT — Begin met iets onverwachts
+   "Oke stop even met scrollen" / "Wacht wacht wacht" / "Nee maar serieus"
+
+2. CURIOSITY GAP — Zeg iets HALF, maak het niet af
+   "Dit ene ding heeft alles veranderd en het is niet wat je denkt"
+   VERBODEN CURIOSITY GAP (overgebruikt, iedereen herkent het als UGC-template):
+   - "Niemand vertelt je dit maar..." ← VERSLETEN, geef -15 punten
+   - "Het geheim dat [doelgroep] niet kent..." ← te generiek
+   GOED: "Ik heb dit drie jaar gebruikt en niemand op mijn afdeling weet dat het bestaat"
+   GOED: "Er is één ding dat ik doe wat mijn team niet snapt — en ik ben altijd als eerste weg"
+
+3. BOLD CLAIM MET BEWIJS — Concreet getal of feit
+   "Oke 10 uur per week. Dat ben je kwijt aan [probleem]"
+   "87% van [doelgroep] doet dit fout"
+
+4. INSTANT HERKENNING — De kijker denkt "DIT BEN IK"
+   "POV: je [herkenbare dagelijkse frustratie]"
+   "Als je ook altijd [herkenbaar gedrag] dan moet je dit zien"
+
+5. CONTRAST SHOCK — Twee werelden naast elkaar
+   "Iedereen doet [oud ding] terwijl je gewoon [nieuw ding] kan doen"
+
+VERBODEN HOOKS:
+- Retorische vragen ("Heb je ooit...") ← NIEMAND stopt hiervoor
+- Generieke openers ("In deze video...", "Vandaag leer je...") ← DIRECT swipe
+- Beleefde introducties ("Hoi! Vandaag...") ← saai
+- AI-woorden ("ontdek", "transformeer", "revolutionair", "krachtig", "optimaliseer") ← herkenbaar als AI
+- Passieve formuleringen ("er is een oplossing", "er bestaat een manier") ← te netjes
+- "Niemand heeft me dit verteld" / "Niemand vertelt je dit" ← VERSLETEN UGC-cliché, -15 punten
+- HOOK EINDIGT MET EEN VRAAG ← NOOIT DOEN. "Hoe bizar is dat?" → zwak. Laatste zin hook = STATEMENT of CLIFFHANGER.
+
+HOOK LENGTE REGEL:
+De hook (scene 1 voiceover) mag MAXIMAAL 20-25 woorden zijn. Dat is ≈1.5-2 seconden audio.
+Een hook van 30+ woorden geeft TikTok-gebruikers tijd om weg te swipen VOOR het interessante deel.
+SLECHT (te lang — 31 woorden): "Niemand heeft me dit verteld toen ik begon — maar die twee uur die jij na je dienst nog zit te schrijven... dat is niet normaal. En er bestaat al jaren iets dat het oplost."
+GOED (15 woorden): "Twee uur schrijven na je dienst. Elke keer. En dat hoort niet normaal te voelen."
+GOED (18 woorden): "Wacht even. Tien uur per week schrijf ik rapportages na mijn dienst. Tien. Uur. Weg."
+  FOUT: "70% haalt lijst nooit af. Hoe bizar is dat?"
+  GOED: "70% haalt lijst nooit af. En ik was ook die 70% — tot ik dit ontdekte."
+  GOED: "70% haalt lijst nooit af. Drie uur per dag. Gewoon... weg."
+  REGEL: Eindig de hook met een statement die CONFRONTEERT of BELOOFT, nooit met "??"
+
+═══════════════════════════════════════════════════
+OPEN LOOP STRUCTUUR — WATCH TIME MAXIMALISEREN (SCORE ≥85 VEREIST)
+═══════════════════════════════════════════════════
+
+Een OPEN LOOP is een belofte die je doet in de hook die pas aan het einde
+wordt ingelost. Dit houdt mensen tot het einde. Zonder een sterke open loop
+swipen 60% van de kijkers weg na 5 seconden.
+
+VERPLICHT: Elke video MOET een SPECIFIEKE open loop hebben.
+
+SCORE 70 OPEN LOOPS (te vaag — DIT WIL JE VERMIJDEN):
+- "Je gaat je doelen niet halen en dit is waarom" ← "waarom" is te vaag
+- "Er is een simpele verandering" ← WAT DAN? Te vaag om te blijven.
+- "Dit verandert alles" ← Wat verandert alles? Zegt niks.
+- "Ik ontdekte iets" ← Oké... en? Niet specifiek genoeg.
+- "En het punt is — het was niet mijn schuld." ← cliffhanger maar GEEN concrete details
+→ Deze hebben GEEN concreet detail. De kijker weet niet wat hij MIST.
+→ TIP: Als je alleen een emotionele cliffhanger hebt maar GEEN specifieke details (getal, tijdstip, frequentie) → score 70.
+
+SCORE 90+ OPEN LOOPS (specifiek detail + mysterie → kijker MOET blijven):
+- "Er is 1 app die ik elke ochtend om 6 uur open en sindsdien haal ik al mijn doelen"
+  → WELKE app? Kijker MOET blijven. Detail: "1 app", "6 uur", "elke ochtend"
+- "Ik deed 3 maanden lang elke dag dit ene ding en het resultaat is gestoord"
+  → WAT deed je? Detail: "3 maanden", "elke dag", "dit ene ding"
+- "Dit simpele trucje kost je 30 seconden maar bespaart je letterlijk 10 uur per week"
+  → WELK trucje? Detail: "30 seconden", "10 uur per week"
+
+DE REGEL: De open loop MOET minstens 2 CONCRETE DETAILS bevatten (getal, tijdstip,
+frequentie, duur) maar het ANTWOORD achterhouden. Zonder concrete details = score 70.
+
+VALIDATIE: Lees je hook terug. Kan de kijker na de hook PRECIES zeggen
+wat hij gaat leren, maar nog NIET wat het antwoord is?
+- "Je gaat je doelen niet halen" → kijker weet niet wat hij gaat leren → ZWAK
+- "Er is 1 ding dat ik in 30 seconden doe elke ochtend" → kijker weet: er komt een
+  concreet ding van 30 sec, maar WELK ding? → STERK
+
+PACING TUSSEN SCENES:
+Scene 2 (problem) MOET een moment van SPANNING creëren dat scene 3 NOODZAKELIJK maakt.
+Niet gewoon "het probleem uitleggen" maar een ESCALATIE die de kijker denkt "shit, is dat echt zo?"
+
+MIDPOINT TWIST (VERPLICHT — watch_through_rate van 75→85+):
+Halverwege de video (einde scene 2 / begin scene 3) MOET er een VERRASSEND FEIT of DRAAI komen.
+Dit is het moment waarop kijkers wegklikken als er geen reden is om te blijven.
+VERPLICHT: Een doorgerekend getal dat GROTER is dan verwacht.
+VOORBEELD: Hook zegt "10 uur per week" → Midpoint zegt "weet je wat dat per jaar is? 520 uur. 65 werkdagen. Twee MAANDEN van je leven."
+De escalatie van klein getal → doorgerekend groot getal houdt kijkers vast.
+
+CLIFFHANGER BRIDGE (VERPLICHT voor elke scene-overgang):
+Elke scene MOET eindigen met een onafgemaakte gedachte of onbeantwoorde vraag.
+NIET: een nette afsluitende zin → dan klikt de kijker weg.
+WEL: een zin die MIDDEN IN EEN GEDACHTE stopt.
+VOORBEELDEN:
+- "En ik dacht oké nee dit kan niet— maar toen—"
+- "Maar wat ik toen ontdekte dat was echt—"
+- "En het resultaat? Ik ga het je laten zien maar—"
+
+MINI-HOOKS TUSSEN SCENES — NIET FORMULAIC:
+SLECHT (formulaic, klinkt als script):
+- "Maar wacht, het wordt nog erger..."
+- "En toen ontdekte ik dit..."
+
+GOED (natuurlijk, als een verhaal):
+- "En het punt is— dit is niet eens het ergste deel"
+- "Maar oke dus toen ging ik zoeken en—"
+- "En weet je wat het gekke is?"
+- "Maar hier komt het— dit had ik echt niet verwacht"
+
+De bridge_to_next moet klinken als een GEDACHTE, niet als een scriptovergang.
+
+═══════════════════════════════════════════════════
+VOICEOVER — SPREEK ALS EEN MENS (SCORE ≥90 VEREIST)
+═══════════════════════════════════════════════════
+
+Je schrijft GEEN script. Je schrijft hoe een ECHT PERSOON praat.
+Iemand van 22 in hun kamer die een TikTok maakt voor hun telefoon.
+De authenticiteit van je voiceover bepaalt of mensen je vertrouwen of wegklikken.
+
+VERPLICHTE STIJLREGELS:
+- Spreektaal: "oke dus", "wacht even", "serieus", "gewoon", "echt", "letterlijk"
+- Korte zinnen. Soms maar 3 woorden. Of zelfs 1.
+- NOOIT beginnen met "Heb je ooit..." of "Stel je voor..."
+- NOOIT: "transformeer", "ontdek", "revolutionair", "ultieme", "oplossing", "krachtig", "optimaliseer", "effectief", "innovatief", "verbeteren"
+- NOOIT beginnen met "Stel je voor...", "Wist je dat...", "Heb je je ooit afgevraagd..."
+- GEEN opsommingen, GEEN "ten eerste... ten tweede..."
+- GEEN perfecte zinnen — echte mensen aarzelen, herhalen, maken halve zinnen
+- Gebruik EMOTIE: frustratie, verbazing, opluchting, enthousiasme
+
+VERPLICHTE IMPERFECTIES — JE MOET MINSTENS 3 VAN DEZE GEBRUIKEN:
+
+PRINCIPE: Imperfecties moeten SPECIFIEK zijn voor het verhaal — niet generieke templates.
+Een echte persoon zegt iets specifieks over HUN situatie, niet een standaard-formule.
+
+1. ZELF-CORRECTIE (specifiek voor dit verhaal — BESTE TECHNIEK VOOR AUTHENTICITEIT):
+   SLECHT: "Nee wacht— laat ik het anders zeggen..." ← HERKENDE TEMPLATE, klinkt te geregisseerd
+   SLECHT: "En het punt is —" gevolgd door een nette zin ← te clean, te formulaic
+
+   BESTE TECHNIEK: MID-SENTENCE ZELF-ONDERBREKING
+   Een echte persoon onderbreekt ZICHZELF in het midden van een zin, niet aan het einde.
+   GOED: "Ik telde het echt — ik bedoel, ik heb letterlijk een notitie gemaakt — tien uur per week."
+   GOED: "En ik dacht oke fijn, een app — maar nee, wacht, het is echt anders dan alles wat ik al had geprobeerd."
+   GOED: "Ik ben — hoe zeg ik dit — ik ben gewoon iemand die elke dag opnieuw begint en dan toch weer stopt."
+   GOED: "Niet één keer, maar ik denk... vijf keer? Zes? Ik weet het niet meer precies."
+
+   VERSCHIL: Zelf-onderbreking IN het midden van een zin vs. aan het eind.
+   EINDE-ONDERBREKING (te geregisseerd): "Ik probeerde alles — en niets hielp."
+   MID-SENTENCE (authentiek): "Ik probeerde — nee wacht, ik heb het echt geprobeerd: apps, planners, alles — en niets hielp."
+
+2. HERHALING VOOR EMPHASIS (het getal of de kernwoorden):
+   "Tien uur. Tien uur per week. Dat is een werkdag. Gewoon... weg."
+   REGEL: Herhaal HET GETAL of DE FRASE die je wil dat mensen onthouden.
+
+3. FILLER WOORDEN: "weet je", "snap je", "echt", "gewoon", "zeg maar"
+   Gebruik ze op EMOTIONELE MOMENTEN, niet willekeurig.
+
+4. EMOTIE-SWITCH (van frustratie naar verbazing of van hoop naar teleurstelling):
+   "En ik dacht oké, eindelijk— maar toen zag ik dat het NIETS was. Gewoon niks. Weer."
+   REGEL: Laat een ECHTE emotionele wisseling zien in de zin zelf.
+
+5. INCOMPLETE ZIN (gedachte kapt af door gevoel):
+   "Want het punt is— " gevolgd door de gedachte die de vorige afkapt.
+   REGEL: Gebruik dit MAX 1x anders klinkt het als een script vol stopzinnen.
+
+6. DIRECT AANSPREKEN (specifiek over wie dit kijkt):
+   "Als jij ook na elke nachtdienst nog een uur zit te typen — ja jij"
+
+7. UITROEP: "bro", "echt niet", "gek gewoon", "no way" — op het moment van de grootste verbazing
+
+GOEDE voiceover (90+ authenticity):
+"Oke serieus— dit had iemand me VEEL eerder moeten vertellen. Want ik was letterlijk— en ik overdrijf niet— tien uur per week kwijt aan die stomme admin. Tien. Uur. Weet je hoe veel dat is? Dat is een hele werkdag die gewoon... weg is. En niemand die er iets van zei. Tot ik dit tegenkwam en ik dacht oké... dit verandert alles."
+
+SLECHTE voiceover (40 authenticity):
+"Veel mensen besteden veel tijd aan administratieve taken. Dit kan frustrerend zijn. Gelukkig is er nu een oplossing die je helpt om efficiënter te werken."
+
+MATIGE voiceover (60 authenticity — DIT WIL JE VERMIJDEN):
+"Oke wacht even. Wist je dat je 10 uur per week kwijt bent? Herkenbaar toch? Maar er is een simpele verandering die alles verandert."
+↑ Dit klinkt ALSOF het spreektaal probeert te zijn maar is te gestructureerd en te netjes.
+
+HERKENDE UGC-TEMPLATES (vermijd deze — iedereen herkent ze, score -10 per stuk):
+- "echt per ongeluk op mijn FYP" ← versleten UGC-cliché
+- "En toen zag ik dit ding op mijn FYP" ← te generiek
+- "Maar hier komt het — [feit]" ← formulaic brugzin
+- "En wacht, het wordt nog gekker" ← formulaic bridge
+- "Nee wacht— laat ik het anders zeggen" ← klinkt te geregisseerd, gebruik alleen als SPECIFIEKE correctie
+- "Dit verandert alles" ← betekent niks
+- "en ik was zo sceptisch" als ENIGE reactie ← te voorspelbaar, geef meer specifiek detail
+- "Niemand heeft me dit verteld" ← versleten hook
+- "Dit had ik eerder moeten weten" ← als ENIGE opening, te generiek
+
+TEST JEZELF — AUTHENTICITY CHECKLIST (alle 4 moeten "JA" zijn):
+□ Tel je imperfecties (zelf-correctie, herhaling, filler, emotie-switch). Minder dan 4? HERSCHRIJF.
+□ Lees de voiceover hardop. Klinkt het alsof je het VOORLEEST? HERSCHRIJF.
+□ Bevat de solution-scene een SPECIFIEK MOMENT VAN TWIJFEL? ("ik dacht eerst..." met concreet detail)
+□ Zou een 22-jarige dit LETTERLIJK zo zeggen in een spraakbericht aan een vriend?
+
+ALS MINSTENS 1 ANTWOORD "NEE" IS → de authenticity_score zal onder 80 uitkomen.
+VOEG EXTRA IMPERFECTIES TOE:
+- Voeg ergens "echt" of "gewoon" in waar het net iets te clean is
+- Voeg een mid-sentence correctie toe ("ik bedoel— niet dat het makkelijk was, maar—")
+- Laat een zin afbreken en herbegin ("Ik was— nee, ik was letterlijk die persoon die—")
+- Voeg een specifiek mini-detail toe dat alleen een ECHT persoon zou weten
+  ("je weet wel, dat stukje waar je denkt: laat maar, dat doe ik morgen wel")
+
+═══════════════════════════════════════════════════
+TAAL & TTS KWALITEIT — DE SPRAAK MOET VLOEIEND KLINKEN
+═══════════════════════════════════════════════════
+
+De voiceover wordt voorgelezen door een TTS-engine (text-to-speech).
+Dat betekent: de tekst MOET goed klinken als het HARDOP wordt gelezen.
+
+VERPLICHTE TAALREGELS:
+
+1. CORRECT NEDERLANDS — geen grammaticafouten
+   - Juiste werkwoordvervoeging ("je bent", niet "je bint")
+   - Juiste lidwoorden ("het probleem", niet "de probleem")
+   - GEEN Engelse woorden tenzij ze ingeburgerd zijn (app, hack, vibe = OK)
+   - GEEN onbestaande woorden of verkeerde samenstellingen
+
+2. TTS-VRIENDELIJK SCHRIJVEN — zodat de spraak vloeiend klinkt
+   - VERMIJD "..." (ellipsis) — dit veroorzaakt lange AI-achtige stiltes in TTS
+   - Gebruik komma's voor korte adempauzes, NIET "..." of "—"
+   - MAXIMAAL 1x "..." per heel script (alleen bij echt dramatisch moment)
+   - Em-dash "—" MAXIMAAL 2x per script (voor zelf-correctie)
+   - Schrijf getallen als WOORDEN als ze in een zin staan ("tien uur" niet "10 uur")
+   - Schrijf getallen als CIJFERS in on-screen text ("10 uur" in tekst op scherm)
+   - GEEN ALL CAPS in voiceover (TTS leest dit raar voor). Emphasis via herhaling.
+   - VERMIJD lange samengestelde woorden (TTS struikelt hierover)
+     SLECHT: "productiviteitsverhogende methode"
+     GOED: "methode die je productiviteit verhoogt"
+
+3. PACING & RITME — SNEL EN VLOEIEND (GEEN LANGE STILTES)
+   - Het HELE script moet aanvoelen als ÉÉN doorlopend verhaal, niet losse scenes
+   - GEEN lange pauzes tussen zinnen — houd het tempo hoog
+   - Hook: SNEL, puntig, max 2 zinnen, geen pauzes
+   - Problem: snel doorpraten, emotie opbouwen, NIET stoppen na elk punt
+   - Solution: enthousiast, doorratelen alsof je het niet kan geloven
+   - CTA: direct, persoonlijk, zonder dramatische pauzes
+   - VERBODEN: "Gewoon... weg." met lange pauze. BETER: "Gewoon weg." zonder pauze.
+
+4. ANTI-BLOKKERIG — DE BELANGRIJKSTE REGEL VOOR TTS:
+   Het script wordt voorgelezen door een AI-stem. Korte losse zinnen klinken ROBOTACHTIG.
+
+   BLOKKERIG (klinkt als robot):
+   "Tien uur. Per week. Weg. Aan admin. Echt."
+   → Elke punt = stilte = gehakkel = AI-achtig
+
+   VLOEIEND (klinkt als mens):
+   "Tien uur per week aan admin, dat is gewoon weg"
+   → Eén doorlopende zin, komma's ipv punten, vloeit als gesproken taal
+
+   REGELS:
+   - NOOIT meer dan 2 zinnen achter elkaar van minder dan 5 woorden
+   - Gebruik KOMMA'S om gedachten te verbinden, niet PUNTEN
+   - Schrijf zinnen die je in ÉÉN ADEM kan uitspreken
+   - "Dat is echt een game changer" ← VERBODEN AI-cliché
+   - GEEN "..." in de voiceover (veroorzaakt lange stiltes)
+   - GEEN em-dash "—" meer dan 1x per scene
+
+5. VERMIJD DEZE TTS-PROBLEMEN:
+   - Afkortingen die TTS niet kent (gebruik voluit)
+   - URLs of links in voiceover (alleen in on-screen text)
+   - Haakjes in voiceover tekst
+
+═══════════════════════════════════════════════════
+SHARE & SAVE TRIGGERS — DIT BEPAALT JE BEREIK (SCORE ≥85 VEREIST)
+═══════════════════════════════════════════════════
+
+Shares en saves zijn ZWAARDER dan likes in het algoritme.
+Een video met 500 saves en 200 shares gaat VERDER dan een video met 10.000 likes.
+
+VERPLICHT — GEBRUIK ALLE 3:
+
+1. BOOKMARK MOMENT (= save trigger)
+   Er MOET een concreet feit, getal, of hack in het script zitten dat zo nuttig is
+   dat de kijker denkt: "dit moet ik onthouden."
+
+   VERPLICHTE TECHNIEK: Noem in de voiceover een SPECIFIEK GETAL én een CONCRETE METHODE.
+   NIET: "het bespaart veel tijd"
+   NIET: "de app helpt je" ← te vaag om te bookmarken, niemand slaat dit op
+   WEL: "letterlijk van 10 uur naar 2 uur per week — ik heb het gemeten"
+   WEL: "3 stappen: open de app, zet je doel, en het plant voor je — dat kost me elke ochtend 30 seconden"
+   WEL: "je spreekt je notitie in TERWIJL je bij de patiënt bent, de app schrijft het automatisch uit, je typt nooit meer achter een scherm"
+
+   DE SAVE-WAARDIGE METHODE MOET IN 1-2 ZINNEN UITLEGBAAR ZIJN met:
+   - WAT je letterlijk doet (actie)
+   - HOE LANG het duurt (tijdsduur)
+   - HET RESULTAAT in een concreet getal
+
+   VOORBEELD: "Elke ochtend, zeven minuten, ik zet 1 doel in de app. Het plant automatisch voor me. Niet twee uur meer plannen — zeven minuten." ← mensen slaan dit op.
+   De kijker moet denken: "wacht ik moet dit opslaan voor later"
+
+2. SEND TRIGGER (= share trigger)
+   Er MOET een moment zijn waarop de kijker denkt aan een SPECIFIEK PERSOON.
+
+   VERPLICHTE TECHNIEK: Noem een HYPERSPEFICIEK TYPE persoon in scene 4.
+   ZWAK: "stuur dit naar iemand" (te vaag → score 60)
+   ZWAK: "stuur dit naar iemand die nog op de opleiding zit" (te breed → score 70)
+   STERK: "stuur dit naar die collega die na elke nachtdienst klaagt dat ze geen tijd heeft" (score 85+)
+   STERK: "tag die ene vriend die elke zondag begint met 'volgende week ga ik het echt doen'" (score 90+)
+   REGEL: Hoe SPECIFIEKER de omschrijving, hoe meer mensen die ene persoon herkennen en taggen.
+
+3. SHOCK VALUE (= emotionele trigger voor delen) — VERPLICHT BEREKEND GETAL
+   Er MOET een DOORGEREKEND impact-getal in de voiceover staan. Niet een algemeen percentage.
+
+   SCORE 70 SHOCK (VERMIJD DIT — te algemeen):
+   - "70% geeft op binnen 3 weken" ← dit is een ALGEMEEN PERCENTAGE. Niet persoonlijk.
+   - "veel mensen besteden te veel tijd aan..." ← geen getal, geen impact
+   - "twee uur per dienst" ← beginpunt, maar nog niet doorgerekend
+
+   SCORE 90+ SHOCK (PERSOONLIJK DOORGEREKEND — VERPLICHT):
+   - "twee uur per dienst, vijf diensten per week — dat is tien uur. Tien uur per week.
+      In een jaar is dat vijfhonderd uur. Vijfhonderd uur die je nooit terugkrijgt."
+     → START met klein getal (2 uur) → REKEN DOOR naar groot getal (500 uur/jaar)
+   - "als je 3 uur per dag verspilt: dat is 21 uur per week, 90 uur per maand,
+      1000 uur per jaar. Dat is zes volledige weken van je leven."
+     → Doorrekening van dag → week → jaar → "van je leven"
+   - "10 uur admin per week × 52 weken = 520 uur per jaar = 65 achturige werkdagen"
+     → Doorrekening eindigt in een ONVERWACHTE VERGELIJKING
+
+   DE REGEL: BEGIN klein (per dienst / per dag) → REKEN DOOR naar het GROTE getal (per jaar / "van je leven").
+   Schrijf de berekening hardop in de voiceover: "twee uur per dienst... vijf diensten... dat is tien uur per week."
+
+   VERPLICHT: De send trigger MOET in de VOICEOVER staan, niet alleen in metadata.
+   In scene 2 of 4 moet je letterlijk zeggen wie dit naar wie moet sturen.
+   "Stuur dit naar die vriend die elke maandag weer opnieuw begint"
+
+IN JE OUTPUT: Vul "share_moment" en "save_moment" in met de EXACTE zin uit het script.
+
+SHARE_SAVE_TRIGGER CHECKLIST (alle 3 MOETEN "JA" zijn):
+□ Staat er een DOORGEREKEND GETAL in scene 2? (klein→groot, bijv: "2 uur per dag → 730 uur per jaar")
+□ Staat er een HYPERSPECIFIEK TYPE PERSOON in scene 4? (niet "iemand" maar "die collega die altijd klaagt over...")
+□ Staat er een CONCREET SYSTEEM/METHODE in scene 3 dat save-waardig is? (wat+hoe lang+resultaat)
+ALS 1 ANTWOORD "NEE" IS → share_save_trigger zal onder 80 scoren. FIX HET.
+
+═══════════════════════════════════════════════════
+COMMENT BAIT — MAAK REACTIES ONVERMIJDELIJK
+═══════════════════════════════════════════════════
+
+VERPLICHT: Het script moet comments triggeren via minstens 1 techniek:
+
+1. MENING VRAGEN: "Ben ik de enige die..." / "Of is dat gewoon ik?"
+2. HERKENNING TRIGGEREN: Iets zo herkenbaar dat mensen "JA DIT" willen reageren
+3. LICHTE CONTROVERSIE: Een standpunt dat sommigen het mee eens/oneens zijn
+4. SPECIFIEKE VRAAG IN CTA: "Hoeveel uur ben jij kwijt? Drop het in de comments"
+
+KALIBRATIE COMMENT BAIT:
+
+SCORE 60 (SLECHT — antwoord vereist een hele zin):
+- "Welke dingen staan er altijd onderaan jouw lijstje?"
+- "Wat zijn jouw grootste uitdagingen met productiviteit?"
+- "Hoe ga jij om met uitstelgedrag?"
+→ Mensen denken "dat is te veel moeite om te typen" → geen comments
+
+SCORE 85+ (GOED — antwoord is 1-3 woorden OF een getal OF ja/nee):
+- "Hoeveel uur verlies jij? Drop het getal ↓" → mensen typen "3", "6", "10"
+- "Ben ik de enige die dit elke maandag denkt? Ja of nee?" → makkelijk "ja!!!"
+- "Stuur dit naar die ene vriend die ALTIJD begint op maandag" → actie, geen antwoord
+- "Type 1 als je dit herkent ↓" → ultra-laagdrempelig
+
+REGEL: De comment vraag moet in MINDER DAN 3 WOORDEN beantwoordbaar zijn.
+Test: "Kan iemand dit beantwoorden terwijl ze scrollen met één hand?" → JA = goed, NEE = herschrijf.
+
+═══════════════════════════════════════════════════
+LOOP POTENTIAL — REDEN OM OPNIEUW TE KIJKEN (SCORE ≥85 VEREIST)
+═══════════════════════════════════════════════════
+
+Dit is wat het verschil maakt tussen 100K en 1M views.
+Een video die LOOPT wordt exponentieel meer gepusht door TikTok.
+
+VERPLICHT — GEBRUIK MINSTENS 2 VAN DEZE TECHNIEKEN:
+
+1. ECHO LOOP — Het EXACTE GETAL of EXACTE FRASE uit de hook komt terug in de CTA
+   SCORE 70 ECHO (ZWAK — alleen thema herhaalt):
+   Hook: "Je gaat je doelen niet halen" → CTA: "hoeveel doelen heb jij niet gehaald?"
+   → "doelen" herhaalt maar er is geen SPECIFIEK DETAIL dat terugkomt.
+
+   SCORE 90+ ECHO (STERK — specifiek getal/frase echoet):
+   Hook: "730 uur per jaar gooi je weg"
+   CTA: "ben ik de enige die 730 uur per jaar weggooit of is dat gewoon iedereen?"
+   → "730 uur per jaar" echoet EXACT terug. Kijker hoort het en herbekijkt.
+
+2. CLIFFHANGER LOOP — De CTA eindigt met een vraag die de hook BEANTWOORDT
+   CTA: "Maar de echte vraag is: hoeveel uur verlies JIJ?"
+   → Video herstart → Hook: "10 uur per week. Dat ben je kwijt."
+   → Kijker denkt: "oh shit dat is het antwoord"
+
+3. TWIST LOOP — Een detail in de hook krijgt PAS BETEKENIS na de solution
+   Hook: "Ik had dit 3 maanden geleden moeten weten"
+   Solution: onthult de app/hack
+   → Bij rewatch denkt kijker: "oh JA 3 maanden, dat klopt"
+
+4. VISUAL LOOP — Laatste visual = zelfde setting als eerste visual
+   Hook: persoon gefrustreerd op bed met telefoon
+   CTA: zelfde persoon, zelfde bed, maar nu glimlachend
+   → Seamless loop visueel
+
+VALIDATIE (verplicht — doe dit voordat je output geeft):
+1. Schrijf je hook's eerste zin op
+2. Schrijf je CTA's laatste zin op
+3. Bevatten ze EXACT HETZELFDE GETAL of DEZELFDE SPECIFIEKE FRASE (niet alleen thema)?
+   - JA → score 85+
+   - NEE, alleen hetzelfde thema ("doelen...doelen") → score 70. HERSCHRIJF.
+
+VERPLICHT IN JE OUTPUT:
+- Vul "loop_technique" in met welke techniek(en) je gebruikt
+- De ALLERLAATSTE ZIN van scene 4 voiceover MOET een echo-vraag zijn die in 1-3 woorden te beantwoorden is:
+  FORMULE: "Hoeveel [KEY GETAL/FRASE] ben jij [werkwoord]? Type het ↓"
+  VOORBEELD GOED: Hook = "Tien uur. Na elke dienst." → Allerlaatste zin: "Hoeveel uur ben jij na elke dienst kwijt? Type het ↓"
+    ← "tien uur" + "na elke dienst" echoot ✓, antwoord is 1 getal ✓
+  VOORBEELD FOUT: Hook = "Tien uur. Na elke dienst." → Allerlaatste zin: "dan hoort dat niet normaal te voelen." ← FOUT, tagline!
+  VOORBEELD FOUT: Hook = "Tien uur. Na elke dienst." → Allerlaatste zin: "dan is dit voor jou." ← FOUT, tagline!
+  VERBODEN ALLERLAATSTE ZINNEN:
+    "dan is dit voor jou" ← VERBODEN
+    "dan hoort dat niet normaal te voelen" ← VERBODEN
+    "probeer het zelf" ← VERBODEN
+    "link in bio" ← VERBODEN als allerlaatste zin
+    elke zin die NIET de exacte hook-frase/getal bevat ← VERBODEN als allerlaatste
+- De "visual_description" van scene 4 MOET visueel teruglinken naar scene 1
+
+═══════════════════════════════════════════════════
+VISUAL DESCRIPTION — AFHANKELIJK VAN VIDEO TYPE
+═══════════════════════════════════════════════════
+
+Als video_type = "talking_head":
+  De creator (persona) praat RECHTSTREEKS naar de camera.
+  Visual descriptions beschrijven de STEMMING en EXPRESSIE van de creator, geen stock footage.
+  Schrijf ALTIJD IN HET ENGELS.
+
+  Voorbeelden voor talking_head:
+  - "Creator speaks directly to camera, slight frustration in expression, casual bedroom setting"
+  - "Creator looks relieved and genuine, holds up phone showing app, natural lighting"
+  - "Creator leans in toward camera, conspiratorial tone, like sharing a secret"
+
+  visual_search_query is WEL VERPLICHT — ook bij talking_head.
+  We gebruiken stock footage, dus ELKE scene MOET een visual_search_query hebben.
+
+  VISUELE SAMENHANG — HEEL BELANGRIJK:
+  De 4 scenes moeten aanvoelen als ÉÉN VERHAAL, niet als 4 losse clips.
+  REGELS:
+  - Kies EEN persoontype voor het hele script (bijv. "young woman" of "man office")
+  - ELKE query bevat dit persoontype + een actie die past bij de scene-emotie
+  - Houd de SETTING consistent (bijv. allemaal office, of allemaal healthcare)
+  - Schrijf in het ENGELS, 3-5 woorden
+
+  GOED VOORBEELD (simpel, vindbaar op stock sites):
+  - Hook: "woman frustrated desk office"
+  - Problem: "woman stressed paperwork documents"
+  - Solution: "woman smiling phone happy"
+  - CTA: "woman tapping phone excited"
+  → Simpele woorden, zelfde type persoon, GEEN "talking to camera" of "nurse"
+
+  SLECHT VOORBEELD (te specifiek, vindt niks op stock sites):
+  - "young nurse frustrated talking to camera" ← BESTAAT NIET
+  - "healthcare worker typing at desk late night" ← TE SPECIFIEK
+  - "man stressed laptop night" ← ANDER persoon dan andere scenes
+
+  REGELS:
+  - MAX 4 woorden per query
+  - NOOIT "talking to camera", "looking at camera", "nurse", "healthcare"
+  - WEL: "woman", "man", "person" + emotie + setting
+  - Houd het SIMPEL: stock sites hebben generieke clips, geen niche content
+
+SOLUTION SCENE AUTHENTICITEIT VEREISTE:
+De solution-scene (scene 3) is het moeilijkst om authentiek te laten klinken
+omdat je een product introduceert. VERPLICHTE TECHNIEK: toon SPECIFIEKE TWIJFEL eerst.
+
+SLECHT (klinkt als reclame):
+"En ik ontdekte Daypulse. Het is bizar simpel. Je zet je doel in, het plant voor je."
+→ Geen twijfel, geen authenticiteit, direct in de pitch.
+
+GOED (klinkt als iemand die dit echt meemaakte):
+"Mijn zus stuurde me een link. En ik dacht — oke, weer zo'n productiviteits-ding. Vast niet voor mij,
+want ik heb al tien van die apps op mijn telefoon staan. Maar ik had niks te verliezen, toch?
+En dan — echt — na één dag dacht ik: dit is anders."
+→ SPECIFIEKE twijfel ("vast niet voor mij want...") maakt het geloofwaardig.
+
+VERPLICHT: De solution-scene MOET een SPECIFIEK MOMENT VAN TWIJFEL bevatten.
+Niet "ik was sceptisch" (te generiek) maar EEN CONCRETE GEDACHTE die die persoon had.
+
+Als video_type = "screen_demo" of "mixed":
+  Schrijf ALTIJD IN HET ENGELS. Realistisch en specifiek.
+  Beelden MOETEN passen bij wat er GEZEGD wordt.
+
+  VERPLICHTE elementen:
+  1. CAMERA: close-up / medium shot / over-shoulder
+  2. WIE: specifiek persoon (bijv. "young woman in her 20s in casual clothes")
+  3. WAT: concrete actie die past bij de voiceover
+  4. WAAR: realistische setting (slaapkamer, kantoor, cafe, bus)
+  5. SFEER: belichting en mood
+
+  BELANGRIJK:
+  - Alledaagse settings: in bed, keukentafel, bank, trein
+  - ECHTE situaties die de doelgroep herkent
+  - Geen stockfoto-poses
+  - Visuele CONTRAST tussen problem en solution scenes
+    (problem = donker/chaotisch, solution = licht/opgelucht)
+
+VIDEO TYPE KEUZE:
+- Als creator_persona beschikbaar is → kies "talking_head" in je output
+- Persona-content is het meest authentiek als een echte persoon praat naar de camera
+- "screen_demo" alleen als de video echt app-schermen of instructies toont
+
+═══════════════════════════════════════════════════
+ON-SCREEN TEXT — KORT EN KRACHTIG
+═══════════════════════════════════════════════════
+
+MAXIMAAL 3-4 WOORDEN per scene. Dit wordt als grote headline bovenaan het scherm getoond.
+Te lange tekst wordt afgeknipt! Houd het ULTRA-KORT.
+
+FORMAAT PER SCENE (voorbeelden):
+- Hook: "10 uur per week" / "Tien uur? Weg." / "520 uur/jaar"
+- Problem: "520 uur admin" / "65 werkdagen kwijt" / "Elke week weer"
+- Solution: "10 uur → 2 uur" / "Van chaos → rust" / "1 app, 30 sec"
+- CTA: "link in bio" / "type het getal" / "hoeveel uur jij?"
+
+VERBODEN: Lange zinnen, meerdere feiten, of combinaties met "+" in on_screen_text.
+SLECHT: "link in bio + hoeveel uur verlies jij?" ← TE LANG, past niet op scherm
+GOED: "type het getal ↓"
+
+═══════════════════════════════════════════════════
+VOORBEELD — DIT IS EEN 90+ SCORE SCRIPT
+═══════════════════════════════════════════════════
+
+BELANGRIJK: Dit is hoe een ECHT PERSOON praat. Niet hoe een AI denkt dat een persoon praat.
+Het verschil: echte mensen beginnen zinnen opnieuw, vergeten wat ze wilden zeggen,
+en zeggen "uh" en "weet je" en "gewoon". Ze hebben GEEN perfecte structuur.
+
+Hook: "Oke wacht even— tien uur. Ik zei het hardop en ik geloofde het zelf niet.
+Tien uur per week zit ik na mijn dienst nog te typen."
+
+Problem: "En ik had dat nooit echt— ik bedoel, je telt dat niet he, je denkt gewoon
+'ach het hoort erbij'. Maar ik ging het echt bijhouden en... tien uur. Per week.
+Reken dat even door: dat is vijfhonderd uur per jaar. Dat is twee maanden van je leven
+die je achter een scherm zit terwijl je eigenlijk al thuis had kunnen zijn."
+
+Solution: "En toen liet een collega van me— ze heet Marieke, we werken op dezelfde afdeling—
+ze liet me dit ding zien op haar telefoon. Dossiertijd. En ik dacht ja hoor, weer een app,
+ik heb al drie van die dingen geprobeerd die niks doen. Maar goed, ze zei 'probeer het
+gewoon even'. Dus ik deed het. En... oke, dit klinkt overdreven maar ik spreek gewoon in
+wat ik wil opschrijven, en het maakt er een dossier van. Gewoon terwijl ik bij de patient
+sta. Ik hoef niet meer achter dat scherm te zitten. Ik ging van tien uur naar twee."
+
+CTA: "Serieus, het is gratis om te proberen, link in bio. Stuur dit naar die collega
+die altijd klaagt dat ze nooit op tijd thuis is na haar dienst. Ik verloor tien uur
+per week— hoeveel verlies jij? Type het getal ↓"
+
+WAAROM DIT 90+ SCOORT:
+- Het klinkt als iemand die PRAAT, niet als iemand die VOORLEEST
+- "ik bedoel", "je telt dat niet he", "ja hoor", "oke dit klinkt overdreven" = ECHTE fillers
+- Marieke = specifiek persoon (niet "een collega")
+- "ik heb al drie van die dingen geprobeerd" = specifieke twijfel
+- Doorrekening: 10 uur/week → 500 uur/jaar → "twee maanden van je leven"
+- "die collega die altijd klaagt dat ze nooit op tijd thuis is" = HYPERSPECIFIEK
+- "Type het getal ↓" met echo van "tien uur" = loop + comment bait
+
+WAAROM DIT 90+ SCOORT:
+- Loop: "730 uur" in hook EN CTA = EXACT ECHO van het getal → kijker herbekijkt
+- Share: "730 uur = 1 maand van je leven" is BEREKEND impact-getal → MUST share
+- Share: "die ene persoon die elke zondag zegt..." = SPECIFIEK TYPE → send trigger
+- Save: "1 app, 30 seconden, elke ochtend 6 uur" = concreet systeem → bookmark
+- Authenticity: zelf-correcties, incomplete zinnen, emotie-switches, fillers
+- Comment bait: "ben ik de enige?" = makkelijk te beantwoorden → reacties
+- Watch through: "1 app, 30 sec" = CONCREET DETAIL maar WELKE app? → blijf kijken
+
+═══════════════════════════════════════════════════
+OUTPUT FORMAT — ALLEEN JSON
+═══════════════════════════════════════════════════
+
+{
+  "script_id": "script_001",
+  "title": "Interne werktitel",
+  "total_duration_sec": 45,
+  "video_type": "screen_demo | talking_head | text_on_screen | mixed",
+  "hook_type": "pattern_interrupt | curiosity_gap | bold_claim | instant_herkenning | contrast_shock",
+  "open_loop": "Beschrijf de open loop: welk SPECIFIEK DETAIL wordt gegeven, en welk ANTWOORD wordt achtergehouden?",
+  "loop_technique": "echo_loop | cliffhanger_loop | twist_loop | visual_loop — welke gebruik je?",
+  "share_trigger": "Waarom zou iemand dit DELEN? Welk moment triggert dat?",
+  "share_moment": "De EXACTE zin uit het script die delen triggert",
+  "save_moment": "De EXACTE zin uit het script die opslaan triggert",
+  "comment_trigger": "Welke zin/moment triggert comments?",
+  "scenes": [
+    {
+      "scene_number": 1,
+      "type": "hook",
+      "duration_sec": 3,
+      "voiceover": "PATTERN INTERRUPT + CURIOSITY GAP in spreektaal. Maximaal 2 zinnen. NOOIT starten met vraagzin.",
+      "on_screen_text": "Max 4 woorden — shocking of herkenbaar",
+      "visual_description": "IN HET ENGELS — realistisch, relateerbaar",
+      "visual_search_query": "MAX 4 woorden bijv: 'woman frustrated desk office'",
+      "bridge_to_next": "OPEN LOOP FORMAAT (VERPLICHT 2 CONCRETE DETAILS): 'Er is 1 [specifiek wat] dat ik [concreet resultaat in getal] bereik — maar laat me je eerst dit laten zien.' VOORBEELDEN: 'Er is 1 app die me van 10 uur naar 30 minuten bracht — maar eerst dit.' / 'Ik deed 3 dingen in exact 7 minuten en het werkt elke keer — kijk.'",
+      "notes": "Productie-instructies"
+    },
+    {
+      "scene_number": 2,
+      "type": "problem",
+      "duration_sec": 8,
+      "voiceover": "Herkenbaar probleem met CONCREET GETAL of FEIT. Emotioneel laden.",
+      "on_screen_text": "Het getal/feit",
+      "visual_description": "IN HET ENGELS — donkere/chaotische sfeer",
+      "visual_search_query": "MAX 4 woorden bijv: 'woman stressed paperwork documents'",
+      "bridge_to_next": "Overgang naar solution: 'en toen ontdekte ik...' of 'maar hier komt het...'",
+      "notes": "..."
+    },
+    {
+      "scene_number": 3,
+      "type": "solution",
+      "duration_sec": 20,
+      "voiceover": "Onthulling van de open loop. Concrete waarde. Save-waardig detail.",
+      "on_screen_text": "Het resultaat (voor→na)",
+      "visual_description": "IN HET ENGELS — lichte/positieve sfeer",
+      "visual_search_query": "MAX 4 woorden bijv: 'woman smiling phone happy'",
+      "bridge_to_next": "Naar CTA: 'en het beste deel is...'",
+      "notes": "..."
+    },
+    {
+      "scene_number": 4,
+      "type": "cta",
+      "duration_sec": 5,
+      "voiceover": "STRUCTUUR (in deze volgorde): (1) Link in bio tip als spreektaal. (2) Stuur naar [HYPERSPECIFIEK TYPE PERSOON]. (3) ALLERLAATSTE ZIN EXACT FORMAAT: 'Hoeveel [KEY GETAL/FRASE UIT SCENE 1] [werkwoord] jij ook? Type het getal ↓' — NOOIT een tagline als slotzin.",
+      "on_screen_text": "MAX 3 WOORDEN bijv: 'type het getal' of 'link in bio'",
+      "visual_description": "IN HET ENGELS — zelfde setting als scene 1 (visual loop)",
+      "visual_search_query": "MAX 4 woorden bijv: 'woman tapping phone excited'",
+      "bridge_to_next": "",
+      "notes": "VERBOD: slotzin mag NOOIT zijn: 'dan hoort dit niet normaal te voelen' / 'dan is dit voor jou' / 'probeer het zelf'. Slotzin MOET eindigen op '? Type het getal ↓' of '? Ja of nee ↓'"
+    }
+  ],
+  "full_voiceover_text": "Volledige voiceover tekst aaneengesloten",
+  "production_notes": "Algemene productie-instructies",
+  "self_check": {
+    "scroll_stop_power": {
+      "score": 85,
+      "evidence": "Welk element in de hook stopt het scrollen? Citeer de exacte woorden."
+    },
+    "watch_through_rate": {
+      "score": 85,
+      "evidence": "Wat is de open loop? Welk detail wordt achtergehouden? Waar wordt het onthuld?"
+    },
+    "share_save_trigger": {
+      "score": 85,
+      "evidence": "Welk shocking getal triggert delen? Welk concreet systeem triggert opslaan?"
+    },
+    "comment_bait": {
+      "score": 85,
+      "evidence": "Welke vraag/stelling triggert comments? Is die makkelijk te beantwoorden?"
+    },
+    "authenticity_score": {
+      "score": 85,
+      "evidence": "Tel de imperfecties: welke zelf-correcties, fillers, emotie-switches zitten erin?"
+    },
+    "loop_potential": {
+      "score": 85,
+      "evidence": "Welke woorden uit scene 1 komen terug in scene 4? Beschrijf de loop."
+    },
+    "taal_kwaliteit": {
+      "score": 85,
+      "evidence": "Is het grammaticaal correct Nederlands? Is het TTS-vriendelijk? Pauzes op juiste plekken?"
+    }
+  }
+}
+
+═══════════════════════════════════════════════════
+SELF-CHECK INSTRUCTIE — VERPLICHT (WEES STRENG)
+═══════════════════════════════════════════════════
+
+VOORDAT je het JSON object afrondt, doe een self-check op ELKE dimensie.
+Vul de "self_check" in met EERLIJKE scores en BEWIJS uit je eigen script.
+
+KALIBRATIE — ZO SCOOR JE EERLIJK:
+
+WATCH_THROUGH_RATE:
+- 70 = Je open loop is vaag ("en dit is waarom", "er is iets"). Geen concreet detail.
+- 85 = Je open loop heeft 2+ concrete details ("1 app, 30 seconden, elke ochtend om 6")
+        maar houdt het antwoord achter. Er is spanning in scene 2 die scene 3 noodzakelijk maakt.
+
+SHARE_SAVE_TRIGGER:
+- 70 = Je hebt een algemeen percentage ("70% faalt") maar geen persoonlijk berekend
+        impact-getal. Geen specifiek persoon als send-trigger IN de voiceover.
+- 85 = Je hebt een BEREKEND impact-getal ("730 uur = 1 maand van je leven") EN
+        een specifiek type persoon IN de voiceover ("stuur dit naar die vriend die...").
+
+LOOP_POTENTIAL:
+- 70 = Hook en CTA delen alleen een THEMA ("doelen...doelen") maar geen specifiek
+        getal of frase.
+- 85 = Hook en CTA delen EXACT HETZELFDE GETAL of DEZELFDE SPECIFIEKE FRASE.
+        Schrijf beide zinnen naast elkaar — als het getal/frase niet identiek is, score 70.
+
+COMMENT_BAIT:
+- 60 = Vraag vereist een volledige zin als antwoord ("Welke dingen staan onderaan jouw lijst?")
+- 85 = Vraag is beantwoordbaar in 1-3 woorden ("Hoeveel uur?", "Ja of nee?", "Type je getal ↓")
+        OF is een actie-trigger ("Stuur dit naar die vriend die...")
+- Test: Kan iemand antwoorden terwijl ze scrollen met één hand? JA = 85+, NEE = 60, herschrijf.
+
+ALS een self_check score ONDER 80 is:
+→ GA TERUG en HERSCHRIJF dat onderdeel van het script VOORDAT je output geeft.
+→ Je mag NIET een score onder 80 geven zonder het script te verbeteren.
+→ Gebruik de kalibratie hierboven om te checken of je score eerlijk is.
+
+VERPLICHTE VERIFICATIE STAPPEN (doe dit VOORDAT je output geeft):
+
+STAP A — HOOK STATEMENT CHECK (verbod op vraagzin):
+Schrijf de EERSTE ZIN van scene 1 letterlijk op: "..."
+Eindigt deze zin op een VRAAGTEKEN (?)?
+  - JA → DIRECT herschrijven naar een STATEMENT met een CONCREET GETAL of BOLD CLAIM.
+    VERBODEN: "Wist je dat...", "Heb jij ook...", "Ken je dat...", "Heb je ooit..."
+    VERVANGING: Begin met het GETAL zelf. "Tien uur." / "[GETAL]." / "[BOLD FEIT]."
+
+STAP B — SEAMLESS LOOP CHECK (MAGIC TRICK — meest impactvolle dimensie):
+De allerlaatste zin van scene 4 moet werken als een MAGISCHE CIRKEL:
+  → Als de video auto-replayed, moet de HOOK het ANTWOORD zijn op de CTA-vraag.
+
+SEAMLESS AUTO-REPLAY STRUCTUUR:
+  1. HOOK (scene 1): Bevat het KEY GETAL als ANTWOORD/CLAIM → "Tien uur per week."
+  2. CTA (scene 4 laatste zin): Stelt een VRAAG waarvoor het KEY GETAL het antwoord is
+     → "Hoeveel uur verlies jij aan admin? Type het ↓"
+  3. Bij auto-replay: CTA-vraag → HOOK geeft antwoord → perfecte seamless loop
+
+VOORBEELD SEAMLESS LOOP (loop_potential = 90+):
+  Hook: "Tien uur. Per week. Aan admin. Weg."
+  Allerlaatste CTA-zin: "Hoeveel uur verlies jij aan admin? Type het ↓"
+  → Auto-replay: "Hoeveel uur?" → "Tien uur. Per week." = ANTWOORD = naadloze cirkel
+
+VOORBEELD (loop_potential = 70 — te vermijden):
+  Hook: "Tien uur per week. Dat verlies je aan admin."
+  Allerlaatste CTA-zin: "dan hoort dit niet normaal te voelen." ← TAGLINE, geen vraag!
+
+VERPLICHT: De allerlaatste zin MOET:
+  a) Een getal-vraag zijn ("Hoeveel [X]? Type het ↓")
+  b) OF een ja/nee vraag ("Ben jij ook [X]? Type 1 als je dit herkent ↓")
+  c) NOOIT een tagline/statement zijn ("dan is dit voor jou", "probeer het zelf")
+
+STAP C — BEREKEND GETAL CHECK (share/save trigger):
+Schrijf het doorgerekende impact-getal letterlijk op dat IN DE VOICEOVER staat: "..."
+Is het getal DOORGEREKEND (klein → groot, per dag → per jaar)?
+  - JA → share_save_trigger basis = 80+
+  - NEE of ontbreekt → voeg toe in scene 2. Schema: "[X] per dienst × [Y] diensten = [Z] per week. In een jaar is dat [A] uur."
+
+STAP D — OPEN LOOP CHECK (watch_through_rate):
+Schrijf de open loop letterlijk op: "In scene 1 beloof ik [X] maar onthul pas in scene 3 [Y]"
+Bevat [X] minstens 2 CONCRETE DETAILS (getal, tijdstip, duur, frequentie)?
+  - JA → watch_through_rate = 85+
+  - NEE → watch_through_rate = 70. Voeg minstens 2 concrete details toe aan de open loop.
+
+STAP E — SHARE TRIGGER CHECK (share_save_trigger):
+Controleer BEIDE elementen:
+  1. Is er een BEREKEND IMPACT GETAL in de voiceover? (bijv: "730 uur = 1 maand van je leven")
+  2. Staat er een SPECIFIEK TYPE PERSOON in de voiceover? (bijv: "stuur naar die vriend die elke maandag...")
+  - Beide aanwezig → share_save_trigger = 85+
+  - Slechts 1 aanwezig → share_save_trigger = 75. Voeg het ontbrekende element toe.
+  - Geen → share_save_trigger = 65. Herschrijf scene 2 (impact getal) en scene 4 (send trigger).
+
+STAP F — COMMENT BAIT CHECK:
+Schrijf de exacte comment-vraag op: "..."
+Kan iemand dit beantwoorden met 1-3 woorden of een getal?
+  - JA (bijv: "Hoeveel uur?" → "6", "Ja of nee?" → "ja") → comment_bait = 85+
+  - NEE (vereist een hele zin) → comment_bait = 65. Vervang door een getal-vraag of ja/nee vraag.
+
+DOEL: Alle 7 dimensies ≥ 80. Maar LIEG NIET — een eerlijke 75 is beter dan
+een valse 90. Als je eerlijk onder 80 scoort, herschrijf dan het script.
+
+Antwoord ALLEEN met het JSON object. Geen extra tekst.
