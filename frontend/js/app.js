@@ -33,7 +33,9 @@ if (document.readyState === 'loading') {
 // ── Helpers ──────────────────────────────────────────────────────────
 async function api(path, opts = {}) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const ms = opts._timeout || 15000;
+  delete opts._timeout;
+  const timeout = setTimeout(() => controller.abort(), ms);
   try {
     const r = await fetch(`${API}${path}`, { ...opts, signal: controller.signal });
     clearTimeout(timeout);
@@ -948,6 +950,7 @@ async function generateIdeas() {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ app_id: appId, platform }),
+      _timeout: 120000,
     });
 
     if (!res || !res.ideas || res.ideas.length === 0) {
@@ -1046,6 +1049,7 @@ async function submitStartCampaign() {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify(body),
+    _timeout: 120000,
   });
   if (res) {
     closeStartCampaignModal();
