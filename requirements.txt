@@ -21,8 +21,8 @@ aiohttp==3.10.5
 # Video / Audio
 ffmpeg-python==0.2.0
 
-# Desktop UI
-PyQt6==6.7.1
+# Desktop UI (alleen lokaal, niet op server)
+# PyQt6==6.7.1
 
 # Utilities
 loguru==0.7.2

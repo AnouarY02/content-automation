@@ -1,0 +1,54 @@
+# Secrets
+.env
+.env.local
+.env.production
+data/tokens/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# Generated assets (worden in runtime gemaakt)
+assets/generated/
+assets/published/
+assets/raw/
+assets/app_screenshots/
+
+# Test files
+test_video*.mp4
+frame_*.jpg
+preview_*.jpg
+*.mp4
+
+# Desktop app (niet nodig op server)
+desktop/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.claude/
+
+# Logs
+logs/
+*.log
+
+# Runtime data (wordt in container gemaakt)
+data/campaigns/
+data/experiments/
+data/analytics/
+data/cost_tracking/
+data/health/
+data/alerts/
+data/audit/
+data/dead_letter/
+data/db/
+data/pexels_cache/
+data/pixabay_cache/
+
+# Git
+.git/
