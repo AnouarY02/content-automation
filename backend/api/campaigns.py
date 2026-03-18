@@ -107,7 +107,7 @@ class StartCampaignRequest(BaseModel):
     platform: str = "tiktok"
     idea_index: int = 0
     tenant_id: str = "default"
-    voice: str = "aria"       # ElevenLabs default — warm vrouwelijk NL
+    voice: str = "roos"       # ElevenLabs default — native NL vrouwelijk
     tts_speed: float = 1.0
     voice_stability: float = 0.58      # 0.0-1.0 — hoger = consistenter
     voice_similarity: float = 0.92     # 0.0-1.0 — hoger = dichter bij originele stem
@@ -140,6 +140,7 @@ class CampaignResponse(BaseModel):
     published_at: str | None = None
     approved_at: str | None = None
     has_video: bool = False
+    display_name: str | None = None
 
 
 def _to_response(bundle: CampaignBundle) -> CampaignResponse:
@@ -165,6 +166,7 @@ def _to_response(bundle: CampaignBundle) -> CampaignResponse:
         published_at=str(bundle.published_at) if bundle.published_at else None,
         approved_at=str(bundle.approved_at) if bundle.approved_at else None,
         has_video=bool(bundle.video_path),
+        display_name=getattr(bundle, 'display_name', None),
     )
 
 
@@ -585,7 +587,7 @@ def regenerate_video(
     def run():
         try:
             on_progress("[1/3] Video opnieuw genereren...")
-            voice = "aria"
+            voice = "roos"
             tts_speed = 1.0
             voice_settings = None
 

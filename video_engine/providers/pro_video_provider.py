@@ -36,6 +36,7 @@ import subprocess
 import time
 import uuid
 from pathlib import Path
+from typing import Callable
 
 from loguru import logger
 
@@ -361,14 +362,14 @@ class ProVideoProvider:
     COST_PER_TTS_CHAR = 0.015 / 1000
     COST_PER_ELEVENLABS_CHAR = 0.0  # Gratis bij ElevenLabs abonnement
 
-    # ElevenLabs stemmen — warm, natuurlijk Nederlands
+    # ElevenLabs stemmen — 100% native Nederlandse sprekers
     ELEVENLABS_VOICES = {
-        "aria": {"id": "9BWtsMINqrJLrRacOk9x", "desc": "Warm, vrouwelijk, jong (NL)"},
-        "roger": {"id": "CwhRBWXzGAHq8TQ4Fs17", "desc": "Warm, mannelijk, professioneel (NL)"},
-        "sarah": {"id": "EXAVITQu4vr4xnSDxMaL", "desc": "Zacht, vrouwelijk, vertrouwd (NL)"},
-        "charlie": {"id": "IKne3meq5aSn9XLyUdCD", "desc": "Casual, mannelijk, energiek (NL)"},
-        "laura": {"id": "FGY2WhTYpPnrIDTdsKH5", "desc": "Helder, vrouwelijk, storytelling (NL)"},
-        "george": {"id": "JBFqnCBsd6RMkjVDRZzb", "desc": "Diep, mannelijk, autoritair (NL)"},
+        "roos": {"id": "7qdUFMklKPaaAVMsBTBt", "desc": "Fris, jong, warm vrouwelijk (NL)"},
+        "emma": {"id": "OlBRrVAItyi00MuGMbna", "desc": "Rustig, helder, vrouwelijk (NL)"},
+        "melanie": {"id": "SXBL9NbvTrjsJQYay2kT", "desc": "Jong, commercieel, vrouwelijk (NL)"},
+        "ido": {"id": "dLPO5AsXc3FZDbTh1IKa", "desc": "Warm, vriendelijk, mannelijk (NL)"},
+        "lucas": {"id": "T6sdx9oLQ9xfxeKIi6AM", "desc": "Diep, verhalend, mannelijk (NL)"},
+        "arjen": {"id": "62klqbsYqbynbr66ypRt", "desc": "Rustig, betrouwbaar, mannelijk (NL)"},
     }
 
     # OpenAI stemmen als fallback
@@ -383,13 +384,13 @@ class ProVideoProvider:
 
     # Gecombineerde lijst voor UI
     VOICES = {
-        # ElevenLabs (primair — beter Nederlands)
-        "aria": "Warm, vrouwelijk, jong — natuurlijk NL (ElevenLabs)",
-        "roger": "Warm, mannelijk, professioneel — natuurlijk NL (ElevenLabs)",
-        "sarah": "Zacht, vrouwelijk, vertrouwd — natuurlijk NL (ElevenLabs)",
-        "charlie": "Casual, mannelijk, energiek — natuurlijk NL (ElevenLabs)",
-        "laura": "Helder, vrouwelijk, storytelling — natuurlijk NL (ElevenLabs)",
-        "george": "Diep, mannelijk, autoritair — natuurlijk NL (ElevenLabs)",
+        # ElevenLabs (primair — native Nederlands)
+        "roos": "Fris, jong, warm vrouwelijk — native NL (ElevenLabs)",
+        "emma": "Rustig, helder, vrouwelijk — native NL (ElevenLabs)",
+        "melanie": "Jong, commercieel, vrouwelijk — native NL (ElevenLabs)",
+        "ido": "Warm, vriendelijk, mannelijk — native NL (ElevenLabs)",
+        "lucas": "Diep, verhalend, mannelijk — native NL (ElevenLabs)",
+        "arjen": "Rustig, betrouwbaar, mannelijk — native NL (ElevenLabs)",
         # OpenAI fallback
         "nova": "Warm, vrouwelijk (OpenAI)",
         "onyx": "Diep, mannelijk (OpenAI)",
@@ -399,15 +400,18 @@ class ProVideoProvider:
         "shimmer": "Zacht (OpenAI)",
     }
 
-    def __init__(self, voice: str = "aria", tts_speed: float = 1.0, voice_settings: dict | None = None):
+    def __init__(self, voice: str = "roos", tts_speed: float = 1.0, voice_settings: dict | None = None):
         self.total_cost_usd = 0.0
-        self.voice = voice if voice in self.VOICES else "aria"
+        self.voice = voice if voice in self.VOICES else "roos"
         self.tts_speed = max(0.5, min(tts_speed, 2.0))
         # Custom voice settings vanuit dashboard (overschrijft defaults)
         self._custom_voice_settings = voice_settings
 
-    def produce(self, script: dict, memory: dict, output_dir: Path) -> Path:
+    def produce(self, script: dict, memory: dict, output_dir: Path, on_progress: Callable | None = None) -> Path:
         """Produceer een complete video met één doorlopende voiceover."""
+        def _vprogress(msg):
+            if on_progress:
+                on_progress(f"  > Video: {msg}")
         vid = str(uuid.uuid4())[:8]
         work_dir = ASSETS_DIR / "work" / vid
         work_dir.mkdir(parents=True, exist_ok=True)
@@ -422,6 +426,7 @@ class ProVideoProvider:
             scenes = [{"voiceover": "Content wordt gegenereerd.", "duration_sec": 5, "type": "hook"}]
 
         # -- Stap 1: Genereer VOLLEDIGE voiceover als één audio (elimineert scene-cuts)
+        _vprogress("Voiceover genereren...")
         full_vo_text = script.get("full_voiceover_text", "")
         if not full_vo_text:
             full_vo_text = " ".join(
@@ -434,6 +439,7 @@ class ProVideoProvider:
             full_duration = float(sum(s.get("duration_sec", 5) for s in scenes))
 
         # -- Stap 1b: Whisper word-level timestamps (voor caption sync)
+        _vprogress("Voiceover klaar, timestamps berekenen...")
         self._word_timestamps = None
         if full_audio and full_audio.exists():
             self._word_timestamps = self._get_word_timestamps(full_audio)
@@ -511,6 +517,7 @@ class ProVideoProvider:
             total_video_duration = sum(scene_durations)
 
         # -- Stap 3: Per-scene visual PARALLEL (saves ~2-3 min vs sequential)
+        _vprogress(f"Beeldmateriaal zoeken ({len(scenes)} scenes)...")
         import concurrent.futures
         app_url = memory.get("url", "") if memory else ""
         self._used_video_ids = set()  # Track gebruikte video's voor unieke footage
@@ -541,6 +548,7 @@ class ProVideoProvider:
             scene_data = list(ex.map(_fetch_visual, scene_data))
 
         # -- Stap 4: Visuele clips PARALLEL
+        _vprogress(f"Clips renderen ({len(scene_data)} scenes)...")
         total_scenes = len(scene_data)
 
         def _make_clip(sd):
@@ -556,6 +564,7 @@ class ProVideoProvider:
             raise RuntimeError("Geen scene clips geproduceerd")
 
         # -- Stap 5: Concat visuals met variabele transities per scene-type
+        _vprogress("Video assembleren...")
         raw_video = work_dir / "raw_video.mp4"
         scene_types = [s.get("type", "body") for s in scenes]
         self._concat_visual_clips(clips, raw_video, scene_types=scene_types)

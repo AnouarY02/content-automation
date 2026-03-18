@@ -95,16 +95,20 @@ function videoUrl(path) {
 }
 function timeAgo(ts) {
   if (!ts || ts==='None') return '-';
-  const diff = Math.floor((Date.now() - new Date(ts)) / 1000);
+  // Server slaat UTC op zonder timezone-suffix — forceer UTC parse
+  let s = String(ts);
+  if (!s.endsWith('Z') && !s.includes('+')) s += 'Z';
+  const diff = Math.floor((Date.now() - new Date(s).getTime()) / 1000);
   if (diff < 0) return 'zojuist';
   if (diff < 30) return 'zojuist';
-  if (diff < 60) return `${diff}s geleden`;
-  if (diff < 3600) { const m = Math.floor(diff/60); return `${m} min geleden`; }
+  if (diff < 60) return `${diff} seconden geleden`;
+  if (diff < 120) return '1 minuut geleden';
+  if (diff < 3600) return `${Math.floor(diff/60)} minuten geleden`;
   if (diff < 7200) return '1 uur geleden';
   if (diff < 86400) return `${Math.floor(diff/3600)} uur geleden`;
   if (diff < 172800) return 'gisteren';
   if (diff < 604800) return `${Math.floor(diff/86400)} dagen geleden`;
-  return new Date(ts).toLocaleDateString('nl-NL', {day:'numeric', month:'short'});
+  return new Date(s).toLocaleDateString('nl-NL', {day:'numeric', month:'short'});
 }
 
 function truncate(str, len=80) { return str && str.length > len ? str.substring(0,len)+'...' : (str||''); }
@@ -286,7 +290,7 @@ async function loadOverview() {
       return `
       <div class="flex items-center justify-between py-2.5 border-b border-border/40 last:border-0 group cursor-pointer" onclick="switchTab('campaigns');showCampaignDetail('${c.id}')">
         <div class="flex-1 min-w-0">
-          <span class="text-sm font-medium truncate block group-hover:text-accent transition-colors">${escapeHtml(c.idea_title || shortId(c.id))}</span>
+          <span class="text-sm font-medium truncate block group-hover:text-accent transition-colors">${escapeHtml(c.display_name || c.idea_title || shortId(c.id))}</span>
           <span class="text-xs text-muted">${escapeHtml(appName)}</span>
         </div>
         <div class="flex items-center gap-3 ml-3 flex-shrink-0">
@@ -682,7 +686,7 @@ function renderCampaigns(list) {
   };
   tbody.innerHTML = list.map(c => {
     const appName = allApps.find(a => (a.id||a.app_id) === c.app_id)?.name || c.app_id || '';
-    const title = c.idea_title || shortId(c.id);
+    const title = c.display_name || c.idea_title || shortId(c.id);
     const vType = c.video_type || '';
     const vLabel = typeLabels[vType] || (vType ? vType.replace(/_/g,' ') : '-');
     const vIcon = typeIcons[vType] || '🎞';
@@ -1062,56 +1066,100 @@ async function submitStartCampaign() {
 }
 
 // ── SSE Progress Stream ──────────────────────────────────────────────
+let _progressStartTime = null;
+let _progressTimer = null;
+
 function startProgressStream(campaignId) {
   if (activeEventSource) { activeEventSource.close(); }
+  _progressStartTime = Date.now();
 
   let progressEl = document.getElementById('pipeline-progress');
   if (!progressEl) {
     progressEl = document.createElement('div');
     progressEl.id = 'pipeline-progress';
     progressEl.className = 'fixed bottom-16 right-4 z-50 bg-card border border-border rounded-xl p-4 shadow-2xl w-80';
-    progressEl.innerHTML = `
-      <div class="flex justify-between items-center mb-2">
-        <span class="text-xs font-semibold text-accent uppercase tracking-wider">Pipeline Voortgang</span>
-        <button onclick="closeProgress()" class="text-muted hover:text-white text-sm">&times;</button>
-      </div>
-      <div id="progress-steps" class="space-y-1.5 max-h-48 overflow-y-auto"></div>
-      <div class="progress-bar mt-3"><div id="progress-fill" class="progress-fill bg-accent" style="width:0%"></div></div>
-    `;
     document.body.appendChild(progressEl);
   }
-  document.getElementById('progress-steps').innerHTML = '';
-  document.getElementById('progress-fill').style.width = '0%';
+  progressEl.innerHTML = `
+    <div class="flex justify-between items-center mb-2">
+      <span class="text-xs font-semibold text-accent uppercase tracking-wider">Pipeline Voortgang</span>
+      <button onclick="closeProgress()" class="text-muted hover:text-white text-sm">&times;</button>
+    </div>
+    <div id="progress-steps" class="space-y-1.5 max-h-48 overflow-y-auto"></div>
+    <div class="mt-3">
+      <div class="flex justify-between text-xs text-muted mb-1">
+        <span id="progress-pct">0%</span>
+        <span id="progress-elapsed">0:00</span>
+      </div>
+      <div class="progress-bar"><div id="progress-fill" class="progress-fill bg-accent" style="width:0%; transition: width 0.8s ease-out"></div></div>
+    </div>
+  `;
   progressEl.classList.remove('hidden');
 
-  const stepMap = {'1/6': 16, '2/6': 33, '3/6': 50, '4/6': 66, '5/6': 83, '6/6': 100};
+  // Verstreken tijd counter
+  if (_progressTimer) clearInterval(_progressTimer);
+  _progressTimer = setInterval(() => {
+    const sec = Math.floor((Date.now() - _progressStartTime) / 1000);
+    const m = Math.floor(sec / 60);
+    const s = String(sec % 60).padStart(2, '0');
+    const el = document.getElementById('progress-elapsed');
+    if (el) el.textContent = `${m}:${s}`;
+  }, 1000);
+
+  // Stap → percentage mapping (gewogen naar werkelijke duur)
+  const stepMap = {'1/7': 5, '2/7': 15, '3/7': 35, '4/7': 45, '5/7': 80, '6/7': 92, '7/7': 100};
+  // Sub-stap keywords → fijner percentage
+  const subStepMap = {
+    'Script schrijven': 25, 'Viral score': 32, 'herschrijven': 40,
+    'Voiceover': 55, 'Beeldmateriaal': 65, 'footage': 65,
+    'Clips': 72, 'assembleren': 78, 'renderen': 75,
+    'Caption': 90, 'hashtags': 90,
+  };
+
+  function updateProgress(pct) {
+    const fill = document.getElementById('progress-fill');
+    const label = document.getElementById('progress-pct');
+    if (fill) fill.style.width = pct + '%';
+    if (label) label.textContent = pct + '%';
+  }
 
   activeEventSource = new EventSource(`${API}/api/campaigns/progress/${campaignId}`);
 
   activeEventSource.addEventListener('progress', (e) => {
     const data = JSON.parse(e.data);
+    const msg = data.message || '';
     const stepsEl = document.getElementById('progress-steps');
     const step = document.createElement('div');
     step.className = 'flex items-center gap-2 text-xs';
-    step.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0"></span><span class="text-muted">${data.message}</span>`;
+    step.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0"></span><span class="text-muted">${msg}</span>`;
     stepsEl.appendChild(step);
     stepsEl.scrollTop = stepsEl.scrollHeight;
+
+    // Bepaal percentage: eerst exacte stap, dan sub-stap keywords
+    let matched = false;
     for (const [key, pct] of Object.entries(stepMap)) {
-      if (data.message.includes(key)) document.getElementById('progress-fill').style.width = pct + '%';
+      if (msg.includes(`Stap ${key}`)) { updateProgress(pct); matched = true; break; }
+    }
+    if (!matched) {
+      for (const [kw, pct] of Object.entries(subStepMap)) {
+        if (msg.toLowerCase().includes(kw.toLowerCase())) { updateProgress(pct); break; }
+      }
     }
   });
 
   activeEventSource.addEventListener('done', () => {
     activeEventSource.close(); activeEventSource = null;
-    document.getElementById('progress-fill').style.width = '100%';
+    if (_progressTimer) { clearInterval(_progressTimer); _progressTimer = null; }
+    updateProgress(100);
     const stepsEl = document.getElementById('progress-steps');
+    const sec = Math.floor((Date.now() - _progressStartTime) / 1000);
     const done = document.createElement('div');
     done.className = 'flex items-center gap-2 text-xs text-success font-medium mt-1';
-    done.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-success"></span>Campagne klaar!';
+    done.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-success"></span>Campagne klaar! (${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')})`;
     stepsEl.appendChild(done);
     toast('Campagne succesvol afgerond!', 'success');
     loadCampaigns(); loadBadges();
-    setTimeout(() => closeProgress(), 5000);
+    setTimeout(() => closeProgress(), 8000);
   });
 
   activeEventSource.addEventListener('error', (e) => {
@@ -1119,11 +1167,13 @@ function startProgressStream(campaignId) {
       try { const d = JSON.parse(e.data); toast('Pipeline fout: ' + (d.error||'onbekend'), 'error'); } catch(_){}
     }
     if (activeEventSource) { activeEventSource.close(); activeEventSource = null; }
+    if (_progressTimer) { clearInterval(_progressTimer); _progressTimer = null; }
     loadCampaigns(); loadBadges();
   });
 
   activeEventSource.onerror = () => {
     if (activeEventSource) { activeEventSource.close(); activeEventSource = null; }
+    if (_progressTimer) { clearInterval(_progressTimer); _progressTimer = null; }
   };
 }
 
@@ -1131,6 +1181,7 @@ function closeProgress() {
   const el = document.getElementById('pipeline-progress');
   if (el) el.classList.add('hidden');
   if (activeEventSource) { activeEventSource.close(); activeEventSource = null; }
+  if (_progressTimer) { clearInterval(_progressTimer); _progressTimer = null; }
 }
 
 // ═══════ EXPERIMENTS TAB ═════════════════════════════════════════════
@@ -1507,6 +1558,11 @@ function toggleRecording() {
 }
 
 async function startRecording() {
+  // Toon permissie-popup voordat browser om microfoon vraagt
+  openModal('mic-permission');
+}
+
+async function doStartRecording() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -1547,7 +1603,7 @@ async function startRecording() {
     }, 1000);
 
   } catch (e) {
-    document.getElementById('rec-status').textContent = 'Microfoon toegang geweigerd — sta het toe in je browser';
+    document.getElementById('rec-status').textContent = 'Microfoon toegang geweigerd. Ga naar je browserinstellingen en sta microfoon toe voor deze site.';
   }
 }
 

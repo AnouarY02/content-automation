@@ -490,13 +490,13 @@
               <div>
                 <label class="text-[0.65rem] text-muted uppercase tracking-wider block mb-1.5 font-semibold">Stem</label>
                 <select id="opnemen-voice" class="w-full text-xs">
-                  <optgroup label="ElevenLabs">
-                    <option value="aria" selected>Aria (warm, vrouwelijk)</option>
-                    <option value="roger">Roger (warm, mannelijk)</option>
-                    <option value="sarah">Sarah (zacht, vertrouwd)</option>
-                    <option value="charlie">Charlie (casual, energiek)</option>
-                    <option value="laura">Laura (helder, storytelling)</option>
-                    <option value="george">George (diep, autoritair)</option>
+                  <optgroup label="ElevenLabs — Native Nederlands">
+                    <option value="roos" selected>Roos (fris, jong, warm)</option>
+                    <option value="emma">Emma (rustig, helder)</option>
+                    <option value="melanie">Melanie (jong, commercieel)</option>
+                    <option value="ido">Ido (warm, vriendelijk)</option>
+                    <option value="lucas">Lucas (diep, verhalend)</option>
+                    <option value="arjen">Arjen (rustig, betrouwbaar)</option>
                   </optgroup>
                   <optgroup label="OpenAI">
                     <option value="nova">Nova (vrouwelijk)</option>
@@ -584,6 +584,31 @@
   </main>
 
   <!-- ═══════════════════════════════════════════ MODALS ═══════════════════════════════════════════ -->
+
+  <!-- Microfoon Permissie Modal -->
+  <div id="modal-mic-permission" class="fixed inset-0 z-50 hidden flex items-center justify-center modal-backdrop">
+    <div class="modal p-6 max-w-sm">
+      <div class="flex flex-col items-center text-center space-y-4">
+        <div class="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center">
+          <svg class="w-8 h-8 text-accent" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+          </svg>
+        </div>
+        <h3 class="font-semibold text-base">Microfoon toegang nodig</h3>
+        <p class="text-sm text-muted leading-relaxed">
+          Om je stem op te nemen hebben we toegang tot je microfoon nodig.
+          Je browser zal om toestemming vragen — klik op <strong>"Toestaan"</strong>.
+        </p>
+        <div class="flex gap-3 w-full pt-2">
+          <button onclick="closeModal('mic-permission')" class="flex-1 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm font-medium transition-colors">Annuleren</button>
+          <button onclick="closeModal('mic-permission'); doStartRecording()" class="flex-1 py-2.5 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+            Microfoon toestaan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Add App Modal -->
   <div id="modal-add-app" class="fixed inset-0 z-50 hidden flex items-center justify-center modal-backdrop">
@@ -709,21 +734,17 @@
               <label class="text-[0.65rem] text-muted uppercase tracking-wider block mb-1.5 font-semibold">Stem</label>
               <div class="flex gap-2">
                 <select id="campaign-voice" class="w-full">
-                  <optgroup label="ElevenLabs — Natuurlijk">
-                    <option value="aria" selected>Aria (warm, vrouwelijk)</option>
-                    <option value="roger">Roger (warm, mannelijk)</option>
-                    <option value="sarah">Sarah (zacht, vertrouwd)</option>
-                    <option value="charlie">Charlie (casual, energiek)</option>
-                    <option value="laura">Laura (helder, storytelling)</option>
-                    <option value="george">George (diep, autoritair)</option>
+                  <optgroup label="ElevenLabs — Native Nederlands">
+                    <option value="roos" selected>Roos (fris, jong, warm)</option>
+                    <option value="emma">Emma (rustig, helder)</option>
+                    <option value="melanie">Melanie (jong, commercieel)</option>
+                    <option value="ido">Ido (warm, vriendelijk)</option>
+                    <option value="lucas">Lucas (diep, verhalend)</option>
+                    <option value="arjen">Arjen (rustig, betrouwbaar)</option>
                   </optgroup>
                   <optgroup label="OpenAI — Fallback">
                     <option value="nova">Nova (vrouwelijk)</option>
                     <option value="onyx">Onyx (mannelijk)</option>
-                    <option value="alloy">Alloy (neutraal)</option>
-                    <option value="echo">Echo (conversatie)</option>
-                    <option value="fable">Fable (storytelling)</option>
-                    <option value="shimmer">Shimmer (zacht)</option>
                   </optgroup>
                 </select>
                 <button type="button" onclick="previewVoice()" class="btn btn-outline btn-sm px-2 flex-shrink-0" title="Preview stem">

@@ -2,7 +2,7 @@
 Datamodellen voor campagnes en content.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 from uuid import uuid4
@@ -83,7 +83,8 @@ class CampaignBundle(BaseModel):
     total_cost_usd: float = 0.0
 
     # Tijdstempels
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    display_name: str | None = None
     approved_at: datetime | None = None
     published_at: datetime | None = None
 

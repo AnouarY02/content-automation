@@ -17,6 +17,7 @@ import json
 import os
 import threading
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
@@ -179,6 +180,12 @@ def run_pipeline(
         # Gebruik stem uit brand memory als die beschikbaar is (per persona)
         if memory.get("tts_voice"):
             voice = memory["tts_voice"]
+
+        # Genereer display_name: "Campagne N — AppNaam"
+        app_name = memory.get("app_name") or app.get("name", app_id)
+        campaigns_dir = _resolve_campaigns_dir(tenant_id)
+        existing_count = len([f for f in campaigns_dir.glob("*.json") if f.stem != "index"])
+        bundle.display_name = f"Campagne {existing_count + 1} — {app_name}"
 
         # Stap 2: Ideeën genereren (of pre-gekozen idee gebruiken)
         if chosen_idea:
@@ -414,31 +421,45 @@ def run_pipeline(
             "rewrites_needed": rewrite_count,
         }
 
-        # Stap 5: Video produceren
+        # Stap 5+6: Video produceren EN caption schrijven (parallel)
         vs_info = f", stability={voice_settings['stability']}" if voice_settings else ""
         progress(f"Stap 5/7: Video produceren (stem: {voice}, snelheid: {tts_speed}x{vs_info})...")
-        vo_kwargs = {"voice": voice, "tts_speed": tts_speed}
+        progress("Stap 6/7: Caption en hashtags schrijven (parallel)...")
+
+        vo_kwargs = {"voice": voice, "tts_speed": tts_speed, "on_progress": on_progress}
         if voice_settings:
             vo_kwargs["voice_settings"] = voice_settings
-        video_engine = VideoOrchestrator(**vo_kwargs)
-        video_path = video_engine.produce(script=script, memory=memory, app_id=app_id)
-        bundle.video_path = str(video_path) if video_path else None
-        total_cost += video_engine.total_cost_usd
-        guardrails.record_cost(video_engine.total_cost_usd, "VideoOrchestrator", bundle.id)
 
-        # Stap 6: Caption schrijven
-        progress("Stap 6/7: Caption en hashtags schrijven...")
-        caption_agent = CaptionWriterAgent()
-        caption = caption_agent.run(
-            script=script,
-            app=app,
-            memory=memory,
-            platform=platform,
-            post_goal=chosen_idea.get("goal", "awareness"),
-        )
-        bundle.caption = caption
-        total_cost += caption_agent.total_cost_usd
-        guardrails.record_cost(caption_agent.total_cost_usd, "CaptionWriterAgent", bundle.id)
+        def _produce_video():
+            engine = VideoOrchestrator(**vo_kwargs)
+            path = engine.produce(script=script, memory=memory, app_id=app_id)
+            return path, engine.total_cost_usd
+
+        def _write_caption():
+            agent = CaptionWriterAgent()
+            cap = agent.run(
+                script=script, app=app, memory=memory,
+                platform=platform, post_goal=chosen_idea.get("goal", "awareness"),
+            )
+            return cap, agent.total_cost_usd
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            video_future = pool.submit(_produce_video)
+            caption_future = pool.submit(_write_caption)
+
+            # Wacht op caption (snel, ~5-10s)
+            caption, caption_cost = caption_future.result()
+            bundle.caption = caption
+            total_cost += caption_cost
+            guardrails.record_cost(caption_cost, "CaptionWriterAgent", bundle.id)
+            progress("  > Caption klaar!")
+
+            # Wacht op video (langzamer, ~60-120s)
+            video_path, video_cost = video_future.result()
+            bundle.video_path = str(video_path) if video_path else None
+            total_cost += video_cost
+            guardrails.record_cost(video_cost, "VideoOrchestrator", bundle.id)
+            progress("  > Video klaar!")
 
         # Stap 6b: Experiment varianten genereren (optioneel — achter feature flag)
         if os.getenv("EXPERIMENTS_ENABLED", "false").lower() == "true":

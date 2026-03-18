@@ -25,11 +25,12 @@ class VideoOrchestrator:
     - FFmpeg: gratis gradient+tekst fallback
     """
 
-    def __init__(self, voice: str = "nova", tts_speed: float = 1.0, voice_settings: dict | None = None):
+    def __init__(self, voice: str = "nova", tts_speed: float = 1.0, voice_settings: dict | None = None, on_progress=None):
         self.total_cost_usd = 0.0
         self.voice = voice
         self.tts_speed = tts_speed
         self.voice_settings = voice_settings  # stability, similarity_boost, style
+        self.on_progress = on_progress
 
     def produce(self, script: dict, memory: dict, app_id: str) -> Path | None:
         """
@@ -61,7 +62,7 @@ class VideoOrchestrator:
                     voice=self.voice, tts_speed=self.tts_speed,
                     voice_settings=self.voice_settings,
                 )
-                video_path = provider.produce(script, memory, output_dir)
+                video_path = provider.produce(script, memory, output_dir, on_progress=self.on_progress)
                 self.total_cost_usd += provider.total_cost_usd
 
             elif provider_name == "openai_image":
