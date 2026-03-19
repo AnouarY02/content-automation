@@ -120,6 +120,18 @@ class VideoOrchestrator:
         """Selecteer de beste beschikbare provider."""
         has_openai = bool(os.getenv("OPENAI_API_KEY"))
         has_did = bool(os.getenv("DID_API_KEY"))
+        env = os.getenv("ENVIRONMENT", "development").lower()
+        fast_video_mode = os.getenv("FAST_VIDEO_MODE", "")
+
+        # In productie is snelle, voorspelbare generatie belangrijker dan de zwaarste video-stack.
+        # Daarom gebruiken we standaard de lichte FFmpeg provider, tenzij expliciet uitgeschakeld.
+        if fast_video_mode:
+            use_fast_video = fast_video_mode.lower() == "true"
+        else:
+            use_fast_video = env == "production"
+
+        if use_fast_video:
+            return "ffmpeg"
 
         # D-ID: prioreteit voor talking_head, MAAR sla over als DID_SKIP=true
         # (gebruik DID_SKIP=true als de D-ID API een 400 geeft door format-mismatch)
