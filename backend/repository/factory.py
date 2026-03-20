@@ -16,14 +16,23 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+from backend.supabase import has_supabase_env
 
 
 def _backend() -> str:
-    return os.getenv("REPO_BACKEND", "file").lower()
+    configured = os.getenv("REPO_BACKEND", "").lower().strip()
+    if configured:
+        return configured
+    if has_supabase_env():
+        return "supabase"
+    return "file"
 
 
 def get_campaign_repo(tenant_id: str = "default"):
     """Factory voor ICampaignRepository."""
+    if _backend() == "supabase":
+        from backend.repository.supabase_campaigns import SupabaseCampaignRepository
+        return SupabaseCampaignRepository(tenant_id=tenant_id)
     if _backend() == "sqlite":
         from backend.repository.sqlite_campaigns import SqliteCampaignRepository
         return SqliteCampaignRepository(tenant_id=tenant_id)
@@ -38,6 +47,15 @@ def get_experiment_repo(tenant_id: str = "default"):
         return SqliteExperimentRepository(tenant_id=tenant_id)
     from backend.repository.file_experiments import FileExperimentRepository
     return FileExperimentRepository(tenant_id=tenant_id)
+
+
+def get_app_repo(tenant_id: str = "default"):
+    """Factory voor app + brand memory opslag."""
+    if _backend() == "supabase":
+        from backend.repository.supabase_apps import SupabaseAppRepository
+        return SupabaseAppRepository(tenant_id=tenant_id)
+    from backend.repository.file_apps import FileAppRepository
+    return FileAppRepository(tenant_id=tenant_id)
 
 
 def get_maturity_repo(tenant_id: str = "default"):

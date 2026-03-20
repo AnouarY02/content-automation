@@ -17,12 +17,13 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from backend.models.campaign import CampaignBundle, CampaignStatus  # noqa: F401 — ook gebruikt in run()
-from backend.repository.file_campaigns import FileCampaignRepository
+from backend.repository.factory import get_campaign_repo
 from workflows.campaign_pipeline import run_pipeline, load_app
 from video_engine.providers.pro_video_provider import ProVideoProvider
 
 from agents.idea_generator import IdeaGeneratorAgent
 from agents import brand_memory as bm
+from utils.runtime_paths import ensure_dir, get_generated_assets_dir
 
 router = APIRouter()
 
@@ -315,7 +316,7 @@ def start_campaign(req: StartCampaignRequest, background_tasks: BackgroundTasks)
         app_name = app.get("name", req.app_id)
     except Exception:
         app_name = req.app_id
-    repo = FileCampaignRepository(tenant_id=req.tenant_id)
+    repo = get_campaign_repo(tenant_id=req.tenant_id)
     existing_count = len(repo.list(req.tenant_id))
 
     bundle = CampaignBundle(
@@ -366,7 +367,7 @@ def start_campaign(req: StartCampaignRequest, background_tasks: BackgroundTasks)
             )
             # Markeer campagne als mislukt in de repository
             try:
-                repo = FileCampaignRepository(tenant_id=req.tenant_id)
+                repo = get_campaign_repo(tenant_id=req.tenant_id)
                 failed_bundle = repo.get(campaign_id, req.tenant_id)
                 if failed_bundle and failed_bundle.status == CampaignStatus.GENERATING:
                     failed_bundle.status = CampaignStatus.FAILED
@@ -385,7 +386,7 @@ def get_pending(
     tenant_id: str = Query("default", description="Tenant identifier"),
 ):
     """Haal alle campagnes op die wachten op goedkeuring."""
-    repo = FileCampaignRepository(tenant_id=tenant_id)
+    repo = get_campaign_repo(tenant_id=tenant_id)
     return [_to_response(b) for b in repo.list_pending(tenant_id)]
 
 
@@ -412,8 +413,7 @@ def list_voices():
 @router.post("/voices/preview")
 def preview_voice(req: VoicePreviewRequest):
     """Genereer een kort audio-fragment om een stem te testen."""
-    preview_dir = Path(__file__).parent.parent.parent / "assets" / "generated" / "previews"
-    preview_dir.mkdir(parents=True, exist_ok=True)
+    preview_dir = ensure_dir(get_generated_assets_dir() / "previews")
     # Unieke cache-key op basis van alle voice settings
     cache_key = f"preview_{req.voice}_{req.speed}_{req.stability}_{req.similarity_boost}_{req.style}"
     audio_path = preview_dir / f"{cache_key}.mp3"
@@ -533,7 +533,7 @@ def list_campaigns(
     tenant_id: str = Query("default", description="Tenant identifier"),
 ):
     """Lijst alle campagnes, optioneel gefilterd op status."""
-    repo = FileCampaignRepository(tenant_id=tenant_id)
+    repo = get_campaign_repo(tenant_id=tenant_id)
     return [_to_response(b) for b in repo.list(tenant_id, status=status)]
 
 
@@ -545,7 +545,7 @@ def publish_campaign(
 ):
     """Publiceer een goedgekeurde campagne naar TikTok."""
     _safe_id(campaign_id, "campaign_id")
-    repo = FileCampaignRepository(tenant_id=tenant_id)
+    repo = get_campaign_repo(tenant_id=tenant_id)
     bundle = repo.get(campaign_id, tenant_id)
     if bundle is None:
         raise HTTPException(status_code=404, detail=f"Campagne {campaign_id} niet gevonden")
@@ -573,7 +573,7 @@ def regenerate_video(
 ):
     """Genereer de video opnieuw voor een bestaande campagne (behoudt script & idee)."""
     _safe_id(campaign_id, "campaign_id")
-    repo = FileCampaignRepository(tenant_id=tenant_id)
+    repo = get_campaign_repo(tenant_id=tenant_id)
     bundle = repo.get(campaign_id, tenant_id)
     if bundle is None:
         raise HTTPException(status_code=404, detail=f"Campagne {campaign_id} niet gevonden")
@@ -651,7 +651,7 @@ def get_campaign(
     """Haal details op van een specifieke campagne."""
     _safe_id(campaign_id, "campaign_id")
     _safe_id(tenant_id, "tenant_id")
-    bundle = FileCampaignRepository(tenant_id=tenant_id).get(campaign_id, tenant_id)
+    bundle = get_campaign_repo(tenant_id=tenant_id).get(campaign_id, tenant_id)
     if bundle is None:
         raise HTTPException(status_code=404, detail=f"Campagne {campaign_id} niet gevonden")
     return bundle
@@ -756,10 +756,8 @@ async def generate_with_audio(
     import subprocess
     import uuid
 
-    ROOT = Path(__file__).parent.parent.parent
-    ASSETS = ROOT / "assets" / "generated"
-    work_dir = ASSETS / "work" / str(uuid.uuid4())[:8]
-    work_dir.mkdir(parents=True, exist_ok=True)
+    ASSETS = get_generated_assets_dir()
+    work_dir = ensure_dir(ASSETS / "work" / str(uuid.uuid4())[:8])
 
     # 1. Sla audio op
     audio_webm = work_dir / "user_audio.webm"
@@ -826,8 +824,7 @@ async def generate_with_audio(
     # 5. Genereer video met user audio (skip TTS)
     from video_engine.providers.pro_video_provider import ProVideoProvider
     provider = ProVideoProvider(voice="peter-natural")
-    output_dir = ASSETS / "videos"
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = ensure_dir(ASSETS / "videos")
 
     vid_id = str(uuid.uuid4())[:8]
     output_path = output_dir / f"user_{vid_id}.mp4"

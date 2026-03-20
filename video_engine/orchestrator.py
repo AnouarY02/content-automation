@@ -12,9 +12,10 @@ Provider prioriteit:
 import os
 from pathlib import Path
 from loguru import logger
+from utils.runtime_paths import ensure_dir, get_generated_assets_dir
 
 ROOT = Path(__file__).parent.parent
-ASSETS_DIR = ROOT / "assets" / "generated"
+ASSETS_DIR = ensure_dir(get_generated_assets_dir())
 
 
 class VideoOrchestrator:

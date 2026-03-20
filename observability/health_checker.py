@@ -53,10 +53,10 @@ from observability.models import (
     HealthStatus,
 )
 from utils.file_io import atomic_write_text
+from utils.runtime_paths import ensure_writable_dir, get_runtime_data_dir
 
 ROOT = Path(__file__).parent.parent
-HEALTH_DIR = ROOT / "data" / "health"
-HEALTH_DIR.mkdir(parents=True, exist_ok=True)
+HEALTH_DIR = ensure_writable_dir(ROOT / "data" / "health", get_runtime_data_dir("health"))
 HEALTH_LATEST = HEALTH_DIR / "latest.json"
 HEALTH_HISTORY = HEALTH_DIR / "history.jsonl"
 

@@ -1,0 +1,1 @@
+-- Run eerst schema.sql en daarna storage.sql in Supabase Studio.

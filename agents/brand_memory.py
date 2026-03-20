@@ -3,34 +3,27 @@ Brand Memory systeem.
 Laadt, slaat op en updatet de merkgeheugen-bestanden per app.
 """
 
-import json
 from datetime import date
-from pathlib import Path
 from typing import Any
 
 from loguru import logger
 
-from utils.file_io import atomic_write_json
-
-ROOT = Path(__file__).parent.parent
-BRAND_MEMORY_DIR = ROOT / "data" / "brand_memory"
+from backend.repository.factory import get_app_repo
 
 
 def load(app_id: str) -> dict:
     """Laad brand memory voor een app. Geeft lege dict terug als niet gevonden."""
-    path = BRAND_MEMORY_DIR / f"{app_id}.json"
-    if not path.exists():
+    memory = get_app_repo(tenant_id="default").get_brand_memory(app_id)
+    if not memory:
         logger.warning(f"Brand memory niet gevonden voor {app_id}, geeft leeg object")
         return {"app_id": app_id, "learned_insights": [], "performance_history": {}}
-    with open(path, encoding="utf-8") as f:
-        return json.load(f)
+    return memory
 
 
 def save(app_id: str, memory: dict) -> None:
     """Sla brand memory op voor een app."""
-    path = BRAND_MEMORY_DIR / f"{app_id}.json"
     memory["last_updated"] = str(date.today())
-    atomic_write_json(path, memory)
+    get_app_repo(tenant_id="default").save_brand_memory(app_id, memory)
     logger.info(f"Brand memory opgeslagen voor {app_id}")
 
 

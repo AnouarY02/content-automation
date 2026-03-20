@@ -47,10 +47,10 @@ import httpx
 from loguru import logger
 
 from observability.models import AlertRecord, Severity
+from utils.runtime_paths import ensure_writable_dir, get_runtime_data_dir
 
 ROOT = Path(__file__).parent.parent
-ALERTS_DIR = ROOT / "data" / "alerts"
-ALERTS_DIR.mkdir(parents=True, exist_ok=True)
+ALERTS_DIR = ensure_writable_dir(ROOT / "data" / "alerts", get_runtime_data_dir("alerts"))
 
 # Suppressie per severity niveau
 SUPPRESSION_WINDOWS: dict[Severity, int] = {

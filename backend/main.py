@@ -38,6 +38,7 @@ from backend.api import settings as settings_router
 from backend.auth import get_current_tenant
 from backend.middleware.rate_limit import RateLimitMiddleware
 from backend.middleware.security_headers import SecurityHeadersMiddleware
+from utils.runtime_paths import ensure_dir, get_generated_assets_dir
 
 
 @asynccontextmanager
@@ -106,12 +107,12 @@ app.include_router(settings_router.router,    prefix="/api/settings",     tags=[
 
 # ── Statische bestanden ───────────────────────────────────────────────
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
-ASSETS_DIR   = Path(__file__).parent.parent / "assets" / "generated"
+ASSETS_DIR = get_generated_assets_dir()
 
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="frontend")
 
-ASSETS_DIR.mkdir(parents=True, exist_ok=True)
-(ASSETS_DIR / "videos").mkdir(parents=True, exist_ok=True)
+ensure_dir(ASSETS_DIR)
+ensure_dir(ASSETS_DIR / "videos")
 app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
 
 

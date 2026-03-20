@@ -208,15 +208,10 @@ class AnalystAgent(BaseAgent):
         return LearningConfidence[stated.upper()] if stated.upper() in LearningConfidence.__members__ else LearningConfidence.LOW
 
     def _load_app(self, app_id: str) -> dict:
-        import json
-        from pathlib import Path
-        configs_dir = Path(__file__).parent.parent / "configs"
-        with open(configs_dir / "app_registry.json", encoding="utf-8") as f:
-            registry = json.load(f)
-        for app in registry["apps"]:
-            if app["id"] == app_id:
-                return app
-        return {"id": app_id}
+        from backend.repository.factory import get_app_repo
+
+        app = get_app_repo(tenant_id="default").get_app(app_id)
+        return app or {"id": app_id}
 
 
 def min_confidence(stated: str, max_level: LearningConfidence) -> LearningConfidence:

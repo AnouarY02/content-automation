@@ -32,13 +32,14 @@ from agents import brand_memory as bm
 from backend.constants import PIPELINE_DEFAULT_DURATION_SEC
 from backend.cost_guardrails import CostGuardrails, BudgetExceededError
 from backend.models.campaign import CampaignBundle, CampaignStatus
+from backend.repository.factory import get_app_repo, get_campaign_repo
 from utils.file_io import atomic_write_json
+from utils.runtime_paths import ensure_writable_dir, get_runtime_data_dir
 from video_engine.orchestrator import VideoOrchestrator
 
 ROOT = Path(__file__).parent.parent
 CONFIGS_DIR = ROOT / "configs"
-DATA_DIR = ROOT / "data" / "campaigns"
-DATA_DIR.mkdir(parents=True, exist_ok=True)
+DATA_DIR = ensure_writable_dir(ROOT / "data" / "campaigns", get_runtime_data_dir("campaigns"))
 
 # ── Per-app pipeline lock (idempotentie) ─────────────────────────────
 # Voorkomt dat twee gelijktijdige requests dezelfde app tegelijk verwerken.
@@ -70,43 +71,30 @@ if os.getenv("EXPERIMENTS_ENABLED", "false").lower() == "true":
 
 
 def load_app(app_id: str) -> dict:
-    with open(CONFIGS_DIR / "app_registry.json", encoding="utf-8") as f:
-        registry = json.load(f)
-    for app in registry["apps"]:
-        if app["id"] == app_id:
-            return app
+    app = get_app_repo(tenant_id="default").get_app(app_id)
+    if app:
+        return app
     raise ValueError(f"App niet gevonden: {app_id}")
 
 
 def save_bundle(bundle: CampaignBundle, tenant_id: str = "default") -> Path:
+    repo = get_campaign_repo(tenant_id=tenant_id)
+    repo.save(bundle)
     campaigns_dir = _resolve_campaigns_dir(tenant_id)
-    path = campaigns_dir / f"{bundle.id}.json"
-    atomic_write_json(path, bundle.model_dump(mode="json"), default=str)
-    return path
+    return campaigns_dir / f"{bundle.id}.json"
 
 
 def load_bundle(campaign_id: str, tenant_id: str = "default") -> CampaignBundle:
-    campaigns_dir = _resolve_campaigns_dir(tenant_id)
-    path = campaigns_dir / f"{campaign_id}.json"
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
-    return CampaignBundle(**data)
+    repo = get_campaign_repo(tenant_id=tenant_id)
+    bundle = repo.get(campaign_id, tenant_id=tenant_id)
+    if bundle is None:
+        raise FileNotFoundError(campaign_id)
+    return bundle
 
 
 def list_pending_campaigns(tenant_id: str = "default") -> list[CampaignBundle]:
-    campaigns_dir = _resolve_campaigns_dir(tenant_id)
-    bundles = []
-    for path in campaigns_dir.glob("*.json"):
-        try:
-            with open(path, encoding="utf-8") as f:
-                data = json.load(f)
-            bundle = CampaignBundle(**data)
-            if bundle.status == CampaignStatus.PENDING_APPROVAL:
-                bundles.append(bundle)
-        except Exception as exc:
-            logger.warning(f"[Pipeline] Kan campagne-bestand niet laden ({path.name}): {exc}")
-    bundles.sort(key=lambda b: b.created_at, reverse=True)
-    return bundles
+    repo = get_campaign_repo(tenant_id=tenant_id)
+    return repo.list_pending(tenant_id=tenant_id)
 
 
 def run_pipeline(

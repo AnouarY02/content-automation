@@ -24,6 +24,7 @@ from backend.repository.file_campaigns import FileCampaignRepository
 from backend.repository.file_experiments import FileExperimentRepository
 from backend.repository.file_maturity import FileMaturityRepository
 from backend.repository.factory import (
+    get_app_repo,
     get_campaign_repo,
     get_experiment_repo,
     get_maturity_repo,
@@ -36,6 +37,7 @@ __all__ = [
     "FileCampaignRepository",
     "FileExperimentRepository",
     "FileMaturityRepository",
+    "get_app_repo",
     "get_campaign_repo",
     "get_experiment_repo",
     "get_maturity_repo",

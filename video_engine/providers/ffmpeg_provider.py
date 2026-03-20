@@ -19,8 +19,10 @@ import uuid
 from pathlib import Path
 
 from loguru import logger
+from utils.runtime_paths import ensure_dir, get_generated_assets_dir
 
 ROOT = Path(__file__).parent.parent.parent
+GENERATED_ASSETS_DIR = ensure_dir(get_generated_assets_dir())
 
 
 class FFmpegProvider:
@@ -291,7 +293,7 @@ class FFmpegProvider:
         try:
             import httpx
             voice_id = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
-            audio_path = ROOT / "assets" / "generated" / "audio" / f"vo_{video_id}.mp3"
+            audio_path = GENERATED_ASSETS_DIR / "audio" / f"vo_{video_id}.mp3"
             audio_path.parent.mkdir(parents=True, exist_ok=True)
 
             response = httpx.post(

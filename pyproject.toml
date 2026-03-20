@@ -1,20 +1,34 @@
 [build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.backends.legacy:build"
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "ay-content-automation"
 version = "0.1.0"
-description = "AY Marketing OS — Content Automation backend"
+description = "AY Marketing OS Content Automation backend"
 requires-python = ">=3.11"
+dependencies = [
+  "fastapi==0.115.0",
+  "uvicorn[standard]==0.30.6",
+  "pydantic==2.8.2",
+  "python-dotenv==1.0.1",
+  "starlette==0.38.6",
+  "python-multipart==0.0.9",
+  "sse-starlette==2.1.3",
+  "anthropic==0.34.2",
+  "openai==1.51.0",
+  "supabase==2.7.4",
+  "apscheduler==3.10.4",
+  "httpx==0.27.2",
+  "aiohttp==3.10.5",
+  "requests==2.32.3",
+  "ffmpeg-python==0.2.0",
+  "loguru==0.7.2",
+  "tenacity==9.0.0",
+  "rich==13.8.1",
+  "click==8.1.7",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
 exclude = ["tests*", "desktop*", "frontend*"]
-
-# Optioneel: installeer als editable package zodat andere modules
-# (zoals C:/AY-automatisering/maturity/) zonder sys.path-hacks kunnen importeren.
-#
-#   pip install -e C:/AY-automatisering/content-automation
-#
-# Na installatie kan het sys.path-blok in maturity/__init__.py verwijderd worden.

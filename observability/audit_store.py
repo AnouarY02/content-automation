@@ -29,10 +29,10 @@ from typing import Iterator
 from loguru import logger
 
 from observability.models import AuditEntry, JobOutcome, JobType, OperationalEvent
+from utils.runtime_paths import ensure_writable_dir, get_runtime_data_dir
 
 ROOT = Path(__file__).parent.parent
-AUDIT_DIR = ROOT / "data" / "audit"
-AUDIT_DIR.mkdir(parents=True, exist_ok=True)
+AUDIT_DIR = ensure_writable_dir(ROOT / "data" / "audit", get_runtime_data_dir("audit"))
 
 
 def _resolve_audit_dir(tenant_id: str) -> Path:
@@ -42,7 +42,7 @@ def _resolve_audit_dir(tenant_id: str) -> Path:
     """
     if tenant_id == "default":
         return AUDIT_DIR
-    return ROOT / "data" / "tenants" / tenant_id / "audit"
+    return get_runtime_data_dir("tenants", tenant_id, "audit")
 
 
 class AuditStore:

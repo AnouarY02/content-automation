@@ -47,11 +47,11 @@ from observability.models import (
     RetryPolicy,
 )
 from observability.correlation import get_correlation_id
+from utils.runtime_paths import ensure_writable_dir, get_runtime_data_dir
 
 ROOT = Path(__file__).parent.parent
-IDEMPOTENCY_STORE = ROOT / "data" / "dead_letter" / "idempotency_keys.json"
-DEAD_LETTER_DIR = ROOT / "data" / "dead_letter"
-DEAD_LETTER_DIR.mkdir(parents=True, exist_ok=True)
+DEAD_LETTER_DIR = ensure_writable_dir(ROOT / "data" / "dead_letter", get_runtime_data_dir("dead_letter"))
+IDEMPOTENCY_STORE = DEAD_LETTER_DIR / "idempotency_keys.json"
 
 T = TypeVar("T")
 

@@ -74,3 +74,5 @@ node_modules/
 .claude/
 .coverage
 *.mp4
+
+.vercel

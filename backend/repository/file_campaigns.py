@@ -20,6 +20,7 @@ from typing import Optional
 from loguru import logger
 
 from backend.models.campaign import CampaignBundle, CampaignStatus
+from utils.runtime_paths import ensure_writable_dir, get_runtime_data_dir
 from utils.file_io import atomic_write_json
 
 ROOT = Path(__file__).parent.parent.parent  # content-automation/
@@ -31,8 +32,11 @@ def _campaigns_dir(tenant_id: str) -> Path:
     overig    → data/tenants/{tenant_id}/campaigns/
     """
     if tenant_id == "default":
-        return ROOT / "data" / "campaigns"
-    return ROOT / "data" / "tenants" / tenant_id / "campaigns"
+        return ensure_writable_dir(ROOT / "data" / "campaigns", get_runtime_data_dir("campaigns"))
+    return ensure_writable_dir(
+        ROOT / "data" / "tenants" / tenant_id / "campaigns",
+        get_runtime_data_dir("tenants", tenant_id, "campaigns"),
+    )
 
 
 class FileCampaignRepository:

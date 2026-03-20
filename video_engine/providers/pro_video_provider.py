@@ -39,6 +39,13 @@ from pathlib import Path
 from typing import Callable
 
 from loguru import logger
+from utils.runtime_paths import (
+    ensure_dir,
+    ensure_writable_dir,
+    get_app_screenshots_dir,
+    get_generated_assets_dir,
+    get_runtime_data_dir,
+)
 
 try:
     from video_engine.retention_optimizer import RetentionOptimizer, VideoRecord
@@ -47,17 +54,14 @@ except ImportError:
     VideoRecord = None
 
 ROOT = Path(__file__).parent.parent.parent
-ASSETS_DIR = ROOT / "assets" / "generated"
+ASSETS_DIR = ensure_dir(get_generated_assets_dir())
 FONT_DIR = ROOT / "assets" / "fonts"
 MUSIC_DIR = ROOT / "assets" / "music"
 SFX_DIR = ROOT / "assets" / "sfx"
-APP_ASSETS_DIR = ROOT / "assets" / "app_screenshots"
-APP_ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+APP_ASSETS_DIR = ensure_dir(get_app_screenshots_dir())
 LUT_DIR = ROOT / "assets" / "luts"
-CACHE_DIR = ROOT / "data" / "pexels_cache"
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
-PIXABAY_CACHE_DIR = ROOT / "data" / "pixabay_cache"
-PIXABAY_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+CACHE_DIR = ensure_writable_dir(ROOT / "data" / "pexels_cache", get_runtime_data_dir("pexels_cache"))
+PIXABAY_CACHE_DIR = ensure_writable_dir(ROOT / "data" / "pixabay_cache", get_runtime_data_dir("pixabay_cache"))
 
 # Stock cache — 24h geldig
 _CACHE_TTL = 86400

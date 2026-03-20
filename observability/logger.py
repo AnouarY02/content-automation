@@ -39,12 +39,13 @@ from pathlib import Path
 from loguru import logger
 
 from observability.correlation import get_correlation_id, get_job_id
+from utils.runtime_paths import ensure_dir, get_logs_dir, is_vercel_runtime
 
 ROOT = Path(__file__).parent.parent
-LOGS_DIR = ROOT / "logs"
-LOGS_DIR.mkdir(parents=True, exist_ok=True)
+LOGS_DIR = ensure_dir(get_logs_dir())
 
 _configured = False
+_USE_ENQUEUE = not is_vercel_runtime()
 
 
 def _json_formatter(record: dict) -> str:
@@ -136,7 +137,7 @@ def setup_logging(
         compression="gz",
         serialize=False,
         colorize=False,
-        enqueue=True,               # Thread-safe
+        enqueue=_USE_ENQUEUE,
     )
 
     # ── Error log (WARNING en hoger) ──
@@ -148,7 +149,7 @@ def setup_logging(
         retention="90 days",        # Errors langer bewaren
         compression="gz",
         colorize=False,
-        enqueue=True,
+        enqueue=_USE_ENQUEUE,
     )
 
     # ── Scheduler log ──
@@ -161,7 +162,7 @@ def setup_logging(
         colorize=False,
         filter=lambda r: "scheduler" in r["extra"].get("component", "").lower()
                          or "Scheduler" in r["message"],
-        enqueue=True,
+        enqueue=_USE_ENQUEUE,
     )
 
     # ── Audit log (SUCCESS en INFO voor audit events) ──
@@ -173,7 +174,7 @@ def setup_logging(
         retention="365 days",       # Audit logs 1 jaar bewaren
         colorize=False,
         filter=lambda r: r["extra"].get("is_audit", False),
-        enqueue=True,
+        enqueue=_USE_ENQUEUE,
     )
 
     _configured = True

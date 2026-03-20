@@ -29,6 +29,8 @@ from typing import Optional
 from loguru import logger
 from pydantic import BaseModel
 
+from utils.runtime_paths import ensure_dir, get_runtime_data_dir
+
 ROOT = Path(__file__).parent.parent
 
 
@@ -109,8 +111,8 @@ def _get_lock(tenant_id: str) -> Lock:
 
 def _resolve_tracking_dir(tenant_id: str) -> Path:
     if tenant_id == "default":
-        return ROOT / "data" / "cost_tracking"
-    return ROOT / "data" / "tenants" / tenant_id / "cost_tracking"
+        return ensure_dir(get_runtime_data_dir("cost_tracking"))
+    return ensure_dir(get_runtime_data_dir("tenants", tenant_id, "cost_tracking"))
 
 
 class CostGuardrails:

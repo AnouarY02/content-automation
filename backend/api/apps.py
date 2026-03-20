@@ -5,18 +5,15 @@ Apps API endpoints — app management, CRUD, en AI-analyse.
 import json
 import uuid
 from datetime import datetime
-from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 from pydantic import BaseModel
 
 from agents import brand_memory as bm
-from utils.file_io import atomic_write_json
+from backend.repository.factory import get_app_repo
 
 router = APIRouter()
-CONFIGS_DIR = Path(__file__).parent.parent.parent / "configs"
-REGISTRY_PATH = CONFIGS_DIR / "app_registry.json"
 
 
 # ── Request models ────────────────────────────────────────────────────
@@ -48,22 +45,8 @@ class AnalyzeURLRequest(BaseModel):
 
 # ── Helpers ───────────────────────────────────────────────────────────
 
-def _load_registry() -> dict:
-    if not REGISTRY_PATH.exists():
-        return {"apps": []}
-    with open(REGISTRY_PATH, encoding="utf-8") as f:
-        return json.load(f)
-
-
-def _save_registry(data: dict) -> None:
-    atomic_write_json(REGISTRY_PATH, data)
-
-
-def _find_app(registry: dict, app_id: str) -> dict | None:
-    for app in registry["apps"]:
-        if app.get("id") == app_id:
-            return app
-    return None
+def _repo():
+    return get_app_repo(tenant_id="default")
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────
@@ -71,7 +54,7 @@ def _find_app(registry: dict, app_id: str) -> dict | None:
 @router.get("/")
 def list_apps():
     """Lijst alle geregistreerde apps."""
-    return _load_registry()["apps"]
+    return _repo().list_apps()
 
 
 @router.post("/analyze-url")
@@ -96,7 +79,6 @@ def analyze_url_standalone(req: AnalyzeURLRequest):
 @router.post("/")
 def create_app(req: AppCreateRequest):
     """Registreer een nieuwe app met optionele URL voor AI-analyse."""
-    registry = _load_registry()
     app_id = f"app_{uuid.uuid4().hex[:8]}"
     new_app = {
         "id": app_id,
@@ -111,8 +93,7 @@ def create_app(req: AppCreateRequest):
         "brand_memory_file": f"data/brand_memory/{app_id}.json",
         "created_at": datetime.utcnow().isoformat(),
     }
-    registry["apps"].append(new_app)
-    _save_registry(registry)
+    _repo().save_app(new_app)
     logger.info(f"[Apps] Nieuwe app aangemaakt: {app_id} ({req.name})")
     return new_app
 
@@ -120,8 +101,7 @@ def create_app(req: AppCreateRequest):
 @router.get("/{app_id}")
 def get_app(app_id: str):
     """Haal een specifieke app op."""
-    registry = _load_registry()
-    app = _find_app(registry, app_id)
+    app = _repo().get_app(app_id)
     if not app:
         raise HTTPException(status_code=404, detail=f"App {app_id} niet gevonden")
     return app
@@ -130,13 +110,13 @@ def get_app(app_id: str):
 @router.put("/{app_id}")
 def update_app(app_id: str, req: AppUpdateRequest):
     """Werk een bestaande app bij."""
-    registry = _load_registry()
-    app = _find_app(registry, app_id)
+    repo = _repo()
+    app = repo.get_app(app_id)
     if not app:
         raise HTTPException(status_code=404, detail=f"App {app_id} niet gevonden")
     for key, val in req.model_dump(exclude_none=True).items():
         app[key] = val
-    _save_registry(registry)
+    repo.save_app(app)
     logger.info(f"[Apps] App bijgewerkt: {app_id}")
     return app
 
@@ -144,12 +124,10 @@ def update_app(app_id: str, req: AppUpdateRequest):
 @router.delete("/{app_id}")
 def delete_app(app_id: str):
     """Verwijder een app uit het register."""
-    registry = _load_registry()
-    original_len = len(registry["apps"])
-    registry["apps"] = [a for a in registry["apps"] if a.get("id") != app_id]
-    if len(registry["apps"]) == original_len:
+    repo = _repo()
+    if not repo.delete_app(app_id):
         raise HTTPException(status_code=404, detail=f"App {app_id} niet gevonden")
-    _save_registry(registry)
+    repo.delete_brand_memory(app_id)
     logger.info(f"[Apps] App verwijderd: {app_id}")
     return {"deleted": app_id}
 
@@ -175,8 +153,8 @@ def analyze_app_url(app_id: str, req: AnalyzeURLRequest | None = None):
     Analyseer de app-URL met AI. Vult automatisch beschrijving, doelgroep, USP en niche in.
     Gebruikt de URL uit het request of de opgeslagen URL van de app.
     """
-    registry = _load_registry()
-    app = _find_app(registry, app_id)
+    repo = _repo()
+    app = repo.get_app(app_id)
     if not app:
         raise HTTPException(status_code=404, detail=f"App {app_id} niet gevonden")
 
@@ -217,7 +195,7 @@ def analyze_app_url(app_id: str, req: AnalyzeURLRequest | None = None):
 
     for key, val in update_fields.items():
         app[key] = val
-    _save_registry(registry)
+    repo.save_app(app)
 
     logger.info(f"[Apps] App {app_id} geanalyseerd — {len(update_fields)} velden bijgewerkt")
     return {"app": app, "analysis": result, "fields_updated": list(update_fields.keys())}
@@ -230,8 +208,7 @@ def get_app_insights(app_id: str):
     Geoptimaliseerd voor het Insights-dashboard.
     """
     memory = bm.load(app_id)
-    registry = _load_registry()
-    app = _find_app(registry, app_id)
+    app = _repo().get_app(app_id)
 
     insights = memory.get("learned_insights", [])
     top_hooks = memory.get("top_performing_hooks", [])
@@ -260,9 +237,9 @@ def get_app_content(app_id: str):
     Haal alle content op voor een app — campagnes met idee, script, caption, video status.
     Geoptimaliseerd voor het Content-overzicht in het dashboard.
     """
-    from backend.repository.file_campaigns import FileCampaignRepository
+    from backend.repository.factory import get_campaign_repo
 
-    repo = FileCampaignRepository(tenant_id="default")
+    repo = get_campaign_repo(tenant_id="default")
     bundles = repo.list(tenant_id="default", app_id=app_id)
 
     content_items = []

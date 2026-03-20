@@ -14,21 +14,6 @@
       "active": true,
       "brand_memory_file": "data/brand_memory/app_76fe2fdd.json",
       "created_at": "2026-03-11T11:38:46.693368"
-    },
-    {
-      "id": "app_cce58eb7",
-      "name": "Daypulse",
-      "url": "https://daypulse-zeta.vercel.app/dashboard",
-      "description": "Doelstellingen omzetten in planning om het te behalen",
-      "target_audience": "Ambitieus, 16 - 50 Jaar",
-      "usp": "Maakt het halen van jou doelen een gewoonte.",
-      "niche": "health",
-      "active_channels": [
-        "tiktok"
-      ],
-      "active": true,
-      "brand_memory_file": "data/brand_memory/app_cce58eb7.json",
-      "created_at": "2026-03-11T13:53:41.442397"
     }
   ]
 }

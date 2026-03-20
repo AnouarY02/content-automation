@@ -14,7 +14,6 @@ CIRCUIT BREAKER:
   Als run_due_checks() 3x op rij faalt → pauze 6 uur
 """
 
-import json
 import os
 import signal
 import sys
@@ -26,6 +25,8 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from loguru import logger
 
+from backend.repository.factory import get_app_repo
+
 ROOT = Path(__file__).parent.parent
 
 # Circuit breaker state
@@ -36,9 +37,8 @@ _MAX_FAILURES = 3
 def load_active_app_ids() -> list[str]:
     """Laad alle actieve apps uit de registry."""
     try:
-        with open(ROOT / "configs" / "app_registry.json", encoding="utf-8") as f:
-            registry = json.load(f)
-        return [app["id"] for app in registry["apps"] if app.get("active", True)]
+        apps = get_app_repo(tenant_id="default").list_apps()
+        return [app["id"] for app in apps if app.get("active", True)]
     except Exception as e:
         logger.error(f"[Scheduler] Kan app registry niet laden: {e}")
         return []
