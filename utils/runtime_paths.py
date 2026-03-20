@@ -39,9 +39,12 @@ def get_app_screenshots_dir() -> Path:
     override = os.getenv("APP_SCREENSHOTS_DIR", "").strip()
     if override:
         return Path(override)
+    source = ROOT / "assets" / "app_screenshots"
+    if source.exists():
+        return source
     if is_vercel_runtime():
         return _TMP_ROOT / "assets" / "app_screenshots"
-    return ROOT / "assets" / "app_screenshots"
+    return source
 
 
 def get_logs_dir() -> Path:

@@ -115,6 +115,10 @@ class ScriptWriterAgent(BaseAgent):
             logger.warning(f"[ScriptWriter] Onverwacht type van JSON parser: {type(script).__name__}. Fallback naar lege dict.")
             script = {}
 
+        # De pipeline bepaalt het gewenste video-type. Laat het model dat niet
+        # stil terugdraaien naar een andere route.
+        script["video_type"] = video_type
+
         logger.success(
             f"[ScriptWriter] Script geschreven: '{script.get('title', '?')}' "
             f"({script.get('total_duration_sec', '?')}s) | kosten=${self.total_cost_usd:.4f}"
@@ -205,6 +209,15 @@ class ScriptWriterAgent(BaseAgent):
         raw    = self._call_api(system, f"{base_prompt}\n\n---\n\n{addendum}")
         script = self._parse_json_response(raw)
 
+        if not isinstance(script, dict):
+            logger.warning(
+                f"[ScriptWriter] Variant JSON parser gaf {type(script).__name__}; "
+                "fallback naar lege dict."
+            )
+            script = {}
+
+        # Variant output moet dezelfde videoroute respecteren als de aangevraagde run.
+        script["video_type"] = video_type
         script["experiment_hook_type"] = hook_type_override
         script["is_variant"] = True
 

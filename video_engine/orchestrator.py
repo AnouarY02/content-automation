@@ -124,15 +124,14 @@ class VideoOrchestrator:
         """Selecteer de beste beschikbare provider."""
         has_openai = bool(os.getenv("OPENAI_API_KEY"))
         has_did = bool(os.getenv("DID_API_KEY"))
-        env = os.getenv("ENVIRONMENT", "development").lower()
         fast_video_mode = os.getenv("FAST_VIDEO_MODE", "")
 
-        # In productie is snelle, voorspelbare generatie belangrijker dan de zwaarste video-stack.
-        # Daarom gebruiken we standaard de lichte FFmpeg provider, tenzij expliciet uitgeschakeld.
+        # Gebruik alleen de lichte FFmpeg route als daar expliciet om gevraagd wordt.
+        # Standaard hoort productie de volledige geoptimaliseerde videoketen te gebruiken.
         if fast_video_mode:
             use_fast_video = fast_video_mode.lower() == "true"
         else:
-            use_fast_video = env == "production"
+            use_fast_video = False
 
         if use_fast_video:
             return "ffmpeg"

@@ -411,6 +411,13 @@ class ProVideoProvider:
         # Custom voice settings vanuit dashboard (overschrijft defaults)
         self._custom_voice_settings = voice_settings
 
+    @staticmethod
+    def _allow_degraded_video() -> bool:
+        raw = os.getenv("ALLOW_DEGRADED_VIDEO", "").strip().lower()
+        if raw:
+            return raw == "true"
+        return os.getenv("ENVIRONMENT", "development").lower() != "production"
+
     def produce(self, script: dict, memory: dict, output_dir: Path, on_progress: Callable | None = None) -> Path:
         """Produceer een complete video met één doorlopende voiceover."""
         def _vprogress(msg):
@@ -2928,9 +2935,18 @@ class ProVideoProvider:
                     bg_clip=bg_clip, accent_color=accent_hex,
                 )
 
-        # Voor solution scenes: ook phone mockup proberen als er screenshots zijn
+        # Voor solution scenes: ook phone mockup proberen als er screenshots zijn.
+        # Als een script geen expliciete demo-scene had, maar wel een echte product-URL,
+        # initialiseer de screenshot-cache hier alsnog zodat de bestaande rich app-demo
+        # route niet stil terugvalt op generieke stock.
         if not visual and scene_type == "solution":
             app_screenshots = getattr(self, "_app_screenshots", None)
+            if not app_screenshots and app_url:
+                demo_pages = scene.get("demo_pages", None)
+                self._app_screenshots = self._capture_app_screenshots(
+                    app_url, work_dir, pages=demo_pages
+                )
+                app_screenshots = self._app_screenshots
             if app_screenshots:
                 # Gebruik een later screenshot (dashboard/resultaat pagina)
                 page_idx = min(len(app_screenshots) - 1, 1)
@@ -3912,15 +3928,24 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
             return []
 
         # Cache check — screenshots per domain
-        domain = app_url.replace("https://", "").replace("http://", "").split("/")[0]
-        cache_dir = APP_ASSETS_DIR / domain.replace(".", "_")
-        cache_dir.mkdir(parents=True, exist_ok=True)
+        domain = app_url.replace("https://", "").replace("http://", "").split("/")[0].strip("/")
+        normalized_domains = [domain]
+        if domain.startswith("www."):
+            normalized_domains.append(domain[4:])
 
-        # Check of er al screenshots zijn (< 24h oud)
-        existing = sorted(cache_dir.glob("*.png"))
-        if existing and (time.time() - existing[0].stat().st_mtime < 86400):
-            logger.info(f"[ProVideo] {len(existing)} gecachte app screenshots gevonden")
-            return existing
+        cache_candidates = []
+        for candidate_domain in normalized_domains:
+            if candidate_domain:
+                cache_candidates.append(APP_ASSETS_DIR / candidate_domain.replace(".", "_"))
+
+        for candidate_dir in cache_candidates:
+            existing = sorted(candidate_dir.glob("*.png"))
+            if existing and (time.time() - existing[0].stat().st_mtime < 86400):
+                logger.info(f"[ProVideo] {len(existing)} gecachte app screenshots gevonden")
+                return existing
+
+        cache_dir = cache_candidates[-1] if cache_candidates else (APP_ASSETS_DIR / "default")
+        cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Standaard pagina's als geen specifieke opgegeven
         if not pages:
@@ -4569,15 +4594,20 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
         if result.returncode != 0:
+            error_tail = result.stderr[-300:] if result.stderr else "geen output"
             logger.warning(
                 f"[ProVideo] Scene {idx} clip mislukt: "
-                f"{result.stderr[-300:] if result.stderr else 'geen output'}"
+                f"{error_tail}"
             )
+            if not self._allow_degraded_video():
+                raise RuntimeError(f"Scene {idx} rich render mislukt: {error_tail}")
             return self._simple_clip_fallback(visual, audio, duration, clip_path)
 
         if clip_path.exists() and clip_path.stat().st_size > 5000:
             return clip_path
 
+        if not self._allow_degraded_video():
+            raise RuntimeError(f"Scene {idx} rich render leverde geen bruikbare output op")
         return self._simple_clip_fallback(visual, audio, duration, clip_path)
 
     # ── Word-by-word Animated Captions (CapCut-stijl) ─────────────

@@ -218,7 +218,7 @@ def run_pipeline(
 
         progress("Stap 3/7: Video-script genereren...")
 
-        video_type = _determine_video_type(chosen_idea)
+        video_type = _determine_video_type(chosen_idea, app=app, memory=memory)
 
         def _generate_and_score(idx: int) -> tuple[dict, dict, float, float]:
             """Genereer één script + viral check. Retourneert (script, viral_result, script_cost, viral_cost)."""
@@ -352,7 +352,7 @@ def run_pipeline(
                     memory=memory,
                     platform=platform,
                     target_duration_sec=PIPELINE_DEFAULT_DURATION_SEC,
-                    video_type=_determine_video_type(chosen_idea),
+                    video_type=_determine_video_type(chosen_idea, app=app, memory=memory),
                     extra_instruction=extra_instruction,
                 )
                 total_cost += rewrite_agent.total_cost_usd
@@ -697,14 +697,33 @@ def _score_and_pick_idea(ideas: list[dict], idea_index: int, memory: dict) -> di
     return scored[0][1]
 
 
-def _determine_video_type(idea: dict) -> str:
+def _determine_video_type(
+    idea: dict,
+    app: dict | None = None,
+    memory: dict | None = None,
+) -> str:
     """
     Bepaal video-type op basis van content format en beschikbare providers.
 
-    Als DID_API_KEY beschikbaar is → altijd talking_head (nano creator UGC stijl).
+    Kwaliteit eerst:
+    - als er een echte product-URL is, stuur dan naar mixed/screen_demo zodat
+      de bestaande demo- en screenshot-flow actief kan worden
+    - talking_head alleen als dat format expliciet gevraagd wordt
     """
-    # D-ID beschikbaar → talking head heeft prioriteit (authentiekste UGC)
-    if os.getenv("DID_API_KEY"):
+    content_format = (idea.get("content_format", "problem-solution") or "").lower()
+    app_url = (
+        (memory or {}).get("url")
+        or (app or {}).get("url")
+        or ""
+    ).strip()
+    has_app_visuals = bool(app_url)
+    did_enabled = bool(os.getenv("DID_API_KEY")) and os.getenv("DID_SKIP", "false").lower() != "true"
+
+    demo_formats = {"problem-solution", "before-after", "tutorial"}
+    if has_app_visuals and content_format in demo_formats:
+        return "mixed" if did_enabled else "screen_demo"
+
+    if content_format == "talking-head":
         return "talking_head"
 
     format_map = {
@@ -715,5 +734,8 @@ def _determine_video_type(idea: dict) -> str:
         "trend": "mixed",
         "talking-head": "talking_head",
     }
-    content_format = idea.get("content_format", "problem-solution")
-    return format_map.get(content_format, "screen_demo")
+
+    fallback = format_map.get(content_format, "screen_demo")
+    if fallback == "screen_demo" and has_app_visuals and did_enabled:
+        return "mixed"
+    return fallback

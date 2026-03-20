@@ -693,6 +693,8 @@ Niet "ik was sceptisch" (te generiek) maar EEN CONCRETE GEDACHTE die die persoon
 Als video_type = "screen_demo" of "mixed":
   Schrijf ALTIJD IN HET ENGELS. Realistisch en specifiek.
   Beelden MOETEN passen bij wat er GEZEGD wordt.
+  Als het product een echte app/site/interface heeft, dan MOET de solution-scene
+  een concrete producthandeling of zichtbaar resultaat op het scherm tonen.
 
   VERPLICHTE elementen:
   1. CAMERA: close-up / medium shot / over-shoulder
@@ -705,13 +707,18 @@ Als video_type = "screen_demo" of "mixed":
   - Alledaagse settings: in bed, keukentafel, bank, trein
   - ECHTE situaties die de doelgroep herkent
   - Geen stockfoto-poses
+  - Minstens 1 product-specifiek moment op scherm: tikken, inspreken, dashboard zien,
+    feature gebruiken, of resultaat zien
+  - Beschrijf NIET alleen "someone smiling with phone" als de app zelf getoond moet worden
   - Visuele CONTRAST tussen problem en solution scenes
     (problem = donker/chaotisch, solution = licht/opgelucht)
 
 VIDEO TYPE KEUZE:
-- Als creator_persona beschikbaar is → kies "talking_head" in je output
-- Persona-content is het meest authentiek als een echte persoon praat naar de camera
-- "screen_demo" alleen als de video echt app-schermen of instructies toont
+- Respecteer exact het VIDEO TYPE dat hierboven is meegegeven
+- Kies alleen "talking_head" als het opgegeven VIDEO TYPE talking_head is
+- Kies "mixed" als menselijke hook/probleem-scenes worden gecombineerd met echte productbeelden
+- Kies "screen_demo" als de waarde vooral in echte app-schermen, interface of instructies zit
+- Als het product een echte interface heeft, overschrijf dit NIET terug naar talking_head puur omdat er een persona is
 
 ═══════════════════════════════════════════════════
 ON-SCREEN TEXT — KORT EN KRACHTIG
@@ -820,10 +827,10 @@ OUTPUT FORMAT — ALLEEN JSON
       "duration_sec": 20,
       "voiceover": "Onthulling van de open loop. Concrete waarde. Save-waardig detail.",
       "on_screen_text": "Het resultaat (voor→na)",
-      "visual_description": "IN HET ENGELS — lichte/positieve sfeer",
+      "visual_description": "IN HET ENGELS — lichte/positieve sfeer, echte app-interface of concreet productmoment zichtbaar op scherm",
       "visual_search_query": "MAX 4 woorden bijv: 'woman smiling phone happy'",
       "bridge_to_next": "Naar CTA: 'en het beste deel is...'",
-      "notes": "..."
+      "notes": "Als video_type screen_demo of mixed is: toon hier de echte producthandeling of het echte resultaat in de app, niet alleen generieke stock."
     },
     {
       "scene_number": 4,
