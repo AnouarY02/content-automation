@@ -11,13 +11,27 @@ import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 import httpx
 from loguru import logger
 
 from utils.file_io import atomic_write_json
+from utils.runtime_paths import ensure_dir, get_runtime_data_dir
 
-_TOKEN_FILE = Path(__file__).parent.parent.parent / "data" / "tokens" / "tiktok.json"
+_TOKEN_FILE = ensure_dir(get_runtime_data_dir("tokens")) / "tiktok.json"
+
+
+def _resolve_video_for_publish(raw_path: str) -> Path:
+    if raw_path.startswith("http://") or raw_path.startswith("https://"):
+        cache_dir = ensure_dir(get_runtime_data_dir("publishing"))
+        target = cache_dir / f"publish_{uuid4().hex}.mp4"
+        with httpx.Client(timeout=120) as client:
+            response = client.get(raw_path)
+            response.raise_for_status()
+            target.write_bytes(response.content)
+        return target
+    return Path(raw_path)
 
 
 def _load_token_from_store() -> tuple[str, str]:
@@ -114,7 +128,7 @@ class TikTokPublisher:
         if not self.access_token:
             raise ValueError("TIKTOK_ACCESS_TOKEN niet ingesteld in .env")
 
-        video_path = Path(bundle.video_path) if bundle.video_path else None
+        video_path = _resolve_video_for_publish(bundle.video_path) if bundle.video_path else None
         if not video_path or not video_path.exists():
             raise FileNotFoundError(f"Video bestand niet gevonden: {bundle.video_path}")
 

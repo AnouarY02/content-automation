@@ -32,6 +32,7 @@ class VideoOrchestrator:
         self.tts_speed = tts_speed
         self.voice_settings = voice_settings  # stability, similarity_boost, style
         self.on_progress = on_progress
+        self.last_error = ""
 
     def produce(self, script: dict, memory: dict, app_id: str) -> Path | None:
         """
@@ -86,6 +87,7 @@ class VideoOrchestrator:
             return video_path
 
         except Exception as e:
+            self.last_error = f"{provider_name}: {e}"
             logger.error(f"[VideoEngine] Productie mislukt ({provider_name}): {e}")
 
             # Fallback keten: pro → openai_image → ffmpeg
@@ -113,6 +115,7 @@ class VideoOrchestrator:
                         fb = FFmpegProvider()
                         return fb.produce(script, memory, output_dir)
                 except Exception as e2:
+                    self.last_error = f"{fb_name}: {e2}"
                     logger.error(f"[VideoEngine] Fallback {fb_name} mislukt: {e2}")
 
             return None

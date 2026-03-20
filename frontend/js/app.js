@@ -90,6 +90,7 @@ function formatEUR(v) { return '€' + (Number(v)||0).toFixed(2); }
 function shortId(id) { return id ? id.substring(0,10) : '-'; }
 function videoUrl(path) {
   if (!path) return '';
+  if (/^https?:\/\//i.test(path)) return path;
   const filename = path.split(/[/\\]/).pop();
   return `/assets/videos/${filename}`;
 }

@@ -33,6 +33,7 @@ from backend.constants import PIPELINE_DEFAULT_DURATION_SEC
 from backend.cost_guardrails import CostGuardrails, BudgetExceededError
 from backend.models.campaign import CampaignBundle, CampaignStatus
 from backend.repository.factory import get_app_repo, get_campaign_repo
+from backend.supabase import has_supabase_env, upload_file_to_public_bucket
 from utils.file_io import atomic_write_json
 from utils.runtime_paths import ensure_writable_dir, get_runtime_data_dir
 from video_engine.orchestrator import VideoOrchestrator
@@ -421,7 +422,7 @@ def run_pipeline(
         def _produce_video():
             engine = VideoOrchestrator(**vo_kwargs)
             path = engine.produce(script=script, memory=memory, app_id=app_id)
-            return path, engine.total_cost_usd
+            return path, engine.total_cost_usd, getattr(engine, "last_error", "")
 
         def _write_caption():
             agent = CaptionWriterAgent()
@@ -443,10 +444,23 @@ def run_pipeline(
             progress("  > Caption klaar!")
 
             # Wacht op video (langzamer, ~60-120s)
-            video_path, video_cost = video_future.result()
-            bundle.video_path = str(video_path) if video_path else None
+            video_path, video_cost, video_error = video_future.result()
+            if not video_path:
+                raise RuntimeError(
+                    f"Video productie mislukt: {video_error or 'geen videobestand aangemaakt'}"
+                )
             total_cost += video_cost
             guardrails.record_cost(video_cost, "VideoOrchestrator", bundle.id)
+            if has_supabase_env():
+                progress("  > Video uploaden naar storage...")
+                bundle.video_path = upload_file_to_public_bucket(
+                    "campaign-videos",
+                    f"{bundle.id}/master.mp4",
+                    video_path,
+                    content_type="video/mp4",
+                )
+            else:
+                bundle.video_path = str(video_path)
             progress("  > Video klaar!")
 
         # Stap 6b: Experiment varianten genereren (optioneel — achter feature flag)

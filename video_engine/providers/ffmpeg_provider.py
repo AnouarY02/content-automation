@@ -17,12 +17,14 @@ import os
 import subprocess
 import uuid
 from pathlib import Path
+from shutil import which
 
 from loguru import logger
 from utils.runtime_paths import ensure_dir, get_generated_assets_dir
 
 ROOT = Path(__file__).parent.parent.parent
 GENERATED_ASSETS_DIR = ensure_dir(get_generated_assets_dir())
+FONT_DIR = ROOT / "assets" / "fonts"
 
 
 class FFmpegProvider:
@@ -44,6 +46,32 @@ class FFmpegProvider:
         "orange": "#f59e0b",
         "pink":   "#ec4899",
     }
+
+    @staticmethod
+    def _resolve_ffmpeg_bin() -> str:
+        custom = os.getenv("FFMPEG_BINARY", "").strip()
+        if custom:
+            return custom
+
+        try:
+            from imageio_ffmpeg import get_ffmpeg_exe
+
+            resolved = get_ffmpeg_exe()
+            if resolved:
+                return resolved
+        except Exception:
+            pass
+
+        return which("ffmpeg") or "ffmpeg"
+
+    @staticmethod
+    def _fontfile_arg() -> str:
+        for name in ("Poppins-Bold.ttf", "Montserrat-Bold.ttf"):
+            path = FONT_DIR / name
+            if path.exists():
+                escaped = str(path).replace("\\", "/").replace(":", "\\:")
+                return f"fontfile='{escaped}':"
+        return ""
 
     def produce(self, script: dict, memory: dict, output_dir: Path) -> Path:
         """
@@ -75,6 +103,8 @@ class FFmpegProvider:
 
         # Stap 2: Kies stijl op basis van brand memory
         visual_style = memory.get("visual_style", {}) if memory else {}
+        if not isinstance(visual_style, dict):
+            visual_style = {}
         gradient = visual_style.get("gradient", "dark")
         accent = visual_style.get("accent_color", "#6C63FF")
         app_name = memory.get("app_name", "") if memory else ""
@@ -135,6 +165,7 @@ class FFmpegProvider:
         └──────────────────────┘
         """
         filters = []
+        font_arg = self._fontfile_arg()
 
         # Achtergrond: verticaal gradient
         top_color, bot_color = self.GRADIENT_PRESETS.get(gradient, self.GRADIENT_PRESETS["dark"])
@@ -190,6 +221,7 @@ class FFmpegProvider:
                 filters.append(
                     f"[{last_label}]drawtext="
                     f"text='{safe_main}':"
+                    f"{font_arg}"
                     f"fontcolor=black@0.4:fontsize={fontsize}:"
                     f"x=(w-text_w)/2+2:y={y_pos}+2:"
                     f"enable='between(t,{visible_start},{visible_end})':"
@@ -202,6 +234,7 @@ class FFmpegProvider:
                 filters.append(
                     f"[{last_label}]drawtext="
                     f"text='{safe_main}':"
+                    f"{font_arg}"
                     f"fontcolor=white:fontsize={fontsize}:"
                     f"x=(w-text_w)/2:y={y_pos}:"
                     f"enable='between(t,{visible_start},{visible_end})':"
@@ -216,6 +249,7 @@ class FFmpegProvider:
                 filters.append(
                     f"[{last_label}]drawtext="
                     f"text='{safe_sub}':"
+                    f"{font_arg}"
                     f"fontcolor=white@0.8:fontsize=28:"
                     f"x=(w-text_w)/2:y=1400:"
                     f"enable='between(t,{visible_start},{visible_end})':"
@@ -237,6 +271,7 @@ class FFmpegProvider:
             filters.append(
                 f"[{last_label}]drawtext="
                 f"text='{safe_name}':"
+                f"{font_arg}"
                 f"fontcolor=white@0.3:fontsize=22:"
                 f"x=40:y=h-60[branded]"
             )
@@ -257,7 +292,7 @@ class FFmpegProvider:
         total_duration: int,
         filter_complex: str,
     ) -> list[str]:
-        cmd = ["ffmpeg", "-y"]
+        cmd = [self._resolve_ffmpeg_bin(), "-y"]
 
         # Audio input (als beschikbaar)
         if audio_path and audio_path.exists():

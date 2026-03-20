@@ -26,6 +26,7 @@ requests==2.32.3
 
 # Video / Audio
 ffmpeg-python==0.2.0
+imageio-ffmpeg==0.5.1
 
 # Desktop UI (alleen lokaal, niet op server)
 # PyQt6==6.7.1
