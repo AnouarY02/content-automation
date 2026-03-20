@@ -24,10 +24,10 @@ from pathlib import Path
 from typing import Any
 
 from loguru import logger
+from utils.runtime_paths import ensure_dir, get_runtime_data_dir
 
 # Persistent storage voor analytics data
-DATA_DIR = Path(__file__).parent.parent / "data" / "analytics"
-DATA_DIR.mkdir(parents=True, exist_ok=True)
+DATA_DIR = ensure_dir(get_runtime_data_dir("analytics"))
 
 
 @dataclass
