@@ -47,6 +47,7 @@ from utils.runtime_paths import (
     get_app_screenshots_dir,
     get_generated_assets_dir,
     get_runtime_data_dir,
+    is_vercel_runtime,
 )
 
 try:
@@ -217,6 +218,18 @@ def _probe_satavg(image_path: Path) -> float | None:
 STOCK_INTERMEDIATE_FPS = 30
 STOCK_INTERMEDIATE_PRESET = "ultrafast"
 STOCK_INTERMEDIATE_CRF = "21"
+
+
+def _visual_fetch_workers() -> int:
+    if is_vercel_runtime():
+        return 2
+    return 4
+
+
+def _clip_render_workers() -> int:
+    if is_vercel_runtime():
+        return 2
+    return 4
 
 
 def _stock_cache_get(query: str, provider: str = "pexels") -> dict | None:
@@ -707,7 +720,7 @@ class ProVideoProvider:
             )
             return sd
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=_visual_fetch_workers()) as ex:
             scene_data = list(ex.map(_fetch_visual, scene_data))
 
         # -- Stap 4: Visuele clips PARALLEL
@@ -717,7 +730,7 @@ class ProVideoProvider:
         def _make_clip(sd):
             return self._create_visual_clip(sd, sd["idx"], work_dir, total_scenes)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=_clip_render_workers()) as ex:
             clip_results = list(ex.map(_make_clip, scene_data))
 
         # Bewaar volgorde
