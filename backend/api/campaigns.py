@@ -247,7 +247,7 @@ def test_script_quality(req: StartCampaignRequest):
     script = script_agent.run(
         idea=idea, app=app, memory=memory, platform=req.platform,
         target_duration_sec=PIPELINE_DEFAULT_DURATION_SEC,
-        video_type=_determine_video_type(idea),
+        video_type=_determine_video_type(idea, app=app, memory=memory),
     )
     total_cost += script_agent.total_cost_usd
     script = _enforce_echo_loop(script)
@@ -276,7 +276,7 @@ def test_script_quality(req: StartCampaignRequest):
         script2 = script_agent2.run(
             idea=idea, app=app, memory=memory, platform=req.platform,
             target_duration_sec=PIPELINE_DEFAULT_DURATION_SEC,
-            video_type=_determine_video_type(idea),
+            video_type=_determine_video_type(idea, app=app, memory=memory),
             extra_instruction="\n".join(extra_parts),
         )
         total_cost += script_agent2.total_cost_usd
