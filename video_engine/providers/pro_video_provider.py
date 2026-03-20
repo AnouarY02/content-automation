@@ -32,10 +32,12 @@ import hashlib
 import json as _json
 import os
 import random
+import re
 import subprocess
 import time
 import uuid
 from pathlib import Path
+from shutil import which
 from typing import Callable
 
 from loguru import logger
@@ -65,6 +67,151 @@ PIXABAY_CACHE_DIR = ensure_writable_dir(ROOT / "data" / "pixabay_cache", get_run
 
 # Stock cache — 24h geldig
 _CACHE_TTL = 86400
+
+
+def _resolve_ffmpeg_bin() -> str:
+    custom = os.getenv("FFMPEG_BINARY", "").strip()
+    if custom:
+        return custom
+
+    try:
+        from imageio_ffmpeg import get_ffmpeg_exe
+
+        resolved = get_ffmpeg_exe()
+        if resolved:
+            return resolved
+    except Exception:
+        pass
+
+    return which("ffmpeg") or "ffmpeg"
+
+
+def _resolve_ffprobe_bin(ffmpeg_bin: str) -> str | None:
+    custom = os.getenv("FFPROBE_BINARY", "").strip()
+    if custom:
+        return custom
+
+    ffmpeg_path = Path(ffmpeg_bin)
+    sibling_names = ("ffprobe.exe", "ffprobe") if ffmpeg_path.suffix.lower() == ".exe" else ("ffprobe", "ffprobe.exe")
+    for name in sibling_names:
+        candidate = ffmpeg_path.with_name(name)
+        if candidate.exists():
+            return str(candidate)
+
+    return which("ffprobe")
+
+
+def _ensure_binary_on_path(binary: str | None) -> None:
+    if not binary:
+        return
+
+    bin_dir = str(Path(binary).parent)
+    current = os.environ.get("PATH", "")
+    if not current:
+        os.environ["PATH"] = bin_dir
+        return
+
+    path_entries = current.split(os.pathsep)
+    if bin_dir not in path_entries:
+        os.environ["PATH"] = os.pathsep.join([bin_dir, current])
+
+
+def _ensure_command_wrapper(command_name: str, target_binary: str | None) -> str | None:
+    if not target_binary:
+        return None
+
+    target_path = Path(target_binary)
+    if target_path.stem.lower() == command_name.lower():
+        _ensure_binary_on_path(str(target_path))
+        return str(target_path)
+
+    wrapper_dir = ensure_dir(get_runtime_data_dir("bin"))
+    if os.name == "nt":
+        wrapper = wrapper_dir / f"{command_name}.cmd"
+        wrapper.write_text(f'@echo off\r\n"{target_binary}" %*\r\n', encoding="utf-8")
+    else:
+        wrapper = wrapper_dir / command_name
+        wrapper.write_text(f'#!/bin/sh\nexec "{target_binary}" "$@"\n', encoding="utf-8")
+        wrapper.chmod(0o755)
+
+    _ensure_binary_on_path(str(wrapper))
+    return str(wrapper)
+
+
+FFMPEG_BIN = _resolve_ffmpeg_bin()
+FFPROBE_BIN = _resolve_ffprobe_bin(FFMPEG_BIN)
+FFMPEG_BIN = _ensure_command_wrapper("ffmpeg", FFMPEG_BIN) or FFMPEG_BIN
+FFPROBE_BIN = _ensure_command_wrapper("ffprobe", FFPROBE_BIN) or FFPROBE_BIN
+_ensure_binary_on_path(FFMPEG_BIN)
+_ensure_binary_on_path(FFPROBE_BIN)
+
+
+def _probe_dimensions(path: Path) -> tuple[int, int] | None:
+    if FFPROBE_BIN:
+        probe = subprocess.run(
+            [FFPROBE_BIN, "-v", "quiet", "-show_entries", "stream=width,height",
+             "-of", "csv=p=0:s=x", str(path)],
+            capture_output=True, text=True, timeout=10,
+        )
+        try:
+            width, height = map(int, probe.stdout.strip().split("x"))
+            return width, height
+        except (ValueError, AttributeError):
+            pass
+
+    probe = subprocess.run(
+        [FFMPEG_BIN, "-i", str(path)],
+        capture_output=True, text=True, timeout=10,
+    )
+    match = re.search(r"(\d{2,5})x(\d{2,5})", (probe.stderr or "") + "\n" + (probe.stdout or ""))
+    if match:
+        return int(match.group(1)), int(match.group(2))
+    return None
+
+
+def _probe_duration_seconds(path: Path) -> float | None:
+    if FFPROBE_BIN:
+        result = subprocess.run(
+            [FFPROBE_BIN, "-v", "quiet", "-show_entries", "format=duration",
+             "-of", "csv=p=0", str(path)],
+            capture_output=True, text=True, timeout=10,
+        )
+        try:
+            return float(result.stdout.strip())
+        except (ValueError, AttributeError):
+            pass
+
+    result = subprocess.run(
+        [FFMPEG_BIN, "-i", str(path)],
+        capture_output=True, text=True, timeout=10,
+    )
+    match = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", (result.stderr or "") + "\n" + (result.stdout or ""))
+    if not match:
+        return None
+    hours = int(match.group(1))
+    minutes = int(match.group(2))
+    seconds = float(match.group(3))
+    return hours * 3600 + minutes * 60 + seconds
+
+
+def _probe_satavg(image_path: Path) -> float | None:
+    if not FFPROBE_BIN:
+        return None
+
+    probe = subprocess.run(
+        [FFPROBE_BIN, "-v", "quiet",
+         "-show_entries", "frame_tags=lavfi.signalstats.SATAVG",
+         "-f", "lavfi",
+         "-i", f"movie='{str(image_path).replace(chr(92), '/')}',signalstats"],
+        capture_output=True, text=True, timeout=10,
+    )
+    try:
+        for line in probe.stdout.splitlines():
+            if "SATAVG" in line:
+                return float(line.split("=")[-1])
+    except Exception:
+        return None
+    return None
 
 
 def _stock_cache_get(query: str, provider: str = "pexels") -> dict | None:
@@ -864,24 +1011,12 @@ class ProVideoProvider:
 
             if candidate.exists() and candidate.stat().st_size > 5000:
                 # Score berekenen via FFmpeg signalstats (gemiddelde saturatie)
-                probe = subprocess.run([
-                    "ffprobe", "-v", "quiet",
-                    "-show_entries", "frame_tags=lavfi.signalstats.SATAVG",
-                    "-f", "lavfi",
-                    "-i", f"movie='{str(candidate).replace(chr(92), '/')}',"
-                          f"signalstats",
-                ], capture_output=True, text=True, timeout=10)
-
                 # Fallback: gebruik bestandsgrootte als kwaliteitsindicator
                 # (meer detail = meer bytes bij zelfde JPEG kwaliteit)
                 score = candidate.stat().st_size
-                try:
-                    for line in probe.stdout.split("\n"):
-                        if "SATAVG" in line:
-                            sat = float(line.split("=")[-1])
-                            score = score * (1 + sat / 100)
-                except Exception:
-                    pass
+                sat = _probe_satavg(candidate)
+                if sat is not None:
+                    score = score * (1 + sat / 100)
 
                 if score > best_score:
                     best_score = score
@@ -3842,14 +3977,10 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
             if not screenshot_path.exists():
                 return None
 
-            probe = subprocess.run(
-                ["ffprobe", "-v", "quiet", "-show_entries", "stream=width,height",
-                 "-of", "csv=p=0:s=x", str(screenshot_path)],
-                capture_output=True, text=True, timeout=10,
-            )
-            try:
-                w, h = map(int, probe.stdout.strip().split("x"))
-            except (ValueError, AttributeError):
+            dimensions = _probe_dimensions(screenshot_path)
+            if dimensions:
+                w, h = dimensions
+            else:
                 w, h = 1280, 3000
 
             clip_path = work_dir / f"web_clip_{idx:02d}.mp4"
@@ -4985,15 +5116,7 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
 
     def _get_media_duration(self, path: Path) -> float | None:
         """Haal duur van audio/video op via ffprobe."""
-        result = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
-             "-of", "csv=p=0", str(path)],
-            capture_output=True, text=True, timeout=10,
-        )
-        try:
-            return float(result.stdout.strip())
-        except (ValueError, AttributeError):
-            return None
+        return _probe_duration_seconds(path)
 
 
 # ── Text helpers ──────────────────────────────────────────────────
