@@ -120,11 +120,37 @@ class VideoOrchestrator:
 
             return None
 
+    @staticmethod
+    def _allow_degraded_video() -> bool:
+        raw = os.getenv("ALLOW_DEGRADED_VIDEO", "").strip().lower()
+        if raw:
+            return raw == "true"
+        return os.getenv("ENVIRONMENT", "development").lower() != "production"
+
+    @staticmethod
+    def _has_rich_video_stack() -> bool:
+        """Bepaal of de bestaande rich video-engine bruikbare inputs heeft.
+
+        De ProVideoProvider kan al hoogwaardige output leveren met stock footage,
+        echte TTS en optioneel D-ID hooks. Daarvoor is OPENAI niet de enige
+        ingang; Pexels/Pixabay/ElevenLabs zijn al voldoende om uit de simpele
+        slide-render te blijven.
+        """
+        keys = (
+            os.getenv("OPENAI_API_KEY", ""),
+            os.getenv("PEXELS_API_KEY", ""),
+            os.getenv("PIXABAY_API_KEY", ""),
+            os.getenv("ELEVENLABS_API_KEY", ""),
+            os.getenv("DID_API_KEY", ""),
+            os.getenv("AZURE_TTS_KEY", ""),
+        )
+        return any(value and len(value.strip()) >= 10 for value in keys)
+
     def _select_provider(self, video_type: str) -> str:
         """Selecteer de beste beschikbare provider."""
-        has_openai = bool(os.getenv("OPENAI_API_KEY"))
         has_did = bool(os.getenv("DID_API_KEY"))
         fast_video_mode = os.getenv("FAST_VIDEO_MODE", "")
+        rich_stack = self._has_rich_video_stack()
 
         # Gebruik alleen de lichte FFmpeg route als daar expliciet om gevraagd wordt.
         # Standaard hoort productie de volledige geoptimaliseerde videoketen te gebruiken.
@@ -136,26 +162,35 @@ class VideoOrchestrator:
         if use_fast_video:
             return "ffmpeg"
 
-        # D-ID: prioreteit voor talking_head, MAAR sla over als DID_SKIP=true
-        # (gebruik DID_SKIP=true als de D-ID API een 400 geeft door format-mismatch)
+        # De rich productievideo hoort standaard via de ProVideoProvider te lopen.
+        # Die provider kan zelf een D-ID hook, echte stock footage, phone mockups
+        # en TTS combineren. Alleen als de rich stack echt ontbreekt, vallen we terug.
+        if rich_stack:
+            return "pro"
+
+        # Legacy full D-ID route alleen als er geen bredere rich stack beschikbaar is.
         did_skip = os.getenv("DID_SKIP", "false").lower() == "true"
         if has_did and video_type == "talking_head" and not did_skip:
             return "did"
-
-        # Pro provider: stock footage + TTS (standaard)
-        if has_openai:
-            return "pro"
 
         return "ffmpeg"
 
     def _get_fallbacks(self, failed_provider: str) -> list[str]:
         """Geef fallback providers na een gefaalde provider."""
-        has_openai = bool(os.getenv("OPENAI_API_KEY"))
+        rich_stack = self._has_rich_video_stack()
+        allow_degraded = self._allow_degraded_video()
+
+        # In productie is inferieure fallback uit. Liever hard falen dan
+        # een dia-video als "succes" opslaan.
+        if not allow_degraded:
+            if failed_provider == "did" and rich_stack:
+                return ["pro"]
+            return []
 
         if failed_provider == "did":
-            return (["pro", "ffmpeg"] if has_openai else ["ffmpeg"])
+            return (["pro", "ffmpeg"] if rich_stack else ["ffmpeg"])
         elif failed_provider == "pro":
-            return (["openai_image", "ffmpeg"] if has_openai else ["ffmpeg"])
+            return (["openai_image", "ffmpeg"] if rich_stack else ["ffmpeg"])
         elif failed_provider == "openai_image":
             return ["ffmpeg"]
         return []
