@@ -214,6 +214,11 @@ def _probe_satavg(image_path: Path) -> float | None:
     return None
 
 
+STOCK_INTERMEDIATE_FPS = 30
+STOCK_INTERMEDIATE_PRESET = "ultrafast"
+STOCK_INTERMEDIATE_CRF = "21"
+
+
 def _stock_cache_get(query: str, provider: str = "pexels") -> dict | None:
     """Haal gecached stock resultaat op (indien < 24h oud)."""
     cache = PIXABAY_CACHE_DIR if provider == "pixabay" else CACHE_DIR
@@ -3573,8 +3578,8 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                             "-i", str(raw_path), "-vf", kb_vf,
                             "-t", str(duration),
                             "-c:v", "libx264", "-profile:v", "baseline", "-level", "4.0",
-                            "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "22",
-                            "-an", "-r", "60", str(clip_path),
+                            "-pix_fmt", "yuv420p", "-preset", STOCK_INTERMEDIATE_PRESET, "-crf", STOCK_INTERMEDIATE_CRF,
+                            "-an", "-r", str(STOCK_INTERMEDIATE_FPS), str(clip_path),
                         ]
                         subprocess.run(cmd, capture_output=True, text=True, timeout=120)
                         if clip_path.exists() and clip_path.stat().st_size > 5000:
@@ -3688,8 +3693,8 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                     "-t", str(duration),
                     "-c:v", "libx264", "-profile:v", "baseline", "-level", "4.0",
                     "-pix_fmt", "yuv420p",
-                    "-preset", "fast", "-crf", "22",
-                    "-an", "-r", "60",
+                    "-preset", STOCK_INTERMEDIATE_PRESET, "-crf", STOCK_INTERMEDIATE_CRF,
+                    "-an", "-r", str(STOCK_INTERMEDIATE_FPS),
                     str(clip_path),
                 ]
                 subprocess.run(cmd, capture_output=True, text=True, timeout=120)
@@ -3761,8 +3766,12 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
             score = 0
             if h > w:
                 score += 50
-            if h >= 1920:
+            # Vercel hoeft geen 2K bron te herencoderen als 1080p portrait al voldoende is.
+            # Richt op snelle, hoogwaardige tussenclips die dicht bij de referentievideo blijven.
+            if 1000 <= h <= 1440:
                 score += 40
+            elif h >= 1920:
+                score += 18
             elif h >= 1080:
                 score += 30
             elif h >= 720:
@@ -3935,9 +3944,9 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                     "-vf", kb_vf,
                     "-t", str(duration),
                     "-c:v", "libx264", "-profile:v", "baseline", "-level", "4.0",
-                    "-preset", "fast", "-crf", "22",
+                    "-preset", STOCK_INTERMEDIATE_PRESET, "-crf", STOCK_INTERMEDIATE_CRF,
                     "-pix_fmt", "yuv420p",
-                    "-an", "-r", "60",
+                    "-an", "-r", str(STOCK_INTERMEDIATE_FPS),
                     str(clip_path),
                 ]
                 subprocess.run(cmd, capture_output=True, text=True, timeout=120)
