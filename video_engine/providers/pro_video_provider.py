@@ -322,6 +322,11 @@ def _get_font_path(extra_bold: bool = False) -> str:
         path = FONT_DIR / name
         if path.exists():
             return str(path).replace("\\", "/").replace(":", "\\:")
+    # Fallback: DejaVu (geïnstalleerd via Dockerfile op Railway/Linux)
+    for sys_font in ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"):
+        if Path(sys_font).exists():
+            return sys_font
     return ""
 
 
@@ -2774,11 +2779,19 @@ class ProVideoProvider:
         for clip in clips:
             inputs += ["-i", str(clip)]
 
+        # Stap 1: normaliseer elke input inline naar 1080x1920 30fps yuv420p
+        norm_parts = []
+        for i in range(len(clips)):
+            norm_parts.append(
+                f"[{i}:v]scale=1080:1920:force_original_aspect_ratio=increase,"
+                f"crop=1080:1920,fps=30,setsar=1,format=yuv420p[s{i}]"
+            )
+
+        # Stap 2: xfade transities op genormaliseerde streams
         vf_parts = []
-        cumulative_offset = 0.0
         for i in range(len(clips) - 1):
-            in_v1 = f"[{i}:v]" if i == 0 else f"[v{i}]"
-            in_v2 = f"[{i + 1}:v]"
+            in_v1 = f"[s{i}]" if i == 0 else f"[v{i}]"
+            in_v2 = f"[s{i + 1}]"
             out_v = "[vout]" if i == len(clips) - 2 else f"[v{i + 1}]"
 
             from_type = scene_types[i] if i < len(scene_types) else "body"
@@ -2798,7 +2811,7 @@ class ProVideoProvider:
                 f"duration={xfade_dur:.1f}:offset={offset:.3f}{out_v}"
             )
 
-        filter_complex = ";".join(vf_parts)
+        filter_complex = ";".join(norm_parts + vf_parts)
         cmd = ["ffmpeg", "-y", "-threads", *_FFMPEG_THREADS] + inputs + [
             "-filter_complex", filter_complex,
             "-map", "[vout]",
@@ -2813,26 +2826,57 @@ class ProVideoProvider:
             logger.info(f"[ProVideo] Xfade concat klaar: {len(clips)} clips")
             return
 
-        # Fallback: simpele concat (harde cuts)
-        logger.warning(f"[ProVideo] Xfade mislukt, simpele concat: {result.stderr[-200:] if result.stderr else ''}")
+        # Fallback: filter_complex concat met inline normalisatie per clip
+        logger.warning(f"[ProVideo] Xfade mislukt, filter_complex concat: {result.stderr[-300:] if result.stderr else ''}")
+
+        # Bouw filter_complex: normaliseer elke input naar exact 1080x1920 30fps yuv420p
+        norm_filters = []
+        concat_inputs = []
+        for i in range(len(clips)):
+            norm_filters.append(
+                f"[{i}:v]scale=1080:1920:force_original_aspect_ratio=increase,"
+                f"crop=1080:1920,fps=30,setsar=1,format=yuv420p[n{i}]"
+            )
+            concat_inputs.append(f"[n{i}]")
+
+        concat_str = "".join(concat_inputs)
+        norm_filters.append(f"{concat_str}concat=n={len(clips)}:v=1:a=0[vout]")
+        fc = ";".join(norm_filters)
+
+        cmd_fc = ["ffmpeg", "-y", "-threads", *_FFMPEG_THREADS] + inputs + [
+            "-filter_complex", fc,
+            "-map", "[vout]",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-an", "-r", "30",
+            "-movflags", "+faststart",
+            str(output_path),
+        ]
+        result2 = subprocess.run(cmd_fc, capture_output=True, text=True, timeout=300)
+        if result2.returncode == 0 and output_path.exists() and output_path.stat().st_size > 10000:
+            logger.info(f"[ProVideo] Filter_complex concat klaar: {len(clips)} clips")
+            return
+
+        # Ultieme fallback: concat demuxer met re-encode
+        logger.warning(f"[ProVideo] Filter_complex concat mislukt, demuxer fallback: {result2.stderr[-300:] if result2.stderr else ''}")
         concat_file = clips[0].parent / "concat_visual.txt"
         with open(concat_file, "w", encoding="utf-8") as f:
             for clip in clips:
                 safe_path = str(clip).replace("\\", "/")
                 f.write(f"file '{safe_path}'\n")
 
-        cmd_simple = [
+        cmd_demux = [
             "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
             "-f", "concat", "-safe", "0",
             "-i", str(concat_file),
+            "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,setsar=1,format=yuv420p",
             "-c:v", "libx264", "-preset", "fast", "-crf", "23",
             "-an", "-r", "30",
             "-movflags", "+faststart",
             str(output_path),
         ]
-        result2 = subprocess.run(cmd_simple, capture_output=True, text=True, timeout=300)
-        if result2.returncode != 0:
-            raise RuntimeError(f"Visuele concat mislukt: {result2.stderr[-300:]}")
+        result3 = subprocess.run(cmd_demux, capture_output=True, text=True, timeout=300)
+        if result3.returncode != 0:
+            raise RuntimeError(f"Visuele concat mislukt: {result3.stderr[-300:]}")
 
     def _build_sfx_track(
         self, work_dir: Path, script: dict, video_dur: float,

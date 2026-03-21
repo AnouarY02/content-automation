@@ -1,9 +1,10 @@
 # ── AY Marketing OS — Production Dockerfile ──
 FROM python:3.11-slim
 
-# FFmpeg voor video productie
+# FFmpeg + fonts voor video productie (drawtext vereist freetype + fontconfig)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg && \
+    apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core fontconfig libfreetype6 && \
+    fc-cache -f && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
