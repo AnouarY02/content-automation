@@ -18,9 +18,16 @@ COPY . .
 # Runtime directories aanmaken
 RUN mkdir -p assets/generated/videos data/campaigns data/brand_memory logs
 
+# FFmpeg memory limiet — voorkom dat encoding alle RAM claimt
+ENV FFMPEG_THREADS=2
+
 # Port configuratie (Railway injecteert PORT env var)
 ENV PORT=8000
 EXPOSE 8000
+
+# Healthcheck (Railway + monitoring)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 # Start FastAPI met uvicorn
 CMD uvicorn backend.main:app --host 0.0.0.0 --port ${PORT}

@@ -10,7 +10,13 @@ def is_vercel_runtime() -> bool:
 
 
 def ensure_dir(path: Path) -> Path:
-    path.mkdir(parents=True, exist_ok=True)
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        # Read-only filesystem (bijv. Vercel) — gebruik /tmp fallback
+        fallback = _TMP_ROOT / path.name
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
     return path
 
 

@@ -217,19 +217,23 @@ def _probe_satavg(image_path: Path) -> float | None:
 
 STOCK_INTERMEDIATE_FPS = 30
 STOCK_INTERMEDIATE_PRESET = "ultrafast"
-STOCK_INTERMEDIATE_CRF = "21"
+STOCK_INTERMEDIATE_CRF = "23"
+
+# Globale FFmpeg thread-limiet — voorkomt dat elk FFmpeg-proces alle cores claimt
+_FFMPEG_THREADS = ["2"]
 
 
 def _visual_fetch_workers() -> int:
     if is_vercel_runtime():
         return 2
-    return 4
+    return 2  # Was 4 — verlaagd om memory-gebruik te beperken (Railway OOM)
 
 
 def _clip_render_workers() -> int:
+    """Aantal parallelle FFmpeg clip-renders. Laag houden voor geheugen."""
     if is_vercel_runtime():
-        return 2
-    return 4
+        return 1
+    return 1  # Was 4 — 1 sequentieel voorkomt OOM op Railway Trial
 
 
 def _stock_cache_get(query: str, provider: str = "pexels") -> dict | None:
@@ -962,7 +966,7 @@ class ProVideoProvider:
 
         # FFmpeg re-encode met platform specs
         cmd = [
-            "ffmpeg", "-y",
+            "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
             "-i", str(video_path),
             "-c:v", specs["codec"],
             "-profile:v", specs["profile"],
@@ -2286,7 +2290,7 @@ class ProVideoProvider:
             "-vf", vf,
             "-an",  # Geen audio in visuele clip
             "-c:v", "libx264", "-preset", "fast", "-crf", "20",
-            "-t", str(duration), "-r", "60",
+            "-t", str(duration), "-r", "30",
             str(clip_path),
         ]
 
@@ -2300,7 +2304,7 @@ class ProVideoProvider:
                 "-i", str(visual),
                 "-vf", "format=yuv420p",
                 "-an", "-c:v", "libx264", "-preset", "fast", "-crf", "22",
-                "-t", str(duration), "-r", "60",
+                "-t", str(duration), "-r", "30",
                 str(clip_path),
             ]
             subprocess.run(cmd_simple, capture_output=True, timeout=60)
@@ -2334,7 +2338,7 @@ class ProVideoProvider:
                 ),
                 "-map", "[out]",
                 "-c:v", "libx264", "-preset", "fast", "-crf", "20",
-                "-an", "-r", "60",
+                "-an", "-r", "30",
                 str(logo_clip),
             ]
             result_logo = subprocess.run(cmd_logo, capture_output=True, timeout=60)
@@ -2691,11 +2695,11 @@ class ProVideoProvider:
             )
 
         filter_complex = ";".join(vf_parts)
-        cmd = ["ffmpeg", "-y"] + inputs + [
+        cmd = ["ffmpeg", "-y", "-threads", *_FFMPEG_THREADS] + inputs + [
             "-filter_complex", filter_complex,
             "-map", "[vout]",
-            "-c:v", "libx264", "-preset", "medium", "-crf", "20",
-            "-an", "-r", "60",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-an", "-r", "30",
             "-movflags", "+faststart",
             str(output_path),
         ]
@@ -2714,11 +2718,11 @@ class ProVideoProvider:
                 f.write(f"file '{safe_path}'\n")
 
         cmd_simple = [
-            "ffmpeg", "-y",
+            "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
             "-f", "concat", "-safe", "0",
             "-i", str(concat_file),
-            "-c:v", "libx264", "-preset", "medium", "-crf", "20",
-            "-an", "-r", "60",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-an", "-r", "30",
             "-movflags", "+faststart",
             str(output_path),
         ]
@@ -2966,24 +2970,24 @@ class ProVideoProvider:
                 filter_complex = voice_chain + music_chain + mix_chain
 
             cmd = [
-                "ffmpeg", "-y",
+                "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
             ] + inputs + [
                 "-filter_complex", filter_complex,
                 "-map", "0:v", "-map", "[aout]",
                 "-c:v", "libx264", "-profile:v", "baseline", "-level", "4.0",
-                "-pix_fmt", "yuv420p", "-preset", "medium", "-crf", "20",
+                "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "23",
                 "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2",
                 "-shortest", "-movflags", "+faststart",
                 str(output_path),
             ]
         elif has_audio:
             cmd = [
-                "ffmpeg", "-y",
+                "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
                 "-i", str(raw_video),
                 "-i", str(full_audio),
                 "-map", "0:v", "-map", "1:a",
                 "-c:v", "libx264", "-profile:v", "baseline", "-level", "4.0",
-                "-pix_fmt", "yuv420p", "-preset", "medium", "-crf", "20",
+                "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "23",
                 "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
                 "-shortest", "-movflags", "+faststart",
                 str(output_path),
@@ -2991,7 +2995,7 @@ class ProVideoProvider:
         elif has_music:
             fade_out_start = max(0, video_dur - 2.5)
             cmd = [
-                "ffmpeg", "-y",
+                "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
                 "-i", str(raw_video),
                 "-stream_loop", "-1",
                 "-i", str(music_track),
@@ -3003,7 +3007,7 @@ class ProVideoProvider:
                 ),
                 "-map", "0:v", "-map", "[aout]",
                 "-c:v", "libx264", "-profile:v", "baseline", "-level", "4.0",
-                "-pix_fmt", "yuv420p", "-preset", "medium", "-crf", "20",
+                "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "23",
                 "-c:a", "aac", "-b:a", "128k", "-ar", "44100",
                 "-t", str(video_dur), "-movflags", "+faststart",
                 str(output_path),
@@ -3259,7 +3263,7 @@ class ProVideoProvider:
                 "-map", "[out]", "-map", "0:a?",
                 "-c:v", "libx264", "-preset", "fast", "-crf", "22",
                 "-c:a", "copy",
-                "-t", str(duration), "-r", "60",
+                "-t", str(duration), "-r", "30",
                 str(clip_path),
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
@@ -4022,7 +4026,7 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                         f"'min({crop_scroll},{crop_scroll}*t/{duration})',"
                         f"format=yuv420p"
                     ),
-                    "-r", "60",
+                    "-r", "30",
                     "-c:v", "libx264", "-preset", "ultrafast", "-crf", "22",
                     str(clip_path),
                 ]
@@ -4037,7 +4041,7 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                         "pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=0x111111,"
                         "format=yuv420p"
                     ),
-                    "-r", "60",
+                    "-r", "30",
                     "-c:v", "libx264", "-preset", "ultrafast", "-crf", "22",
                     str(clip_path),
                 ]
@@ -4184,7 +4188,7 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                     "eq=brightness=-0.15:saturation=0.6,"
                     "format=yuv420p"
                 ),
-                "-t", str(duration), "-r", "60",
+                "-t", str(duration), "-r", "30",
                 "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
                 "-an", str(bg_path),
             ]
@@ -4300,7 +4304,7 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                 f"format=yuv420p[out]"
             ),
             "-map", "[out]",
-            "-t", str(duration), "-r", "60",
+            "-t", str(duration), "-r", "30",
             "-c:v", "libx264", "-preset", "ultrafast", "-crf", "22",
             "-an", str(content_path),
         ]
@@ -4312,7 +4316,7 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                 "ffmpeg", "-y",
                 "-loop", "1", "-i", str(screenshot_path),
                 "-vf", f"scale={screen_w}:{screen_h}:force_original_aspect_ratio=decrease,pad={screen_w}:{screen_h},format=yuv420p",
-                "-t", str(duration), "-r", "60",
+                "-t", str(duration), "-r", "30",
                 "-c:v", "libx264", "-preset", "ultrafast", "-crf", "22",
                 "-an", str(content_path),
             ]
@@ -4356,7 +4360,7 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
             "-loop", "1", "-i", str(phone_frame_path),  # [2] statisch telefoon frame
             "-filter_complex", filter_complex,
             "-map", "[out]",
-            "-t", str(duration), "-r", "60",
+            "-t", str(duration), "-r", "30",
             "-c:v", "libx264", "-preset", "fast", "-crf", "21",
             "-an", str(mockup_path),
         ]
@@ -4383,7 +4387,7 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
         ])
         subprocess.run([
             "ffmpeg", "-y", "-i", str(bg_path), "-vf", bezel_vf,
-            "-r", "60", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "22",
+            "-r", "30", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "22",
             "-an", str(bezel_path),
         ], capture_output=True, timeout=45)
 
@@ -4400,7 +4404,7 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                     f"format=yuv420p[scaled];"
                     f"[0:v][scaled]overlay=x={screen_x}:y={screen_y}:shortest=1[out]"
                 ),
-                "-map", "[out]", "-r", "60",
+                "-map", "[out]", "-r", "30",
                 "-c:v", "libx264", "-preset", "ultrafast", "-crf", "22",
                 "-an", str(mockup_path),
             ]
@@ -4476,7 +4480,7 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                 "-loop", "1", "-t", str(duration),
                 "-i", str(img_path),
                 "-vf", vf,
-                "-r", "60",
+                "-r", "30",
                 "-c:v", "libx264", "-profile:v", "baseline", "-level", "4.0",
                 "-pix_fmt", "yuv420p",
                 "-preset", "fast", "-crf", "22",
@@ -4739,7 +4743,7 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
             "-c:v", "libx264", "-preset", "medium", "-crf", "19",
             "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
             "-t", str(duration),
-            "-r", "60",
+            "-r", "30",
             "-shortest",
             str(clip_path),
         ]
@@ -5027,7 +5031,7 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
         cmd += [
             "-c:v", "libx264", "-preset", "fast", "-crf", "22",
             "-c:a", "aac", "-b:a", "128k", "-ar", "44100",
-            "-t", str(duration), "-r", "60",
+            "-t", str(duration), "-r", "30",
             str(output),
         ]
         subprocess.run(cmd, capture_output=True, timeout=60)
@@ -5091,12 +5095,12 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
 
         filter_complex = ";".join(vf_parts + af_parts)
 
-        cmd = ["ffmpeg", "-y"] + inputs + [
+        cmd = ["ffmpeg", "-y", "-threads", *_FFMPEG_THREADS] + inputs + [
             "-filter_complex", filter_complex,
             "-map", "[vout]", "-map", "[aout]",
-            "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
             "-c:a", "aac", "-b:a", "128k", "-ar", "44100",
-            "-r", "60", "-movflags", "+faststart",
+            "-r", "30", "-movflags", "+faststart",
             str(output_path),
         ]
 
@@ -5121,12 +5125,12 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                 f.write(f"file '{safe_path}'\n")
 
         cmd = [
-            "ffmpeg", "-y",
+            "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
             "-f", "concat", "-safe", "0",
             "-i", str(concat_file),
-            "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
             "-c:a", "aac", "-b:a", "128k", "-ar", "44100",
-            "-r", "60",
+            "-r", "30",
             "-movflags", "+faststart",
             str(output_path),
         ]

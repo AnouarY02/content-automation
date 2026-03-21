@@ -17,13 +17,15 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 from backend.supabase import has_supabase_env
+from utils.runtime_paths import is_vercel_runtime
 
 
 def _backend() -> str:
     configured = os.getenv("REPO_BACKEND", "").lower().strip()
     if configured:
         return configured
-    if has_supabase_env():
+    # Op Vercel is het filesystem read-only; altijd Supabase gebruiken
+    if is_vercel_runtime() or has_supabase_env():
         return "supabase"
     return "file"
 

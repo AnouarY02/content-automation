@@ -62,9 +62,10 @@ def _resolve_campaigns_dir(tenant_id: str) -> Path:
     """
     if tenant_id == "default":
         return DATA_DIR
-    d = ROOT / "data" / "tenants" / tenant_id / "campaigns"
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+    return ensure_writable_dir(
+        ROOT / "data" / "tenants" / tenant_id / "campaigns",
+        get_runtime_data_dir("tenants", tenant_id, "campaigns"),
+    )
 
 # Log active feature flags once at import time
 if os.getenv("EXPERIMENTS_ENABLED", "false").lower() == "true":
@@ -172,8 +173,8 @@ def run_pipeline(
 
         # Genereer display_name: "Campagne N — AppNaam"
         app_name = memory.get("app_name") or app.get("name", app_id)
-        campaigns_dir = _resolve_campaigns_dir(tenant_id)
-        existing_count = len([f for f in campaigns_dir.glob("*.json") if f.stem != "index"])
+        repo = get_campaign_repo(tenant_id=tenant_id)
+        existing_count = len(repo.list(tenant_id=tenant_id))
         bundle.display_name = f"Campagne {existing_count + 1} — {app_name}"
 
         # Stap 2: Ideeën genereren (of pre-gekozen idee gebruiken)
@@ -213,8 +214,8 @@ def run_pipeline(
         # Doel: 90+ viral score. Parallel = zelfde tijd als 1 poging, maar 3x kans.
         import concurrent.futures as _cf
 
-        TOURNAMENT_SIZE = 1   # 1 script = goedkoop ($0.005 ipv $0.15)
-        TARGET_SCORE = 90     # Streefcijfer
+        TOURNAMENT_SIZE = 2   # 2 scripts parallel = snellere selectie, nog steeds goedkoop
+        TARGET_SCORE = 75     # Verlaagd: 75 is goed genoeg, voorkomt re-write loops
 
         progress("Stap 3/7: Video-script genereren...")
 

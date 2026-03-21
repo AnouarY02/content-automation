@@ -120,62 +120,66 @@ def setup_logging(
 
     logger.remove()  # Verwijder default loguru handler
 
+    _is_vercel = is_vercel_runtime()
+
     # ── Console sink ──
     if enable_console:
-        if environment == "production":
+        if environment == "production" or _is_vercel:
             logger.add(sys.stdout, format=_json_formatter, level=log_level, colorize=False)
         else:
             logger.add(sys.stderr, format=_human_format, level=log_level, colorize=False)
 
-    # ── System log (alle levels) ──
-    logger.add(
-        LOGS_DIR / "system.jsonl",
-        format=_json_formatter,
-        level="DEBUG",
-        rotation="00:00",           # Nieuw bestand elke dag om middernacht
-        retention="30 days",
-        compression="gz",
-        serialize=False,
-        colorize=False,
-        enqueue=_USE_ENQUEUE,
-    )
+    # Op Vercel: alleen stdout logging, geen file sinks (ephemeral /tmp)
+    if not _is_vercel:
+        # ── System log (alle levels) ──
+        logger.add(
+            LOGS_DIR / "system.jsonl",
+            format=_json_formatter,
+            level="DEBUG",
+            rotation="00:00",           # Nieuw bestand elke dag om middernacht
+            retention="30 days",
+            compression="gz",
+            serialize=False,
+            colorize=False,
+            enqueue=_USE_ENQUEUE,
+        )
 
-    # ── Error log (WARNING en hoger) ──
-    logger.add(
-        LOGS_DIR / "errors.jsonl",
-        format=_json_formatter,
-        level="WARNING",
-        rotation="00:00",
-        retention="90 days",        # Errors langer bewaren
-        compression="gz",
-        colorize=False,
-        enqueue=_USE_ENQUEUE,
-    )
+        # ── Error log (WARNING en hoger) ──
+        logger.add(
+            LOGS_DIR / "errors.jsonl",
+            format=_json_formatter,
+            level="WARNING",
+            rotation="00:00",
+            retention="90 days",        # Errors langer bewaren
+            compression="gz",
+            colorize=False,
+            enqueue=_USE_ENQUEUE,
+        )
 
-    # ── Scheduler log ──
-    logger.add(
-        LOGS_DIR / "scheduler.jsonl",
-        format=_json_formatter,
-        level="INFO",
-        rotation="00:00",
-        retention="14 days",
-        colorize=False,
-        filter=lambda r: "scheduler" in r["extra"].get("component", "").lower()
-                         or "Scheduler" in r["message"],
-        enqueue=_USE_ENQUEUE,
-    )
+        # ── Scheduler log ──
+        logger.add(
+            LOGS_DIR / "scheduler.jsonl",
+            format=_json_formatter,
+            level="INFO",
+            rotation="00:00",
+            retention="14 days",
+            colorize=False,
+            filter=lambda r: "scheduler" in r["extra"].get("component", "").lower()
+                             or "Scheduler" in r["message"],
+            enqueue=_USE_ENQUEUE,
+        )
 
-    # ── Audit log (SUCCESS en INFO voor audit events) ──
-    logger.add(
-        LOGS_DIR / "audit.jsonl",
-        format=_json_formatter,
-        level="INFO",
-        rotation="00:00",
-        retention="365 days",       # Audit logs 1 jaar bewaren
-        colorize=False,
-        filter=lambda r: r["extra"].get("is_audit", False),
-        enqueue=_USE_ENQUEUE,
-    )
+        # ── Audit log (SUCCESS en INFO voor audit events) ──
+        logger.add(
+            LOGS_DIR / "audit.jsonl",
+            format=_json_formatter,
+            level="INFO",
+            rotation="00:00",
+            retention="365 days",       # Audit logs 1 jaar bewaren
+            colorize=False,
+            filter=lambda r: r["extra"].get("is_audit", False),
+            enqueue=_USE_ENQUEUE,
+        )
 
     _configured = True
     logger.info("Logging systeem geconfigureerd", extra={"component": "logger"})

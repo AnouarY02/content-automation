@@ -38,7 +38,13 @@ def atomic_write_json(
         OSError / TypeError: bij schrijf- of serialisatiefout.
     """
     path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        raise OSError(
+            f"Kan map {path.parent} niet aanmaken. "
+            f"Op Vercel: zet REPO_BACKEND=supabase in env vars."
+        )
     tmp = path.with_suffix(".tmp")
     try:
         tmp.write_text(
@@ -47,7 +53,10 @@ def atomic_write_json(
         )
         os.replace(tmp, path)
     except Exception:
-        tmp.unlink(missing_ok=True)
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass  # Read-only filesystem — tmp cleanup niet mogelijk
         raise
 
 

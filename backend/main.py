@@ -84,6 +84,14 @@ _EXTRA_ORIGIN = os.getenv("ALLOWED_ORIGIN", "")
 if _EXTRA_ORIGIN:
     _ALLOWED_ORIGINS.append(_EXTRA_ORIGIN)
 
+# Vercel: auto-detect deployment URL en voeg toe aan CORS
+_VERCEL_URL = os.getenv("VERCEL_URL", "")
+if _VERCEL_URL:
+    _ALLOWED_ORIGINS.append(f"https://{_VERCEL_URL}")
+_VERCEL_PROJECT = os.getenv("VERCEL_PROJECT_PRODUCTION_URL", "")
+if _VERCEL_PROJECT:
+    _ALLOWED_ORIGINS.append(f"https://{_VERCEL_PROJECT}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
@@ -109,9 +117,10 @@ app.include_router(settings_router.router,    prefix="/api/settings",     tags=[
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 ASSETS_DIR = get_generated_assets_dir()
 
-app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="frontend")
+if FRONTEND_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="frontend")
 
-ensure_dir(ASSETS_DIR)
+ASSETS_DIR = ensure_dir(ASSETS_DIR)
 ensure_dir(ASSETS_DIR / "videos")
 app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
 
