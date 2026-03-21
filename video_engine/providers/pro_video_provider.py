@@ -3677,7 +3677,8 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                             kb_vf = "setpts=1.12*PTS," + kb_vf
 
                         cmd = [
-                            "ffmpeg", "-y", "-stream_loop", "-1",
+                            "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+                            "-stream_loop", "-1",
                             "-i", str(raw_path), "-vf", kb_vf,
                             "-t", str(duration),
                             "-c:v", "libx264", "-profile:v", "baseline", "-level", "4.0",
@@ -3687,7 +3688,22 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                         cur_result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
                         if clip_path.exists() and clip_path.stat().st_size > 5000:
                             return clip_path
-                        logger.warning(f"[ProVideo] Curated pre-proc scene {idx} mislukt (rc={cur_result.returncode}): {(cur_result.stderr or '')[-200:]}")
+                        # Simpele fallback voor curated
+                        logger.warning(f"[ProVideo] Curated KB mislukt scene {idx}: {(cur_result.stderr or '')[-150:]}")
+                        simple_vf = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p"
+                        cmd_simple = [
+                            "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+                            "-stream_loop", "-1",
+                            "-i", str(raw_path), "-vf", simple_vf,
+                            "-t", str(duration),
+                            "-c:v", "libx264", "-preset", STOCK_INTERMEDIATE_PRESET,
+                            "-crf", STOCK_INTERMEDIATE_CRF,
+                            "-an", "-r", str(STOCK_INTERMEDIATE_FPS), str(clip_path),
+                        ]
+                        subprocess.run(cmd_simple, capture_output=True, text=True, timeout=120)
+                        if clip_path.exists() and clip_path.stat().st_size > 5000:
+                            logger.info(f"[ProVideo] Curated simple fallback OK scene {idx}")
+                            return clip_path
                 except Exception as e:
                     logger.debug(f"[ProVideo] Curated video {chosen_id} mislukt: {e}")
 
@@ -3790,7 +3806,7 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                     kb_vf = "setpts=1.12*PTS," + kb_vf
 
                 cmd = [
-                    "ffmpeg", "-y",
+                    "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
                     "-stream_loop", "-1",  # Loop video als korter dan scene duur
                     "-i", str(raw_path),
                     "-vf", kb_vf,
@@ -3806,12 +3822,32 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                 if clip_path.exists() and clip_path.stat().st_size > 5000:
                     return clip_path
 
-                # Log waarom pre-processing faalde
+                # Ken Burns mislukt — probeer simpele scale+crop
                 logger.warning(
-                    f"[ProVideo] Stock pre-processing scene {idx} mislukt "
+                    f"[ProVideo] KB pre-proc scene {idx} mislukt "
                     f"(rc={pre_result.returncode}, raw={raw_path.stat().st_size}b): "
                     f"{(pre_result.stderr or '')[-200:]}"
                 )
+                simple_vf = (
+                    "scale=1080:1920:force_original_aspect_ratio=increase,"
+                    "crop=1080:1920,setsar=1,format=yuv420p"
+                )
+                cmd_simple = [
+                    "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+                    "-stream_loop", "-1",
+                    "-i", str(raw_path),
+                    "-vf", simple_vf,
+                    "-t", str(duration),
+                    "-c:v", "libx264", "-preset", STOCK_INTERMEDIATE_PRESET,
+                    "-crf", STOCK_INTERMEDIATE_CRF,
+                    "-an", "-r", str(STOCK_INTERMEDIATE_FPS),
+                    str(clip_path),
+                ]
+                simple_result = subprocess.run(cmd_simple, capture_output=True, text=True, timeout=120)
+                if clip_path.exists() and clip_path.stat().st_size > 5000:
+                    logger.info(f"[ProVideo] Simple scale+crop fallback OK scene {idx}")
+                    return clip_path
+                logger.warning(f"[ProVideo] Simple fallback ook mislukt scene {idx}: {(simple_result.stderr or '')[-200:]}")
 
             except Exception as e:
                 logger.debug(f"[ProVideo] Stock query '{query}' mislukt: {e}")
