@@ -3,7 +3,9 @@
 // ══════════════════════════════════════════════════════════════════════
 
 // ── State ────────────────────────────────────────────────────────────
-const API = '';
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? ''  // Lokale dev — zelfde server
+  : 'https://content-automation-production-1812.up.railway.app';  // Productie — Railway backend
 let currentTab = 'overview';
 let currentApp = '';
 let allApps = [];
