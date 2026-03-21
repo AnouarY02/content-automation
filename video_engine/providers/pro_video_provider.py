@@ -756,11 +756,24 @@ class ProVideoProvider:
                 if visual and visual.exists() and visual.stat().st_size > 5000:
                     _vprogress(f"  > Clip {sd['idx']}: effects mislukt, raw visual als fallback")
                     logger.warning(f"[ProVideo] Clip {sd['idx']} effecten mislukt, raw visual fallback")
+                    # Detecteer image vs video
+                    v_str = str(visual).lower()
+                    is_img = v_str.endswith((".jpg", ".jpeg", ".png", ".webp", ".bmp"))
+                    if not is_img:
+                        # Check framecount — 1 frame = image-achtig
+                        pr = subprocess.run(
+                            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+                             "-show_entries", "stream=nb_frames",
+                             "-of", "csv=p=0", str(visual)],
+                            capture_output=True, text=True, timeout=10)
+                        nb = (pr.stdout or "").strip()
+                        if nb in ("1", "N/A", ""):
+                            is_img = True
+                    inp = ["-loop", "1"] if is_img else ["-stream_loop", "-1"]
                     # Scale naar 1080x1920 portrait
                     fb_cmd = [
                         "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
-                        "-stream_loop", "-1",
-                        "-i", str(visual),
+                        *inp, "-i", str(visual),
                         "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p",
                         "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
                         "-an", "-t", str(sd["duration"]), "-r", "30",
@@ -770,10 +783,11 @@ class ProVideoProvider:
                     if raw_clip.exists() and raw_clip.stat().st_size > 5000:
                         _vprogress(f"  > Clip {sd['idx']}: raw fallback OK ({raw_clip.stat().st_size} bytes)")
                         return raw_clip
-                    # Zonder scale — misschien is input al juiste formaat
+                    # Zonder loop — misschien is input al juiste lengte
                     fb_cmd2 = [
                         "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
                         "-i", str(visual),
+                        "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,format=yuv420p",
                         "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
                         "-pix_fmt", "yuv420p", "-an",
                         "-t", str(sd["duration"]), "-r", "30",
@@ -2357,13 +2371,34 @@ class ProVideoProvider:
         vf_parts.append("format=yuv420p")
         vf = ",".join(vf_parts)
 
+        # Detecteer of input een afbeelding is (geen video stream)
+        is_image = str(visual).lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".bmp"))
+        if not is_image:
+            # Probe of er een video stream is met meerdere frames
+            probe_cmd = [
+                "ffprobe", "-v", "error", "-select_streams", "v:0",
+                "-count_frames", "-show_entries", "stream=nb_read_frames,codec_type",
+                "-of", "csv=p=0", str(visual),
+            ]
+            probe_res = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=15)
+            probe_out = (probe_res.stdout or "").strip()
+            # Als het maar 1 frame heeft of probe faalt → behandel als image
+            if probe_res.returncode != 0 or ",1" in probe_out or probe_out.endswith(",1"):
+                is_image = True
+
+        # Input flags: -loop 1 voor images, -stream_loop -1 voor video
+        if is_image:
+            input_flags = ["-loop", "1", "-i", str(visual)]
+            logger.info(f"[ProVideo] Clip {idx}: input is afbeelding, gebruik -loop 1")
+        else:
+            input_flags = ["-stream_loop", "-1", "-i", str(visual)]
+
         cmd = [
-            "ffmpeg", "-y",
-            "-stream_loop", "-1",  # Loop als input korter is dan duration
-            "-i", str(visual),
+            "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+            *input_flags,
             "-vf", vf,
-            "-an",  # Geen audio in visuele clip
-            "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+            "-an",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
             "-t", str(duration), "-r", "30",
             str(clip_path),
         ]
@@ -2371,31 +2406,70 @@ class ProVideoProvider:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
         if result.returncode != 0 or not (clip_path.exists() and clip_path.stat().st_size > 5000):
-            logger.warning(f"[ProVideo] Clip {idx} FFmpeg fout (rc={result.returncode}): {(result.stderr or '')[-300:]}")
-            # Simpele fallback zonder overlays — scale naar portrait
-            cmd_simple = [
-                "ffmpeg", "-y",
-                "-stream_loop", "-1",
-                "-i", str(visual),
-                "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p",
+            logger.warning(f"[ProVideo] Clip {idx} full effects fout (rc={result.returncode}): {(result.stderr or '')[-300:]}")
+
+            # Fallback 1: "lite" effects — kleurcorrectie + gradient + vignette (geen drawtext/zoompan/lut)
+            lite_vf = []
+            # Kleurcorrectie
+            if scene_type == "hook":
+                lite_vf.append("eq=saturation=1.20:contrast=1.15:brightness=0.02")
+            elif scene_type == "problem":
+                lite_vf.append("eq=saturation=0.80:contrast=1.16:brightness=-0.04")
+            elif scene_type in ("solution", "demo", "feature"):
+                lite_vf.append("eq=saturation=1.15:contrast=1.06:brightness=0.04")
+            else:
+                lite_vf.append("eq=saturation=1.25:contrast=1.10:brightness=0.03")
+            # Gradient onderkant (simpeler: 3 lagen)
+            for gi in range(3):
+                gy = 0.82 - gi * 0.06
+                alpha = 0.12 * ((3 - gi) / 3) ** 1.5
+                lite_vf.append(f"drawbox=y=ih*{gy:.3f}:w=iw:h=ih*{1 - gy:.3f}:color=black@{alpha:.3f}:t=fill")
+            # Vignette
+            lite_vf.append("vignette=PI/5")
+            # Fade
+            if idx > 0:
+                lite_vf.append("fade=t=in:st=0:d=0.2")
+            lite_vf.append(f"fade=t=out:st={duration - 0.2:.2f}:d=0.2")
+            lite_vf.append("scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p")
+
+            cmd_lite = [
+                "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+                *input_flags,
+                "-vf", ",".join(lite_vf),
                 "-an", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
                 "-t", str(duration), "-r", "30",
                 str(clip_path),
             ]
-            fb1 = subprocess.run(cmd_simple, capture_output=True, text=True, timeout=60)
-            if fb1.returncode != 0 or not (clip_path.exists() and clip_path.stat().st_size > 5000):
-                logger.warning(f"[ProVideo] Clip {idx} simpele fallback ook mislukt (rc={fb1.returncode}): {(fb1.stderr or '')[-200:]}")
-                # Ultra-simpele fallback: alleen copy/format
-                cmd_ultra = [
-                    "ffmpeg", "-y", "-i", str(visual),
-                    "-vf", "format=yuv420p",
-                    "-an", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
+            fb_lite = subprocess.run(cmd_lite, capture_output=True, text=True, timeout=60)
+            if fb_lite.returncode == 0 and clip_path.exists() and clip_path.stat().st_size > 5000:
+                logger.info(f"[ProVideo] Clip {idx}: lite effects OK ({clip_path.stat().st_size} bytes)")
+            else:
+                logger.warning(f"[ProVideo] Clip {idx} lite effects mislukt (rc={fb_lite.returncode}): {(fb_lite.stderr or '')[-200:]}")
+
+                # Fallback 2: simpele scale naar portrait
+                cmd_simple = [
+                    "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+                    *input_flags,
+                    "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p",
+                    "-an", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
                     "-t", str(duration), "-r", "30",
                     str(clip_path),
                 ]
-                fb2 = subprocess.run(cmd_ultra, capture_output=True, text=True, timeout=60)
-                if fb2.returncode != 0:
-                    logger.error(f"[ProVideo] Clip {idx} ALLE fallbacks mislukt: {(fb2.stderr or '')[-200:]}")
+                fb1 = subprocess.run(cmd_simple, capture_output=True, text=True, timeout=60)
+                if fb1.returncode != 0 or not (clip_path.exists() and clip_path.stat().st_size > 5000):
+                    logger.warning(f"[ProVideo] Clip {idx} simpele fallback ook mislukt (rc={fb1.returncode}): {(fb1.stderr or '')[-200:]}")
+                    # Fallback 3: input zonder filter (alleen re-encode)
+                    cmd_ultra = [
+                        "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+                        *input_flags,
+                        "-vf", "scale=1080:1920,format=yuv420p",
+                        "-an", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
+                        "-t", str(duration), "-r", "30",
+                        str(clip_path),
+                    ]
+                    fb2 = subprocess.run(cmd_ultra, capture_output=True, text=True, timeout=60)
+                    if fb2.returncode != 0:
+                        logger.error(f"[ProVideo] Clip {idx} ALLE fallbacks mislukt: {(fb2.stderr or '')[-200:]}")
 
         # ── 9. Logo watermark overlay — klein logo linksonder ──────────
         # Zoek logo in memory of standaard locaties
