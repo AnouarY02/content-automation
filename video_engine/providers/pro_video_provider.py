@@ -742,13 +742,41 @@ class ProVideoProvider:
         def _make_clip(sd):
             try:
                 result = self._create_visual_clip(sd, sd["idx"], work_dir, total_scenes)
-                if not result or not result.exists():
-                    _vprogress(f"  > Clip {sd['idx']}: MISLUKT (geen output)")
-                    logger.warning(f"[ProVideo] Clip {sd['idx']} mislukt: geen output")
-                else:
+                if result and result.exists() and result.stat().st_size > 5000:
                     _vprogress(f"  > Clip {sd['idx']}: OK ({result.stat().st_size} bytes)")
-                    logger.info(f"[ProVideo] Clip {sd['idx']} OK: {result.stat().st_size} bytes")
-                return result
+                    return result
+                # Clip rendering mislukt — gebruik visual direct als noodoplossing
+                visual = sd.get("visual")
+                if visual and visual.exists() and visual.stat().st_size > 5000:
+                    _vprogress(f"  > Clip {sd['idx']}: effects mislukt, raw visual als fallback")
+                    logger.warning(f"[ProVideo] Clip {sd['idx']} effecten mislukt, raw visual fallback")
+                    # Maak simpele clip van raw visual
+                    raw_clip = work_dir / f"raw_clip_{sd['idx']:02d}.mp4"
+                    fb_cmd = [
+                        "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+                        "-i", str(visual),
+                        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
+                        "-pix_fmt", "yuv420p", "-an",
+                        "-t", str(sd["duration"]), "-r", "30",
+                        str(raw_clip),
+                    ]
+                    subprocess.run(fb_cmd, capture_output=True, timeout=60)
+                    if raw_clip.exists() and raw_clip.stat().st_size > 5000:
+                        _vprogress(f"  > Clip {sd['idx']}: raw fallback OK ({raw_clip.stat().st_size} bytes)")
+                        return raw_clip
+                    # Zelfs simpele re-encode faalt — copy video stream
+                    copy_cmd = [
+                        "ffmpeg", "-y", "-i", str(visual),
+                        "-c", "copy", "-an",
+                        "-t", str(sd["duration"]),
+                        str(raw_clip),
+                    ]
+                    subprocess.run(copy_cmd, capture_output=True, timeout=30)
+                    if raw_clip.exists() and raw_clip.stat().st_size > 5000:
+                        _vprogress(f"  > Clip {sd['idx']}: stream copy OK")
+                        return raw_clip
+                _vprogress(f"  > Clip {sd['idx']}: MISLUKT (alle fallbacks)")
+                return None
             except Exception as e:
                 _vprogress(f"  > Clip {sd['idx']}: CRASH ({e})")
                 logger.error(f"[ProVideo] Clip {sd['idx']} CRASH: {e}")
