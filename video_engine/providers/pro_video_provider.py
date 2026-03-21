@@ -2114,15 +2114,18 @@ class ProVideoProvider:
             logger.warning(f"[ProVideo] Geen geldige visual voor scene {idx} (size={v_size})")
             return None
 
-        # ── Prefer raw stock over corrupt pre-processed files ──
+        # ── Prefer raw stock over pre-processed files ──
+        # Pre-processing (Ken Burns) can corrupt files or produce incompatible
+        # codecs. Since pass1 already normalizes to 1080x1920, raw stock works
+        # just as well and is always uncorrupted.
         _IMG_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".tiff")
         is_image = str(visual).lower().endswith(_IMG_EXTS)
-        if not is_image and v_size < 1_000_000:
+        if not is_image:
             raw_stock = work_dir / f"stock_raw_{idx:02d}.mp4"
-            if raw_stock.exists() and raw_stock.stat().st_size > v_size:
+            if raw_stock.exists() and raw_stock.stat().st_size > 50_000:
                 logger.info(
-                    f"[ProVideo] Clip {idx}: visual te klein ({v_size}B), "
-                    f"gebruik raw stock ({raw_stock.stat().st_size}B)"
+                    f"[ProVideo] Clip {idx}: gebruik raw stock ({raw_stock.stat().st_size}B) "
+                    f"ipv pre-processed ({v_size}B)"
                 )
                 visual = raw_stock
                 v_size = visual.stat().st_size
