@@ -727,12 +727,29 @@ class ProVideoProvider:
         with concurrent.futures.ThreadPoolExecutor(max_workers=_visual_fetch_workers()) as ex:
             scene_data = list(ex.map(_fetch_visual, scene_data))
 
+        # Log welke visuals gevonden zijn
+        for sd in scene_data:
+            v = sd.get("visual")
+            v_ok = v and v.exists() if v else False
+            v_size = v.stat().st_size if v_ok else 0
+            logger.info(f"[ProVideo] Scene {sd['idx']} visual: {'OK' if v_ok else 'GEEN'} ({v_size} bytes) path={v}")
+            _vprogress(f"  > Scene {sd['idx']} visual: {'OK' if v_ok else 'GEEN'} ({v_size} bytes)")
+
         # -- Stap 4: Visuele clips PARALLEL
         _vprogress(f"Clips renderen ({len(scene_data)} scenes)...")
         total_scenes = len(scene_data)
 
         def _make_clip(sd):
-            return self._create_visual_clip(sd, sd["idx"], work_dir, total_scenes)
+            try:
+                result = self._create_visual_clip(sd, sd["idx"], work_dir, total_scenes)
+                if not result or not result.exists():
+                    logger.warning(f"[ProVideo] Clip {sd['idx']} mislukt: geen output")
+                else:
+                    logger.info(f"[ProVideo] Clip {sd['idx']} OK: {result.stat().st_size} bytes")
+                return result
+            except Exception as e:
+                logger.error(f"[ProVideo] Clip {sd['idx']} CRASH: {e}")
+                return None
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=_clip_render_workers()) as ex:
             clip_results = list(ex.map(_make_clip, scene_data))
@@ -741,7 +758,9 @@ class ProVideoProvider:
         clips = [c for c in clip_results if c and c.exists()]
 
         if not clips:
-            raise RuntimeError("Geen scene clips geproduceerd")
+            # Diagnostiek: welke scenes faalden en waarom
+            diag = [f"scene {sd['idx']}: visual={'OK' if sd.get('visual') and sd['visual'].exists() else 'GEEN'}" for sd in scene_data]
+            raise RuntimeError(f"Geen scene clips geproduceerd. Diagnostiek: {'; '.join(diag)}")
 
         # -- Stap 5: Concat visuals met variabele transities per scene-type
         _vprogress("Video assembleren...")
@@ -2297,6 +2316,7 @@ class ProVideoProvider:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
         if result.returncode != 0 or not (clip_path.exists() and clip_path.stat().st_size > 5000):
+            logger.warning(f"[ProVideo] Clip {idx} FFmpeg fout (rc={result.returncode}): {(result.stderr or '')[-300:]}")
             # Simpele fallback zonder overlays
             cmd_simple = [
                 "ffmpeg", "-y",
