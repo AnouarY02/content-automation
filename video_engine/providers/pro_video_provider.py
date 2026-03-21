@@ -808,9 +808,29 @@ class ProVideoProvider:
         clips = [c for c in clip_results if c and c.exists()]
 
         if not clips:
-            # Diagnostiek: welke scenes faalden en waarom
             diag = [f"scene {sd['idx']}: visual={'OK' if sd.get('visual') and sd['visual'].exists() else 'GEEN'}" for sd in scene_data]
             raise RuntimeError(f"Geen scene clips geproduceerd. Diagnostiek: {'; '.join(diag)}")
+
+        # -- Stap 4b: Normaliseer alle clips naar exact 1080x1920 30fps yuv420p
+        #    Dit voorkomt concat-fouten door mismatches in resolutie/codec/fps
+        normalized_clips = []
+        for i, clip in enumerate(clips):
+            norm_path = work_dir / f"norm_{i:02d}.mp4"
+            norm_cmd = [
+                "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+                "-i", str(clip),
+                "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p",
+                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
+                "-an", "-r", "30",
+                str(norm_path),
+            ]
+            norm_res = subprocess.run(norm_cmd, capture_output=True, text=True, timeout=120)
+            if norm_res.returncode == 0 and norm_path.exists() and norm_path.stat().st_size > 1000:
+                normalized_clips.append(norm_path)
+            else:
+                logger.warning(f"[ProVideo] Norm clip {i} mislukt, origineel behouden: {(norm_res.stderr or '')[-150:]}")
+                normalized_clips.append(clip)
+        clips = normalized_clips
 
         # -- Stap 5: Concat visuals met variabele transities per scene-type
         _vprogress("Video assembleren...")
