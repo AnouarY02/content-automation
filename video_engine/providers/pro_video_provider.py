@@ -816,28 +816,7 @@ class ProVideoProvider:
             diag = [f"scene {sd['idx']}: visual={'OK' if sd.get('visual') and sd['visual'].exists() else 'GEEN'}" for sd in scene_data]
             raise RuntimeError(f"Geen scene clips geproduceerd. Diagnostiek: {'; '.join(diag)}")
 
-        # -- Stap 4b: Normaliseer alle clips naar exact 1080x1920 30fps yuv420p
-        #    Dit voorkomt concat-fouten door mismatches in resolutie/codec/fps
-        normalized_clips = []
-        for i, clip in enumerate(clips):
-            norm_path = work_dir / f"norm_{i:02d}.mp4"
-            norm_cmd = [
-                "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
-                "-i", str(clip),
-                "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p",
-                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
-                "-an", "-r", "30",
-                str(norm_path),
-            ]
-            norm_res = subprocess.run(norm_cmd, capture_output=True, text=True, timeout=120)
-            if norm_res.returncode == 0 and norm_path.exists() and norm_path.stat().st_size > 1000:
-                normalized_clips.append(norm_path)
-            else:
-                logger.warning(f"[ProVideo] Norm clip {i} mislukt, origineel behouden: {(norm_res.stderr or '')[-150:]}")
-                normalized_clips.append(clip)
-        clips = normalized_clips
-
-        # -- Stap 5: Concat visuals met variabele transities per scene-type
+        # -- Stap 5: Concat visuals (normalisatie gebeurt in _concat_visual_clips)
         _vprogress("Video assembleren...")
         raw_video = work_dir / "raw_video.mp4"
         scene_types = [s.get("type", "body") for s in scenes]
@@ -2733,150 +2712,80 @@ class ProVideoProvider:
         self, clips: list[Path], output_path: Path,
         scene_types: list[str] | None = None,
     ) -> None:
-        """Concat visuele clips met variabele xfade transities per scene-type.
+        """Concat visuele clips — robuust met per-clip pre-normalisatie.
 
-        Transitie-regels (v6):
-        - hook→problem: hard cut (0.3s fade) — urgentie
-        - problem→solution: langzame dissolve (1.2s) — emotionele shift
-        - solution→cta: snelle wipe (0.5s) — energie
-        - Overig: medium crossfade (0.7s)
-
-        Transitie-types per overgang:
-        - hook→problem: fadeblack (dramatisch)
-        - problem→solution: fade (zachte oplossing)
-        - solution→cta: smoothleft (actie-energie)
+        Strategie: eerst elk clip individueel re-encoden naar exact hetzelfde
+        formaat (1080x1920 30fps yuv420p H.264), dan concat demuxer met
+        stream copy. Dit omzeilt alle format-mismatch problemen.
         """
         if len(clips) == 1:
             import shutil
             shutil.copy(clips[0], output_path)
             return
 
-        durations = [self._get_media_duration(c) or 5.0 for c in clips]
+        work_dir = clips[0].parent
 
-        # Variabele transitie per scene-grens
-        def _get_transition(from_type: str, to_type: str) -> tuple[str, float]:
-            """Bepaal transitie-type en duur op basis van scene-types."""
-            pair = f"{from_type}>{to_type}"
-            _map = {
-                "hook>problem": ("fadeblack", 0.3),
-                "problem>solution": ("fade", 1.2),
-                "problem>demo": ("fade", 0.8),      # problem → app demo: zachte reveal
-                "demo>cta": ("smoothleft", 0.5),     # demo → CTA: actie
-                "demo>solution": ("fade", 0.6),      # demo → solution: vloeiend
-                "demo>feature": ("fade", 0.5),       # demo → feature: smooth
-                "feature>cta": ("smoothleft", 0.5),  # feature → CTA: actie
-                "hook>demo": ("fade", 0.6),          # hook → demo: onthulling
-                "solution>cta": ("smoothleft", 0.5),
-                "hook>solution": ("fade", 0.8),
-                "hook>cta": ("smoothleft", 0.6),
-                "problem>cta": ("wipeleft", 0.6),
-            }
-            return _map.get(pair, ("fade", 0.7))
+        # Stap 1: pre-normaliseer elke clip INDIVIDUEEL naar identiek formaat
+        safe_clips = []
+        for i, clip in enumerate(clips):
+            safe_path = work_dir / f"safe_{i:02d}.mp4"
+            cmd = [
+                "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+                "-i", str(clip),
+                "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,"
+                       "crop=1080:1920,setsar=1,format=yuv420p",
+                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
+                "-r", "30", "-g", "30",  # keyframe every 30 frames = 1s
+                "-video_track_timescale", "15360",
+                "-an",
+                "-movflags", "+faststart",
+                str(safe_path),
+            ]
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            if res.returncode == 0 and safe_path.exists() and safe_path.stat().st_size > 1000:
+                safe_clips.append(safe_path)
+                logger.info(f"[ProVideo] Safe clip {i}: {safe_path.stat().st_size} bytes")
+            else:
+                logger.warning(f"[ProVideo] Safe clip {i} mislukt, skip: {(res.stderr or '')[-200:]}")
 
-        scene_types = scene_types or ["body"] * len(clips)
+        if not safe_clips:
+            raise RuntimeError("Geen clips na normalisatie — concat onmogelijk")
 
-        inputs = []
-        for clip in clips:
-            inputs += ["-i", str(clip)]
-
-        # Stap 1: normaliseer elke input inline naar 1080x1920 30fps yuv420p
-        norm_parts = []
-        for i in range(len(clips)):
-            norm_parts.append(
-                f"[{i}:v]scale=1080:1920:force_original_aspect_ratio=increase,"
-                f"crop=1080:1920,fps=30,setsar=1,format=yuv420p[s{i}]"
-            )
-
-        # Stap 2: xfade transities op genormaliseerde streams
-        vf_parts = []
-        for i in range(len(clips) - 1):
-            in_v1 = f"[s{i}]" if i == 0 else f"[v{i}]"
-            in_v2 = f"[s{i + 1}]"
-            out_v = "[vout]" if i == len(clips) - 2 else f"[v{i + 1}]"
-
-            from_type = scene_types[i] if i < len(scene_types) else "body"
-            to_type = scene_types[i + 1] if (i + 1) < len(scene_types) else "body"
-            transition, xfade_dur = _get_transition(from_type, to_type)
-
-            offset = sum(durations[:i + 1]) - sum(
-                _get_transition(
-                    scene_types[j] if j < len(scene_types) else "body",
-                    scene_types[j + 1] if (j + 1) < len(scene_types) else "body",
-                )[1] for j in range(i + 1)
-            )
-            offset = max(0.1, offset)
-
-            vf_parts.append(
-                f"{in_v1}{in_v2}xfade=transition={transition}:"
-                f"duration={xfade_dur:.1f}:offset={offset:.3f}{out_v}"
-            )
-
-        filter_complex = ";".join(norm_parts + vf_parts)
-        cmd = ["ffmpeg", "-y", "-threads", *_FFMPEG_THREADS] + inputs + [
-            "-filter_complex", filter_complex,
-            "-map", "[vout]",
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-            "-an", "-r", "30",
-            "-movflags", "+faststart",
-            str(output_path),
-        ]
-
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-        if result.returncode == 0 and output_path.exists() and output_path.stat().st_size > 10000:
-            logger.info(f"[ProVideo] Xfade concat klaar: {len(clips)} clips")
-            return
-
-        # Fallback: filter_complex concat met inline normalisatie per clip
-        logger.warning(f"[ProVideo] Xfade mislukt, filter_complex concat: {result.stderr[-300:] if result.stderr else ''}")
-
-        # Bouw filter_complex: normaliseer elke input naar exact 1080x1920 30fps yuv420p
-        norm_filters = []
-        concat_inputs = []
-        for i in range(len(clips)):
-            norm_filters.append(
-                f"[{i}:v]scale=1080:1920:force_original_aspect_ratio=increase,"
-                f"crop=1080:1920,fps=30,setsar=1,format=yuv420p[n{i}]"
-            )
-            concat_inputs.append(f"[n{i}]")
-
-        concat_str = "".join(concat_inputs)
-        norm_filters.append(f"{concat_str}concat=n={len(clips)}:v=1:a=0[vout]")
-        fc = ";".join(norm_filters)
-
-        cmd_fc = ["ffmpeg", "-y", "-threads", *_FFMPEG_THREADS] + inputs + [
-            "-filter_complex", fc,
-            "-map", "[vout]",
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-            "-an", "-r", "30",
-            "-movflags", "+faststart",
-            str(output_path),
-        ]
-        result2 = subprocess.run(cmd_fc, capture_output=True, text=True, timeout=300)
-        if result2.returncode == 0 and output_path.exists() and output_path.stat().st_size > 10000:
-            logger.info(f"[ProVideo] Filter_complex concat klaar: {len(clips)} clips")
-            return
-
-        # Ultieme fallback: concat demuxer met re-encode
-        logger.warning(f"[ProVideo] Filter_complex concat mislukt, demuxer fallback: {result2.stderr[-300:] if result2.stderr else ''}")
-        concat_file = clips[0].parent / "concat_visual.txt"
+        # Stap 2: concat demuxer met stream copy (alle clips zijn nu identiek formaat)
+        concat_file = work_dir / "concat_safe.txt"
         with open(concat_file, "w", encoding="utf-8") as f:
-            for clip in clips:
+            for clip in safe_clips:
                 safe_path = str(clip).replace("\\", "/")
                 f.write(f"file '{safe_path}'\n")
 
-        cmd_demux = [
+        cmd_concat = [
             "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
             "-f", "concat", "-safe", "0",
             "-i", str(concat_file),
-            "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,setsar=1,format=yuv420p",
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-            "-an", "-r", "30",
+            "-c", "copy",
             "-movflags", "+faststart",
             str(output_path),
         ]
-        result3 = subprocess.run(cmd_demux, capture_output=True, text=True, timeout=300)
-        if result3.returncode != 0:
-            raise RuntimeError(f"Visuele concat mislukt: {result3.stderr[-300:]}")
+        result = subprocess.run(cmd_concat, capture_output=True, text=True, timeout=120)
+        if result.returncode == 0 and output_path.exists() and output_path.stat().st_size > 5000:
+            logger.info(f"[ProVideo] Concat klaar ({len(safe_clips)} clips, stream copy)")
+            return
+
+        # Fallback: concat demuxer met re-encode (als stream copy faalt)
+        logger.warning(f"[ProVideo] Stream copy concat mislukt, re-encode: {(result.stderr or '')[-200:]}")
+        cmd_reencode = [
+            "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+            "-f", "concat", "-safe", "0",
+            "-i", str(concat_file),
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-r", "30", "-pix_fmt", "yuv420p",
+            "-an",
+            "-movflags", "+faststart",
+            str(output_path),
+        ]
+        result2 = subprocess.run(cmd_reencode, capture_output=True, text=True, timeout=180)
+        if result2.returncode != 0:
+            raise RuntimeError(f"Visuele concat mislukt: {(result2.stderr or '')[-300:]}")
 
     def _build_sfx_track(
         self, work_dir: Path, script: dict, video_dur: float,
