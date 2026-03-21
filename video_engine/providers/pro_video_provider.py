@@ -2034,8 +2034,9 @@ class ProVideoProvider:
         total_duration = scene_data.get("total_duration", 30.0)
         time_offset = scene_data.get("time_offset", 0.0)
 
-        if not visual or not visual.exists():
-            logger.warning(f"[ProVideo] Geen visual voor scene {idx}")
+        v_size = visual.stat().st_size if visual and visual.exists() else 0
+        if not visual or not visual.exists() or v_size < 5000:
+            logger.warning(f"[ProVideo] Geen geldige visual voor scene {idx} (size={v_size})")
             return None
 
         clip_path = work_dir / f"visual_{idx:02d}.mp4"
@@ -3143,17 +3144,41 @@ class ProVideoProvider:
         if not visual:
             visual = self._get_stock_video(scene, memory, work_dir, idx, duration)
 
-        # Kwaliteitscheck
-        if visual and visual.exists() and visual.stat().st_size < 50000:
+        # Kwaliteitscheck na elke bron
+        if visual and visual.exists() and visual.stat().st_size < 5000:
+            logger.warning(f"[ProVideo] Pexels visual scene {idx} te klein ({visual.stat().st_size}b), skip")
             visual = None
 
         # 3. SECUNDAIR: Pixabay stock video (gratis, extra variatie)
         if not visual:
             visual = self._get_pixabay_video(scene, memory, work_dir, idx, duration)
+            if visual and visual.exists() and visual.stat().st_size < 5000:
+                logger.warning(f"[ProVideo] Pixabay visual scene {idx} te klein, skip")
+                visual = None
 
         # 4. FALLBACK: AI-gegenereerd beeld (kost ~$0.04 per beeld)
         if not visual:
             visual = self._generate_ai_clip(scene, memory, work_dir, idx, duration)
+            if visual and visual.exists() and visual.stat().st_size < 5000:
+                logger.warning(f"[ProVideo] AI visual scene {idx} te klein, skip")
+                visual = None
+
+        # 5. ULTIMATE FALLBACK: eenvoudige kleur-achtergrond video
+        if not visual:
+            logger.warning(f"[ProVideo] Alle visuele bronnen mislukt voor scene {idx}, color fallback")
+            _colors = {"hook": "0x1a1a2e", "problem": "0x16213e", "solution": "0x0f3460", "cta": "0x533483"}
+            bg_color = _colors.get(scene_type, "0x1a1a2e")
+            fallback_path = work_dir / f"fallback_{idx:02d}.mp4"
+            fb_cmd = [
+                "ffmpeg", "-y", "-f", "lavfi",
+                "-i", f"color=c={bg_color}:s=1080x1920:d={duration}:r=30",
+                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
+                "-pix_fmt", "yuv420p",
+                str(fallback_path),
+            ]
+            subprocess.run(fb_cmd, capture_output=True, timeout=30)
+            if fallback_path.exists() and fallback_path.stat().st_size > 1000:
+                visual = fallback_path
 
         return visual
 
@@ -3618,9 +3643,10 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                             "-pix_fmt", "yuv420p", "-preset", STOCK_INTERMEDIATE_PRESET, "-crf", STOCK_INTERMEDIATE_CRF,
                             "-an", "-r", str(STOCK_INTERMEDIATE_FPS), str(clip_path),
                         ]
-                        subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+                        cur_result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
                         if clip_path.exists() and clip_path.stat().st_size > 5000:
                             return clip_path
+                        logger.warning(f"[ProVideo] Curated pre-proc scene {idx} mislukt (rc={cur_result.returncode}): {(cur_result.stderr or '')[-200:]}")
                 except Exception as e:
                     logger.debug(f"[ProVideo] Curated video {chosen_id} mislukt: {e}")
 
@@ -3734,10 +3760,17 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                     "-an", "-r", str(STOCK_INTERMEDIATE_FPS),
                     str(clip_path),
                 ]
-                subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+                pre_result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
                 if clip_path.exists() and clip_path.stat().st_size > 5000:
                     return clip_path
+
+                # Log waarom pre-processing faalde
+                logger.warning(
+                    f"[ProVideo] Stock pre-processing scene {idx} mislukt "
+                    f"(rc={pre_result.returncode}, raw={raw_path.stat().st_size}b): "
+                    f"{(pre_result.stderr or '')[-200:]}"
+                )
 
             except Exception as e:
                 logger.debug(f"[ProVideo] Stock query '{query}' mislukt: {e}")
