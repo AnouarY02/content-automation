@@ -2114,87 +2114,151 @@ class ProVideoProvider:
             logger.warning(f"[ProVideo] Geen geldige visual voor scene {idx} (size={v_size})")
             return None
 
+        # ── Prefer raw stock over corrupt pre-processed files ──
+        _IMG_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".tiff")
+        is_image = str(visual).lower().endswith(_IMG_EXTS)
+        if not is_image and v_size < 1_000_000:
+            raw_stock = work_dir / f"stock_raw_{idx:02d}.mp4"
+            if raw_stock.exists() and raw_stock.stat().st_size > v_size:
+                logger.info(
+                    f"[ProVideo] Clip {idx}: visual te klein ({v_size}B), "
+                    f"gebruik raw stock ({raw_stock.stat().st_size}B)"
+                )
+                visual = raw_stock
+                v_size = visual.stat().st_size
+
         clip_path = work_dir / f"visual_{idx:02d}.mp4"
+        pass1_path = work_dir / f"visual_p1_{idx:02d}.mp4"
 
         font_bold = _get_font_path(extra_bold=False)
         font_extra = _get_font_path(extra_bold=True)
         font_headline = font_extra or font_bold
         font_caption = font_bold
 
-        vf_parts = []
         scene_type = scene.get("type", "body")
 
-        # ── 0a. Normaliseer input naar 1080x1920 — alle filters verwachten dit formaat
-        vf_parts.append("scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1")
+        # Input flags: -loop 1 voor images, -stream_loop -1 voor video
+        if is_image:
+            input_flags = ["-loop", "1", "-i", str(visual)]
+            logger.info(f"[ProVideo] Clip {idx}: input is afbeelding, gebruik -loop 1")
+        else:
+            input_flags = ["-stream_loop", "-1", "-i", str(visual)]
+
+        # ════════════════════════════════════════════════════════
+        # PASS 1: Visual effects (~12 filters, geen drawtext)
+        # Color grading + gradient + vignette + grain + progress
+        # ════════════════════════════════════════════════════════
+        vf_visual = []
+
+        # 0a. Normaliseer input naar 1080x1920
+        vf_visual.append("scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1")
 
         # ── 1. Kleurcorrectie per scene-type ──────────────────────────
         if scene_type == "hook":
-            vf_parts.append("curves=r='0/0 0.25/0.30 0.5/0.58 0.75/0.82 1/1':g='0/0 0.5/0.50 1/1':b='0/0 0.25/0.28 0.5/0.42 1/0.95'")
-            vf_parts.append("eq=saturation=1.20:contrast=1.15:brightness=0.02:gamma=0.93")
+            vf_visual.append("curves=r='0/0 0.25/0.30 0.5/0.58 0.75/0.82 1/1':g='0/0 0.5/0.50 1/1':b='0/0 0.25/0.28 0.5/0.42 1/0.95'")
+            vf_visual.append("eq=saturation=1.20:contrast=1.15:brightness=0.02:gamma=0.93")
         elif scene_type == "problem":
-            vf_parts.append("curves=r='0/0 0.5/0.44 1/0.92':g='0/0 0.5/0.47 1/0.95':b='0/0 0.5/0.55 1/1'")
-            vf_parts.append("eq=saturation=0.80:contrast=1.16:brightness=-0.04:gamma=1.10")
+            vf_visual.append("curves=r='0/0 0.5/0.44 1/0.92':g='0/0 0.5/0.47 1/0.95':b='0/0 0.5/0.55 1/1'")
+            vf_visual.append("eq=saturation=0.80:contrast=1.16:brightness=-0.04:gamma=1.10")
         elif scene_type in ("solution", "demo", "feature"):
-            # Demo/feature scenes: helder, schoon, hoge leesbaarheid
-            # Subtielere grading zodat de app UI goed zichtbaar blijft
-            vf_parts.append("curves=r='0/0 0.25/0.28 0.5/0.58 1/1':g='0/0 0.5/0.55 1/1':b='0/0 0.5/0.42 1/0.88'")
+            vf_visual.append("curves=r='0/0 0.25/0.28 0.5/0.58 1/1':g='0/0 0.5/0.55 1/1':b='0/0 0.5/0.42 1/0.88'")
             if scene_type in ("demo", "feature"):
-                # Minder agressieve grading voor phone mockups (UI moet leesbaar zijn)
-                vf_parts.append("eq=saturation=1.10:contrast=1.04:brightness=0.03:gamma=0.95")
+                vf_visual.append("eq=saturation=1.10:contrast=1.04:brightness=0.03:gamma=0.95")
             else:
-                vf_parts.append("eq=saturation=1.22:contrast=1.06:brightness=0.06:gamma=0.90")
+                vf_visual.append("eq=saturation=1.22:contrast=1.06:brightness=0.06:gamma=0.90")
         else:  # cta
-            vf_parts.append("curves=r='0/0 0.5/0.56 1/1':g='0/0 0.5/0.52 1/1':b='0/0 0.5/0.44 1/0.92'")
-            vf_parts.append("eq=saturation=1.28:contrast=1.10:brightness=0.04:gamma=0.92")
+            vf_visual.append("curves=r='0/0 0.5/0.56 1/1':g='0/0 0.5/0.52 1/1':b='0/0 0.5/0.44 1/0.92'")
+            vf_visual.append("eq=saturation=1.28:contrast=1.10:brightness=0.04:gamma=0.92")
 
-        # NOTE: unsharp mask VERWIJDERD — stock footage is al gecomprimeerd,
-        # sharpening versterkt JPEG/H.264 artefacten (ringing rond randen).
-
-        # NOTE: LUT verwijderd — curves+eq is voldoende kleurcorrectie,
-        # lut3d voegt complexiteit toe en kan crashen op sommige FFmpeg builds.
-
-        # ── 1c. Scene-transition flash — subtielere eased flash ───────
+        # 1c. Scene-transition flash
         if idx > 0:
-            # Korter (0.04s) en zachter (0.08 alpha) — minder "glitch" gevoel
-            vf_parts.append(
+            vf_visual.append(
                 "drawbox=x=0:y=0:w=iw:h=ih:color=white@0.08:t=fill:"
                 "enable='between(t,0,0.04)'"
             )
 
-        # ── 2. Gradient onderkant — 4 lagen (compact, minder filters) ───
+        # 2. Gradient onderkant (4 lagen)
         for gi, (gy, alpha) in enumerate([
             (0.82, 0.05), (0.72, 0.10), (0.62, 0.18), (0.52, 0.30),
         ]):
-            vf_parts.append(
+            vf_visual.append(
                 f"drawbox=y=ih*{gy:.2f}:w=iw:h=ih*{1 - gy:.2f}:color=black@{alpha:.2f}:t=fill"
             )
 
-        # ── 3. Vignette — sterker voor drama, lichter voor positief ───
-        # Demo/feature: zeer lichte vignette (UI moet leesbaar zijn)
+        # 3. Vignette
         _vig = {"hook": "PI/4.5", "problem": "PI/4", "solution": "PI/5.5",
                 "demo": "PI/6", "feature": "PI/6", "cta": "PI/5"}
-        vf_parts.append(f"vignette={_vig.get(scene_type, 'PI/5')}")
+        vf_visual.append(f"vignette={_vig.get(scene_type, 'PI/5')}")
 
-        # ── 4. Filmgrain — variabel per scene-type ────────────────────
-        # Demo/feature: minimale grain (scherpe UI)
+        # 4. Filmgrain
         _grain = {"hook": 3, "problem": 4, "solution": 2, "demo": 1, "feature": 1, "cta": 2}
-        vf_parts.append(f"noise=alls={_grain.get(scene_type, 3)}:allf=t")
+        vf_visual.append(f"noise=alls={_grain.get(scene_type, 3)}:allf=t")
 
-        # ── 5. Progress bar — dunne voortgangslijn bovenaan ───────────
-        # Toont kijker hoe ver de video is (verhoogt watch-through)
+        # 5. Progress bar
         if total_duration > 0:
-            # Lijn loopt van links naar rechts over de video duur
-            # Gebruik scene-lokale tijd + offset voor globale progressie
             bar_height = 4
-            # Bereken start/eind positie voor deze scene
             progress_start = time_offset / total_duration
             progress_end = (time_offset + duration) / total_duration
-            vf_parts.append(
+            vf_visual.append(
                 f"drawbox=x=0:y=0:w=iw*{progress_start:.4f}+iw*{progress_end - progress_start:.4f}*(t/{duration:.2f}):"
                 f"h={bar_height}:color=white@0.85:t=fill"
             )
 
-        # ── 6. On-screen headline — safe-zone y=0.18 ─────────────────
+        vf_visual.append("format=yuv420p")
+
+        # ── Run PASS 1 ──
+        cmd_p1 = [
+            "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+            *input_flags,
+            "-vf", ",".join(vf_visual),
+            "-an", "-c:v", "libx264", "-preset", "fast", "-crf", "21",
+            "-t", str(duration), "-r", "30",
+            str(pass1_path),
+        ]
+        res_p1 = subprocess.run(cmd_p1, capture_output=True, text=True, timeout=120)
+
+        if res_p1.returncode != 0 or not (pass1_path.exists() and pass1_path.stat().st_size > 5000):
+            logger.warning(
+                f"[ProVideo] Clip {idx} pass1 visual mislukt "
+                f"(rc={res_p1.returncode}, filters={len(vf_visual)}): "
+                f"{(res_p1.stderr or '')[-300:]}"
+            )
+            # Lite fallback: alleen eq + vignette
+            lite_vf = [
+                "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1",
+            ]
+            if scene_type == "hook":
+                lite_vf.append("eq=saturation=1.20:contrast=1.15:brightness=0.02")
+            elif scene_type == "problem":
+                lite_vf.append("eq=saturation=0.80:contrast=1.16:brightness=-0.04")
+            elif scene_type in ("solution", "demo", "feature"):
+                lite_vf.append("eq=saturation=1.15:contrast=1.06:brightness=0.04")
+            else:
+                lite_vf.append("eq=saturation=1.25:contrast=1.10:brightness=0.03")
+            lite_vf.append("vignette=PI/5")
+            lite_vf.append("format=yuv420p")
+            cmd_lite = [
+                "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+                *input_flags,
+                "-vf", ",".join(lite_vf),
+                "-an", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
+                "-t", str(duration), "-r", "30",
+                str(pass1_path),
+            ]
+            res_lite = subprocess.run(cmd_lite, capture_output=True, text=True, timeout=60)
+            if res_lite.returncode != 0 or not (pass1_path.exists() and pass1_path.stat().st_size > 5000):
+                logger.warning(f"[ProVideo] Clip {idx} lite visual ook mislukt — return None")
+                return None
+
+        logger.info(f"[ProVideo] Clip {idx} pass1 OK ({pass1_path.stat().st_size} bytes, {len(vf_visual)} filters)")
+
+        # ════════════════════════════════════════════════════════
+        # PASS 2: Text overlays op pass1 output (headline, CTA,
+        # captions, fade). Input is al 1080x1920 yuv420p.
+        # ════════════════════════════════════════════════════════
+        vf_text = []
+
+        # 6. Headline
         on_screen = scene.get("on_screen_text", "").strip()
         if on_screen and len(on_screen) <= 50:
             if len(on_screen) > 25:
@@ -2205,7 +2269,7 @@ class ProVideoProvider:
             h_font_spec = f"fontfile='{font_headline}':" if font_headline else ""
             h_fontsize = 95 if len(on_screen) <= 12 else (82 if len(on_screen) <= 18 else 68)
 
-            vf_parts.append(
+            vf_text.append(
                 f"drawtext=text='{safe_headline}':"
                 f"{h_font_spec}"
                 f"fontsize={h_fontsize}:fontcolor=white:"
@@ -2215,22 +2279,19 @@ class ProVideoProvider:
                 f"enable='between(t,0.3,{duration:.2f})'"
             )
 
-        # ── 7. CTA overlay — compact design (4 filters) ─────────────
+        # 7. CTA overlay
         if scene_type == "cta":
             cta_font_spec = f"fontfile='{font_extra or font_bold}':" if (font_extra or font_bold) else ""
             cta_y_base = "h*0.48"
             cta_appear = 0.5
 
-            # Badge achtergrond
-            vf_parts.append(
+            vf_text.append(
                 f"drawbox=x=iw*0.15:y={cta_y_base}-8:w=iw*0.70:h=96:"
                 f"color=0xFFA500@0.90:t=fill:"
                 f"enable='between(t,{cta_appear:.1f},{duration:.2f})'"
             )
-
-            # CTA tekst
             cta_text = _escape_drawtext("START NU GRATIS")
-            vf_parts.append(
+            vf_text.append(
                 f"drawtext=text='{cta_text}':"
                 f"{cta_font_spec}"
                 f"fontsize=54:fontcolor=white:"
@@ -2239,9 +2300,7 @@ class ProVideoProvider:
                 f"x=(w-text_w)/2:y={cta_y_base}+14:"
                 f"enable='between(t,{cta_appear:.1f},{duration:.2f})'"
             )
-
-            # Link in bio
-            vf_parts.append(
+            vf_text.append(
                 f"drawtext=text='{_escape_drawtext('LINK IN BIO')}':"
                 f"{cta_font_spec}"
                 f"fontsize=34:fontcolor=white@0.90:"
@@ -2249,11 +2308,9 @@ class ProVideoProvider:
                 f"x=(w-text_w)/2:y={cta_y_base}+112:"
                 f"enable='between(t,{cta_appear + 0.3:.1f},{duration:.2f})'"
             )
-
-            # App naam
             app_name = scene_data.get("app_name", "")
             if app_name:
-                vf_parts.append(
+                vf_text.append(
                     f"drawtext=text='{_escape_drawtext(app_name.upper())}':"
                     f"{cta_font_spec}"
                     f"fontsize=40:fontcolor=0xFFD700:"
@@ -2263,7 +2320,7 @@ class ProVideoProvider:
                     f"enable='between(t,{cta_appear + 0.5:.1f},{duration:.2f})'"
                 )
 
-        # ── 8. Captions — scene-type kleur + safe-zone positie ────────
+        # 8. Captions
         voiceover = scene.get("voiceover", "")
         scene_words = self._get_scene_whisper_words(voiceover, time_offset, duration)
         caption_filters = self._build_caption_filters(
@@ -2271,10 +2328,9 @@ class ProVideoProvider:
             whisper_words=scene_words,
             scene_type=scene_type,
         )
-        vf_parts.extend(caption_filters)
+        vf_text.extend(caption_filters)
 
-        # ── 8. Variabele fade timing per scene-type ───────────────────
-        # Hook: snelle fade-in (urgentie), demo: langzamere fade (UI focus)
+        # 9. Fade
         _fade_in = {"hook": 0.0, "problem": 0.3, "solution": 0.15,
                     "demo": 0.2, "feature": 0.2, "cta": 0.1}
         _fade_out = {"hook": 0.15, "problem": 0.25, "solution": 0.2,
@@ -2282,107 +2338,39 @@ class ProVideoProvider:
         fade_in = _fade_in.get(scene_type, 0.2) if idx > 0 else 0.0
         fade_out = _fade_out.get(scene_type, 0.2)
         if fade_in > 0:
-            vf_parts.append(f"fade=t=in:st=0:d={fade_in}")
-        vf_parts.append(f"fade=t=out:st={duration - fade_out:.2f}:d={fade_out}")
+            vf_text.append(f"fade=t=in:st=0:d={fade_in}")
+        vf_text.append(f"fade=t=out:st={duration - fade_out:.2f}:d={fade_out}")
+        vf_text.append("format=yuv420p")
 
-        vf_parts.append("format=yuv420p")
-        vf = ",".join(vf_parts)
-
-        # Detecteer of input een afbeelding is (alleen op basis van extensie)
-        _IMG_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".tiff")
-        is_image = str(visual).lower().endswith(_IMG_EXTS)
-
-        # Input flags: -loop 1 voor images, -stream_loop -1 voor video
-        if is_image:
-            input_flags = ["-loop", "1", "-i", str(visual)]
-            logger.info(f"[ProVideo] Clip {idx}: input is afbeelding, gebruik -loop 1")
-        else:
-            input_flags = ["-stream_loop", "-1", "-i", str(visual)]
-
-        cmd = [
+        # ── Run PASS 2 ──
+        cmd_p2 = [
             "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
-            *input_flags,
-            "-vf", vf,
-            "-an",
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-            "-t", str(duration), "-r", "30",
+            "-i", str(pass1_path),
+            "-vf", ",".join(vf_text),
+            "-an", "-c:v", "libx264", "-preset", "fast", "-crf", "21",
+            "-r", "30",
             str(clip_path),
         ]
+        res_p2 = subprocess.run(cmd_p2, capture_output=True, text=True, timeout=120)
 
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-
-        if result.returncode != 0 or not (clip_path.exists() and clip_path.stat().st_size > 5000):
-            # Log volledige fout + filter count voor debugging
-            stderr_tail = (result.stderr or '')[-500:]
-            vf_count = len(vf_parts)
+        if res_p2.returncode != 0 or not (clip_path.exists() and clip_path.stat().st_size > 5000):
             logger.warning(
-                f"[ProVideo] Clip {idx} full effects fout (rc={result.returncode}, "
-                f"filters={vf_count}, is_image={is_image}, "
-                f"visual_size={visual.stat().st_size if visual.exists() else 0}): {stderr_tail}"
+                f"[ProVideo] Clip {idx} pass2 text mislukt "
+                f"(rc={res_p2.returncode}, text_filters={len(vf_text)}): "
+                f"{(res_p2.stderr or '')[-300:]}"
             )
+            # Text overlays mislukt — gebruik pass1 output (visuele effecten zonder tekst)
+            import shutil
+            shutil.copy(str(pass1_path), str(clip_path))
+            logger.info(f"[ProVideo] Clip {idx}: gebruik pass1 (visueel) zonder tekst overlays")
+        else:
+            logger.info(f"[ProVideo] Clip {idx} pass2 OK ({clip_path.stat().st_size} bytes, {len(vf_text)} text filters)")
 
-            # Fallback 1: "lite" effects — kleurcorrectie + gradient + vignette (geen drawtext/zoompan/lut)
-            lite_vf = []
-            # Kleurcorrectie
-            if scene_type == "hook":
-                lite_vf.append("eq=saturation=1.20:contrast=1.15:brightness=0.02")
-            elif scene_type == "problem":
-                lite_vf.append("eq=saturation=0.80:contrast=1.16:brightness=-0.04")
-            elif scene_type in ("solution", "demo", "feature"):
-                lite_vf.append("eq=saturation=1.15:contrast=1.06:brightness=0.04")
-            else:
-                lite_vf.append("eq=saturation=1.25:contrast=1.10:brightness=0.03")
-            # Gradient onderkant (simpeler: 3 lagen)
-            for gi in range(3):
-                gy = 0.82 - gi * 0.06
-                alpha = 0.12 * ((3 - gi) / 3) ** 1.5
-                lite_vf.append(f"drawbox=y=ih*{gy:.3f}:w=iw:h=ih*{1 - gy:.3f}:color=black@{alpha:.3f}:t=fill")
-            # Vignette
-            lite_vf.append("vignette=PI/5")
-            # Fade
-            if idx > 0:
-                lite_vf.append("fade=t=in:st=0:d=0.2")
-            lite_vf.append(f"fade=t=out:st={duration - 0.2:.2f}:d=0.2")
-            lite_vf.append("scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p")
-
-            cmd_lite = [
-                "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
-                *input_flags,
-                "-vf", ",".join(lite_vf),
-                "-an", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
-                "-t", str(duration), "-r", "30",
-                str(clip_path),
-            ]
-            fb_lite = subprocess.run(cmd_lite, capture_output=True, text=True, timeout=60)
-            if fb_lite.returncode == 0 and clip_path.exists() and clip_path.stat().st_size > 5000:
-                logger.info(f"[ProVideo] Clip {idx}: lite effects OK ({clip_path.stat().st_size} bytes)")
-            else:
-                logger.warning(f"[ProVideo] Clip {idx} lite effects mislukt (rc={fb_lite.returncode}): {(fb_lite.stderr or '')[-200:]}")
-
-                # Fallback 2: simpele scale naar portrait
-                cmd_simple = [
-                    "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
-                    *input_flags,
-                    "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p",
-                    "-an", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
-                    "-t", str(duration), "-r", "30",
-                    str(clip_path),
-                ]
-                fb1 = subprocess.run(cmd_simple, capture_output=True, text=True, timeout=60)
-                if fb1.returncode != 0 or not (clip_path.exists() and clip_path.stat().st_size > 5000):
-                    logger.warning(f"[ProVideo] Clip {idx} simpele fallback ook mislukt (rc={fb1.returncode}): {(fb1.stderr or '')[-200:]}")
-                    # Fallback 3: input zonder filter (alleen re-encode)
-                    cmd_ultra = [
-                        "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
-                        *input_flags,
-                        "-vf", "scale=1080:1920,format=yuv420p",
-                        "-an", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
-                        "-t", str(duration), "-r", "30",
-                        str(clip_path),
-                    ]
-                    fb2 = subprocess.run(cmd_ultra, capture_output=True, text=True, timeout=60)
-                    if fb2.returncode != 0:
-                        logger.error(f"[ProVideo] Clip {idx} ALLE fallbacks mislukt: {(fb2.stderr or '')[-200:]}")
+        # Cleanup pass1 temp
+        try:
+            pass1_path.unlink(missing_ok=True)
+        except Exception:
+            pass
 
         # ── 9. Logo watermark overlay — klein logo linksonder ──────────
         # Zoek logo in memory of standaard locaties
