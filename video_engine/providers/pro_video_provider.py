@@ -2150,12 +2150,8 @@ class ProVideoProvider:
         # NOTE: unsharp mask VERWIJDERD — stock footage is al gecomprimeerd,
         # sharpening versterkt JPEG/H.264 artefacten (ringing rond randen).
 
-        # ── 1b. Color LUT — cinematic finishing layer ────────────────
-        lut_path = self._select_lut_for_scene(scene_type, getattr(self, "_current_memory", None))
-        if lut_path:
-            lut_escaped = str(lut_path).replace("\\", "/").replace(":", "\\:")
-            # LUT als finishing touch, 60% intensity blend met origineel
-            vf_parts.append(f"lut3d=file='{lut_escaped}':interp=trilinear")
+        # NOTE: LUT verwijderd — curves+eq is voldoende kleurcorrectie,
+        # lut3d voegt complexiteit toe en kan crashen op sommige FFmpeg builds.
 
         # ── 1c. Scene-transition flash — subtielere eased flash ───────
         if idx > 0:
@@ -2165,21 +2161,12 @@ class ProVideoProvider:
                 "enable='between(t,0,0.04)'"
             )
 
-        # ── 2. Gradient onderkant — 10 lagen, smoother exponentieel ───
-        # Minder lagen met betere alpha curve = onzichtbare overgang
-        for gi in range(10):
-            gy = 0.88 - gi * 0.04
-            # Kwadratische curve: bodem zwaar, bovenrand nauwelijks zichtbaar
-            alpha = 0.06 * ((10 - gi) / 10) ** 1.8
+        # ── 2. Gradient onderkant — 4 lagen (compact, minder filters) ───
+        for gi, (gy, alpha) in enumerate([
+            (0.82, 0.05), (0.72, 0.10), (0.62, 0.18), (0.52, 0.30),
+        ]):
             vf_parts.append(
-                f"drawbox=y=ih*{gy:.3f}:w=iw:h=ih*{1 - gy:.3f}:color=black@{alpha:.3f}:t=fill"
-            )
-
-        # ── 2b. Top gradient — voor headline leesbaarheid ─────────────
-        for gi in range(4):
-            alpha = 0.025 * (1 - gi / 4)
-            vf_parts.append(
-                f"drawbox=y=0:w=iw:h=ih*{(gi + 1) * 0.03:.3f}:color=black@{alpha:.3f}:t=fill"
+                f"drawbox=y=ih*{gy:.2f}:w=iw:h=ih*{1 - gy:.2f}:color=black@{alpha:.2f}:t=fill"
             )
 
         # ── 3. Vignette — sterker voor drama, lichter voor positief ───
@@ -2212,135 +2199,69 @@ class ProVideoProvider:
         if on_screen and len(on_screen) <= 50:
             if len(on_screen) > 25:
                 cut = on_screen[:25].rfind(" ")
-                if cut > 10:
-                    on_screen = on_screen[:cut]
-                else:
-                    on_screen = on_screen[:25]
+                on_screen = on_screen[:cut] if cut > 10 else on_screen[:25]
 
             safe_headline = _escape_drawtext(on_screen)
-            font_spec = f"fontfile='{font_headline}':" if font_headline else ""
+            h_font_spec = f"fontfile='{font_headline}':" if font_headline else ""
+            h_fontsize = 95 if len(on_screen) <= 12 else (82 if len(on_screen) <= 18 else 68)
 
-            if len(on_screen) <= 12:
-                h_fontsize = 95
-            elif len(on_screen) <= 18:
-                h_fontsize = 82
-            else:
-                h_fontsize = 68
-
-            # Headline glow — fade-in
             vf_parts.append(
                 f"drawtext=text='{safe_headline}':"
-                f"{font_spec}"
-                f"fontsize={h_fontsize + 6}:fontcolor=white@0.25:"
-                f"borderw=0:"
-                f"x=(w-text_w)/2:y=h*0.18:"
-                f"alpha='min(1,(t-0.3)/0.3)':"
-                f"enable='between(t,0.3,{duration:.2f})'"
-            )
-            # Headline tekst
-            vf_parts.append(
-                f"drawtext=text='{safe_headline}':"
-                f"{font_spec}"
+                f"{h_font_spec}"
                 f"fontsize={h_fontsize}:fontcolor=white:"
                 f"borderw=6:bordercolor=black:"
-                f"shadowcolor=black@0.85:shadowx=5:shadowy=5:"
+                f"shadowcolor=black@0.85:shadowx=4:shadowy=4:"
                 f"x=(w-text_w)/2:y=h*0.18:"
-                f"alpha='min(1,(t-0.3)/0.3)':"
                 f"enable='between(t,0.3,{duration:.2f})'"
             )
 
-        # ── 7. Pro CTA overlay — gelaagd design met pulse effect ─────
-        # Ontwerp: gradient achtergrond → tekst badge → app naam → swipe-up pijl
-        # Alles verschijnt gestaffeld (0.6s, 0.8s, 1.0s, 1.3s) voor dynamiek
+        # ── 7. CTA overlay — compact design (4 filters) ─────────────
         if scene_type == "cta":
             cta_font_spec = f"fontfile='{font_extra or font_bold}':" if (font_extra or font_bold) else ""
             cta_y_base = "h*0.48"
-            cta_appear = 0.6  # CTA verschijnt sneller dan voorheen
+            cta_appear = 0.5
 
-            # Layer 1: Donker gradient scrim over heel de scene (sfeer)
-            for gi in range(6):
-                alpha = 0.08 * (1 - gi / 6) ** 1.5
-                vf_parts.append(
-                    f"drawbox=y=ih*{0.38 + gi * 0.04:.3f}:w=iw:h=ih*0.30:"
-                    f"color=black@{alpha:.3f}:t=fill:"
-                    f"enable='between(t,{cta_appear:.1f},{duration:.2f})'"
-                )
-
-            # Layer 2: Gekleurde accent box (gradient-achtig via 3 overlapping boxes)
-            # Hoofd badge: warm gradient (oranje-geel) met pulse scale-effect
-            # Pulse via drawbox w-oscillatie: w schaalt 2% elke 0.8s
-            box_w_pct = 0.64
-            box_h = 88
-            for ci, (color, alpha) in enumerate([
-                ("0xFFA500", 0.92),   # oranje kern
-                ("0xFFBF40", 0.60),   # gouden glow eromheen
-                ("0xFFD700", 0.30),   # gele outer glow
-            ]):
-                expand = ci * 8  # elke laag 8px groter
-                vf_parts.append(
-                    f"drawbox=x=iw*{(1 - box_w_pct) / 2 - ci * 0.008:.4f}:"
-                    f"y={cta_y_base}-{expand // 2}:"
-                    f"w=iw*{box_w_pct + ci * 0.016:.4f}:"
-                    f"h={box_h + expand}:"
-                    f"color={color}@{alpha:.2f}:t=fill:"
-                    f"enable='between(t,{cta_appear:.1f},{duration:.2f})'"
-                )
-
-            # Layer 3: CTA tekst — wit op gekleurde achtergrond
-            cta_text = _escape_drawtext("START NU GRATIS")
-            cta_fs = 54
+            # Badge achtergrond
             vf_parts.append(
-                f"drawtext=text='{cta_text}':"
-                f"{cta_font_spec}"
-                f"fontsize={cta_fs}:"
-                f"fontcolor=white:"
-                f"borderw=3:bordercolor=black@0.4:"
-                f"shadowcolor=black@0.5:shadowx=3:shadowy=3:"
-                f"x=(w-text_w)/2:y={cta_y_base}+14:"
-                f"alpha='min(1,(t-{cta_appear})/0.2)':"
+                f"drawbox=x=iw*0.15:y={cta_y_base}-8:w=iw*0.70:h=96:"
+                f"color=0xFFA500@0.90:t=fill:"
                 f"enable='between(t,{cta_appear:.1f},{duration:.2f})'"
             )
 
-            # Layer 4: Subtekst "Link in bio ↑" onder de badge
-            link_text = _escape_drawtext("LINK IN BIO")
-            link_appear = cta_appear + 0.3
+            # CTA tekst
+            cta_text = _escape_drawtext("START NU GRATIS")
             vf_parts.append(
-                f"drawtext=text='{link_text}':"
+                f"drawtext=text='{cta_text}':"
+                f"{cta_font_spec}"
+                f"fontsize=54:fontcolor=white:"
+                f"borderw=3:bordercolor=black@0.4:"
+                f"shadowcolor=black@0.5:shadowx=3:shadowy=3:"
+                f"x=(w-text_w)/2:y={cta_y_base}+14:"
+                f"enable='between(t,{cta_appear:.1f},{duration:.2f})'"
+            )
+
+            # Link in bio
+            vf_parts.append(
+                f"drawtext=text='{_escape_drawtext('LINK IN BIO')}':"
                 f"{cta_font_spec}"
                 f"fontsize=34:fontcolor=white@0.90:"
                 f"borderw=5:bordercolor=black@0.6:"
-                f"x=(w-text_w)/2:y={cta_y_base}+{box_h + 24}:"
-                f"alpha='min(1,(t-{link_appear:.1f})/0.25)':"
-                f"enable='between(t,{link_appear:.1f},{duration:.2f})'"
+                f"x=(w-text_w)/2:y={cta_y_base}+112:"
+                f"enable='between(t,{cta_appear + 0.3:.1f},{duration:.2f})'"
             )
 
-            # Layer 5: App naam — branded, verschijnt als laatste
+            # App naam
             app_name = scene_data.get("app_name", "")
             if app_name:
-                safe_app = _escape_drawtext(app_name.upper())
-                app_appear = cta_appear + 0.5
                 vf_parts.append(
-                    f"drawtext=text='{safe_app}':"
+                    f"drawtext=text='{_escape_drawtext(app_name.upper())}':"
                     f"{cta_font_spec}"
                     f"fontsize=40:fontcolor=0xFFD700:"
                     f"borderw=5:bordercolor=black:"
                     f"shadowcolor=black@0.7:shadowx=4:shadowy=4:"
-                    f"x=(w-text_w)/2:y={cta_y_base}+{box_h + 64}:"
-                    f"alpha='min(1,(t-{app_appear:.1f})/0.3)':"
-                    f"enable='between(t,{app_appear:.1f},{duration:.2f})'"
+                    f"x=(w-text_w)/2:y={cta_y_base}+158:"
+                    f"enable='between(t,{cta_appear + 0.5:.1f},{duration:.2f})'"
                 )
-
-            # Layer 6: Pulserende glow-ring om badge (elke 1.2s pulse)
-            # Dit is de "klik hier" visual cue die aandacht trekt
-            pulse_appear = cta_appear + 0.4
-            vf_parts.append(
-                f"drawbox=x=iw*{(1 - box_w_pct) / 2 - 0.03:.4f}:"
-                f"y={cta_y_base}-14:"
-                f"w=iw*{box_w_pct + 0.06:.4f}:"
-                f"h={box_h + 28}:"
-                f"color=white@'0.15*abs(sin(t*2.6))':t=fill:"
-                f"enable='between(t,{pulse_appear:.1f},{duration:.2f})'"
-            )
 
         # ── 8. Captions — scene-type kleur + safe-zone positie ────────
         voiceover = scene.get("voiceover", "")
@@ -2666,63 +2587,29 @@ class ProVideoProvider:
             )
             return layers
 
-        # ── Whisper-synced captions met word highlight ──
+        # ── Whisper-synced captions — 4 woorden per chunk ──
         if whisper_words and len(whisper_words) >= 2:
             filters = []
             i = 0
             while i < len(whisper_words):
-                chunk_words = whisper_words[i:i + 2]
+                chunk_words = whisper_words[i:i + 4]
                 chunk_text = " ".join(w["word"] for w in chunk_words)
                 t = chunk_words[0]["start"]
                 chunk_end = chunk_words[-1]["end"]
-                chunk_end = max(chunk_end, t + 0.3)
+                chunk_end = max(chunk_end, t + 0.4)
 
-                # Bepaal kleur
-                if _is_number_word(chunk_text):
-                    fontcolor = "yellow"
-                else:
-                    fontcolor = base_color
+                fontcolor = "yellow" if _is_number_word(chunk_text) else base_color
 
-                # Triple-layer caption voor het chunk
                 filters.extend(
                     _build_triple_layer(chunk_text, t, chunk_end, fontcolor, main_fontsize)
                 )
 
-                # Word-level highlight: als er 2 woorden zijn, highlight het
-                # actieve woord in accent kleur (per-woord timing)
-                if len(chunk_words) == 2 and not _is_number_word(chunk_text):
-                    for wi, word_info in enumerate(chunk_words):
-                        w_start = word_info["start"]
-                        w_end = word_info["end"]
-                        w_end = max(w_end, w_start + 0.1)
-                        w_text = word_info["word"].upper()
-                        w_safe = _escape_drawtext(w_text)
+                i += 4
 
-                        # Bereken x-offset: eerste woord links, tweede woord rechts
-                        # We gebruiken een overlay die het volledige chunk bedekt
-                        # maar alleen het actieve woord kleurt
-                        if wi == 0:
-                            # Highlight eerste woord — zelfde positie als chunk maar alleen woord 1
-                            # Gebruik text_w trick: bereken offset van woord 2 tekst
-                            other_word = chunk_words[1]["word"].upper()
-                            other_safe = _escape_drawtext(other_word)
-                            filters.append(
-                                f"drawtext=text='{w_safe}':"
-                                f"{font_spec}"
-                                f"fontsize={_bounce_fs(main_fontsize, t)}:"
-                                f"fontcolor={highlight_color}:"
-                                f"borderw=0:"
-                                f"x=(w-text_w)/2-(tw('{other_safe}')+{main_fontsize}*0.3)/2:"
-                                f"y={caption_y}:"
-                                f"enable='between(t,{w_start:.2f},{w_end:.2f})'"
-                            )
-
-                i += 2
-
-            logger.debug(f"[ProVideo] TikTok-native captions: {len(filters)//3} chunks")
+            logger.debug(f"[ProVideo] Captions: {len(filters)//2} chunks")
             return filters
 
-        # ── Fallback: proportionele timing ──
+        # ── Fallback: proportionele timing (4 woorden per chunk) ──
         words = voiceover.split()
         if not words:
             return []
@@ -2730,8 +2617,8 @@ class ProVideoProvider:
         chunks = []
         i = 0
         while i < len(words):
-            chunks.append(" ".join(words[i:i + 2]))
-            i += 2
+            chunks.append(" ".join(words[i:i + 4]))
+            i += 4
 
         total_chars = sum(len(c) for c in chunks)
         if total_chars == 0:
