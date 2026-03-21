@@ -756,19 +756,9 @@ class ProVideoProvider:
                 if visual and visual.exists() and visual.stat().st_size > 5000:
                     _vprogress(f"  > Clip {sd['idx']}: effects mislukt, raw visual als fallback")
                     logger.warning(f"[ProVideo] Clip {sd['idx']} effecten mislukt, raw visual fallback")
-                    # Detecteer image vs video
-                    v_str = str(visual).lower()
-                    is_img = v_str.endswith((".jpg", ".jpeg", ".png", ".webp", ".bmp"))
-                    if not is_img:
-                        # Check framecount — 1 frame = image-achtig
-                        pr = subprocess.run(
-                            ["ffprobe", "-v", "error", "-select_streams", "v:0",
-                             "-show_entries", "stream=nb_frames",
-                             "-of", "csv=p=0", str(visual)],
-                            capture_output=True, text=True, timeout=10)
-                        nb = (pr.stdout or "").strip()
-                        if nb in ("1", "N/A", ""):
-                            is_img = True
+                    # Detecteer image vs video (alleen extensie-gebaseerd)
+                    _IMG_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".tiff")
+                    is_img = str(visual).lower().endswith(_IMG_EXTS)
                     inp = ["-loop", "1"] if is_img else ["-stream_loop", "-1"]
                     # Scale naar 1080x1920 portrait
                     fb_cmd = [
@@ -2360,20 +2350,9 @@ class ProVideoProvider:
         vf_parts.append("format=yuv420p")
         vf = ",".join(vf_parts)
 
-        # Detecteer of input een afbeelding is (geen video stream)
-        is_image = str(visual).lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".bmp"))
-        if not is_image:
-            # Probe of er een video stream is met meerdere frames
-            probe_cmd = [
-                "ffprobe", "-v", "error", "-select_streams", "v:0",
-                "-count_frames", "-show_entries", "stream=nb_read_frames,codec_type",
-                "-of", "csv=p=0", str(visual),
-            ]
-            probe_res = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=15)
-            probe_out = (probe_res.stdout or "").strip()
-            # Als het maar 1 frame heeft of probe faalt → behandel als image
-            if probe_res.returncode != 0 or ",1" in probe_out or probe_out.endswith(",1"):
-                is_image = True
+        # Detecteer of input een afbeelding is (alleen op basis van extensie)
+        _IMG_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".tiff")
+        is_image = str(visual).lower().endswith(_IMG_EXTS)
 
         # Input flags: -loop 1 voor images, -stream_loop -1 voor video
         if is_image:
