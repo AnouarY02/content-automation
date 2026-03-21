@@ -743,11 +743,14 @@ class ProVideoProvider:
             try:
                 result = self._create_visual_clip(sd, sd["idx"], work_dir, total_scenes)
                 if not result or not result.exists():
+                    _vprogress(f"  > Clip {sd['idx']}: MISLUKT (geen output)")
                     logger.warning(f"[ProVideo] Clip {sd['idx']} mislukt: geen output")
                 else:
+                    _vprogress(f"  > Clip {sd['idx']}: OK ({result.stat().st_size} bytes)")
                     logger.info(f"[ProVideo] Clip {sd['idx']} OK: {result.stat().st_size} bytes")
                 return result
             except Exception as e:
+                _vprogress(f"  > Clip {sd['idx']}: CRASH ({e})")
                 logger.error(f"[ProVideo] Clip {sd['idx']} CRASH: {e}")
                 return None
 
@@ -2318,17 +2321,30 @@ class ProVideoProvider:
 
         if result.returncode != 0 or not (clip_path.exists() and clip_path.stat().st_size > 5000):
             logger.warning(f"[ProVideo] Clip {idx} FFmpeg fout (rc={result.returncode}): {(result.stderr or '')[-300:]}")
-            # Simpele fallback zonder overlays
+            # Simpele fallback zonder overlays — scale naar portrait
             cmd_simple = [
                 "ffmpeg", "-y",
                 "-stream_loop", "-1",
                 "-i", str(visual),
-                "-vf", "format=yuv420p",
-                "-an", "-c:v", "libx264", "-preset", "fast", "-crf", "22",
+                "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p",
+                "-an", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
                 "-t", str(duration), "-r", "30",
                 str(clip_path),
             ]
-            subprocess.run(cmd_simple, capture_output=True, timeout=60)
+            fb1 = subprocess.run(cmd_simple, capture_output=True, text=True, timeout=60)
+            if fb1.returncode != 0 or not (clip_path.exists() and clip_path.stat().st_size > 5000):
+                logger.warning(f"[ProVideo] Clip {idx} simpele fallback ook mislukt (rc={fb1.returncode}): {(fb1.stderr or '')[-200:]}")
+                # Ultra-simpele fallback: alleen copy/format
+                cmd_ultra = [
+                    "ffmpeg", "-y", "-i", str(visual),
+                    "-vf", "format=yuv420p",
+                    "-an", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
+                    "-t", str(duration), "-r", "30",
+                    str(clip_path),
+                ]
+                fb2 = subprocess.run(cmd_ultra, capture_output=True, text=True, timeout=60)
+                if fb2.returncode != 0:
+                    logger.error(f"[ProVideo] Clip {idx} ALLE fallbacks mislukt: {(fb2.stderr or '')[-200:]}")
 
         # ── 9. Logo watermark overlay — klein logo linksonder ──────────
         # Zoek logo in memory of standaard locaties
@@ -3169,6 +3185,7 @@ class ProVideoProvider:
             _colors = {"hook": "0x1a1a2e", "problem": "0x16213e", "solution": "0x0f3460", "cta": "0x533483"}
             bg_color = _colors.get(scene_type, "0x1a1a2e")
             fallback_path = work_dir / f"fallback_{idx:02d}.mp4"
+            # Methode 1: lavfi color source
             fb_cmd = [
                 "ffmpeg", "-y", "-f", "lavfi",
                 "-i", f"color=c={bg_color}:s=1080x1920:d={duration}:r=30",
@@ -3176,9 +3193,33 @@ class ProVideoProvider:
                 "-pix_fmt", "yuv420p",
                 str(fallback_path),
             ]
-            subprocess.run(fb_cmd, capture_output=True, timeout=30)
+            fb_res = subprocess.run(fb_cmd, capture_output=True, text=True, timeout=30)
+            if not (fallback_path.exists() and fallback_path.stat().st_size > 1000):
+                # Methode 2: rawvideo als lavfi niet beschikbaar is
+                logger.warning(f"[ProVideo] Color lavfi mislukt (rc={fb_res.returncode}): {(fb_res.stderr or '')[-150:]}")
+                # Genereer 1 frame PNG en loop
+                frame_path = work_dir / f"frame_{idx:02d}.raw"
+                # 1080x1920 * 3 bytes (RGB) = 6,220,800 bytes per frame — te groot
+                # Gebruik een klein formaat en laat FFmpeg opschalen
+                import struct
+                # Maak een 2x2 pixel raw RGB bestand
+                pixel = bytes.fromhex(bg_color.replace("0x", ""))
+                raw_data = pixel * 4  # 2x2 pixels
+                frame_path.write_bytes(raw_data)
+                fb_cmd2 = [
+                    "ffmpeg", "-y",
+                    "-f", "rawvideo", "-pixel_format", "rgb24",
+                    "-video_size", "2x2", "-framerate", "1",
+                    "-i", str(frame_path),
+                    "-vf", "scale=1080:1920,format=yuv420p",
+                    "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
+                    "-t", str(duration), "-r", "30",
+                    str(fallback_path),
+                ]
+                subprocess.run(fb_cmd2, capture_output=True, timeout=30)
             if fallback_path.exists() and fallback_path.stat().st_size > 1000:
                 visual = fallback_path
+                logger.info(f"[ProVideo] Color fallback scene {idx}: {fallback_path.stat().st_size}b")
 
         return visual
 
