@@ -2117,17 +2117,8 @@ class ProVideoProvider:
         vf_parts = []
         scene_type = scene.get("type", "body")
 
-        # ── 0. Hook pattern interrupt — zoom burst (eerste 0.4s) ──────
-        # Snelle zoom-in + settle: begint 1.15x en settled naar 1.0x in 0.4s
-        # Dit is de #1 retentie-techniek op TikTok — scroll-stoppend effect
-        if scene_type == "hook" and idx == 0:
-            # Zoom burst: scale 1.15→1.0 over 0.4s met eased deceleration
-            # FFmpeg zoompan: z expression met max(1, ...) voor smooth settle
-            # We doen dit als eerste filter zodat alles erna correct schaalt
-            vf_parts.append(
-                "zoompan=z='if(lt(t,0.4),1.0+0.15*(1-t/0.4)*(1-t/0.4),1.0)':"
-                "d=1:s=1080x1920:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
-            )
+        # ── 0a. Normaliseer input naar 1080x1920 — alle filters verwachten dit formaat
+        vf_parts.append("scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1")
 
         # ── 1. Kleurcorrectie per scene-type ──────────────────────────
         if scene_type == "hook":
@@ -2288,15 +2279,13 @@ class ProVideoProvider:
                     f"enable='between(t,{cta_appear:.1f},{duration:.2f})'"
                 )
 
-            # Layer 3: CTA tekst — wit op gekleurde achtergrond, bounce-in
+            # Layer 3: CTA tekst — wit op gekleurde achtergrond
             cta_text = _escape_drawtext("START NU GRATIS")
-            cta_fs = 52
-            # Bounce-in: fontsize begint 25% groter, settled in 0.2s
-            cta_bounce = f"{cta_fs}*(1+0.25*max(0\\,1-(t-{cta_appear})/0.20))"
+            cta_fs = 54
             vf_parts.append(
                 f"drawtext=text='{cta_text}':"
                 f"{cta_font_spec}"
-                f"fontsize={cta_bounce}:"
+                f"fontsize={cta_fs}:"
                 f"fontcolor=white:"
                 f"borderw=3:bordercolor=black@0.4:"
                 f"shadowcolor=black@0.5:shadowx=3:shadowy=3:"
@@ -2406,7 +2395,14 @@ class ProVideoProvider:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
         if result.returncode != 0 or not (clip_path.exists() and clip_path.stat().st_size > 5000):
-            logger.warning(f"[ProVideo] Clip {idx} full effects fout (rc={result.returncode}): {(result.stderr or '')[-300:]}")
+            # Log volledige fout + filter count voor debugging
+            stderr_tail = (result.stderr or '')[-500:]
+            vf_count = len(vf_parts)
+            logger.warning(
+                f"[ProVideo] Clip {idx} full effects fout (rc={result.returncode}, "
+                f"filters={vf_count}, is_image={is_image}, "
+                f"visual_size={visual.stat().st_size if visual.exists() else 0}): {stderr_tail}"
+            )
 
             # Fallback 1: "lite" effects — kleurcorrectie + gradient + vignette (geen drawtext/zoompan/lut)
             lite_vf = []
@@ -2629,9 +2625,9 @@ class ProVideoProvider:
                 w.strip(".,!?") in _num_words for w in words_in
             )
 
-        # Bounce-in: fontsize begint 30% groter, settled in 0.15s
+        # Static fontsize — bounce expressie verwijderd voor stabiliteit
         def _bounce_fs(base: int, start: float) -> str:
-            return f"{base}*(1+0.3*max(0\\,1-(t-{start:.2f})/0.15))"
+            return str(base)
 
         def _build_triple_layer(
             text: str, t_start: float, t_end: float,
@@ -2650,30 +2646,19 @@ class ProVideoProvider:
 
             # Proportionele border: ~10% van fontsize, min 6, max 14
             border_w = max(6, min(14, round(fs * 0.10)))
-            shadow_border = border_w + 2
-            shadow_offset = max(3, round(fs * 0.05))
 
-            # Layer 1: deep shadow (offset, zwart, blur-achtig via dikke border)
-            layers.append(
-                f"drawtext=text='{safe}':"
-                f"{font_spec}"
-                f"fontsize={_bounce_fs(fs, t_start)}:"
-                f"fontcolor=black@0.6:"
-                f"borderw={shadow_border}:bordercolor=black@0.4:"
-                f"x=(w-text_w)/2+{shadow_offset}:y={caption_y}+{shadow_offset}:"
-                f"enable='between(t,{t_start:.2f},{t_end:.2f})'"
-            )
-            # Layer 2: thick outline (zwarte rand)
+            # Layer 1: outline + shadow (zwarte rand met schaduw)
             layers.append(
                 f"drawtext=text='{safe}':"
                 f"{font_spec}"
                 f"fontsize={_bounce_fs(fs, t_start)}:"
                 f"fontcolor=black:"
                 f"borderw={border_w}:bordercolor=black:"
+                f"shadowcolor=black@0.6:shadowx=4:shadowy=4:"
                 f"x=(w-text_w)/2:y={caption_y}:"
                 f"enable='between(t,{t_start:.2f},{t_end:.2f})'"
             )
-            # Layer 3: fill (gekleurde tekst bovenop)
+            # Layer 2: fill (gekleurde tekst bovenop)
             layers.append(
                 f"drawtext=text='{safe}':"
                 f"{font_spec}"
