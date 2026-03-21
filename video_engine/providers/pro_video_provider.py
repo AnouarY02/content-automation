@@ -773,6 +773,23 @@ class ProVideoProvider:
                     if raw_clip.exists() and raw_clip.stat().st_size > 5000:
                         _vprogress(f"  > Clip {sd['idx']}: raw fallback OK ({raw_clip.stat().st_size} bytes)")
                         return raw_clip
+                    # Probeer origineel raw bestand (pre-processing kan corrupt zijn)
+                    raw_stock = work_dir / f"stock_raw_{sd['idx']:02d}.mp4"
+                    if raw_stock.exists() and raw_stock.stat().st_size > 50000:
+                        _vprogress(f"  > Clip {sd['idx']}: probeer origineel stock ({raw_stock.stat().st_size} bytes)")
+                        fb_raw = [
+                            "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+                            "-stream_loop", "-1",
+                            "-i", str(raw_stock),
+                            "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p",
+                            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
+                            "-an", "-t", str(sd["duration"]), "-r", "30",
+                            str(raw_clip),
+                        ]
+                        subprocess.run(fb_raw, capture_output=True, timeout=60)
+                        if raw_clip.exists() and raw_clip.stat().st_size > 5000:
+                            _vprogress(f"  > Clip {sd['idx']}: origineel stock OK ({raw_clip.stat().st_size} bytes)")
+                            return raw_clip
                     # Zonder loop — misschien is input al juiste lengte
                     fb_cmd2 = [
                         "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
