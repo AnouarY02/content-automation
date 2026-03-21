@@ -747,35 +747,54 @@ class ProVideoProvider:
                     return result
                 # Clip rendering mislukt — gebruik visual direct als noodoplossing
                 visual = sd.get("visual")
+                raw_clip = work_dir / f"raw_clip_{sd['idx']:02d}.mp4"
                 if visual and visual.exists() and visual.stat().st_size > 5000:
                     _vprogress(f"  > Clip {sd['idx']}: effects mislukt, raw visual als fallback")
                     logger.warning(f"[ProVideo] Clip {sd['idx']} effecten mislukt, raw visual fallback")
-                    # Maak simpele clip van raw visual
-                    raw_clip = work_dir / f"raw_clip_{sd['idx']:02d}.mp4"
+                    # Scale naar 1080x1920 portrait
                     fb_cmd = [
                         "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+                        "-stream_loop", "-1",
                         "-i", str(visual),
+                        "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p",
                         "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
-                        "-pix_fmt", "yuv420p", "-an",
-                        "-t", str(sd["duration"]), "-r", "30",
+                        "-an", "-t", str(sd["duration"]), "-r", "30",
                         str(raw_clip),
                     ]
                     subprocess.run(fb_cmd, capture_output=True, timeout=60)
                     if raw_clip.exists() and raw_clip.stat().st_size > 5000:
                         _vprogress(f"  > Clip {sd['idx']}: raw fallback OK ({raw_clip.stat().st_size} bytes)")
                         return raw_clip
-                    # Zelfs simpele re-encode faalt — copy video stream
-                    copy_cmd = [
-                        "ffmpeg", "-y", "-i", str(visual),
-                        "-c", "copy", "-an",
-                        "-t", str(sd["duration"]),
+                    # Zonder scale — misschien is input al juiste formaat
+                    fb_cmd2 = [
+                        "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+                        "-i", str(visual),
+                        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
+                        "-pix_fmt", "yuv420p", "-an",
+                        "-t", str(sd["duration"]), "-r", "30",
                         str(raw_clip),
                     ]
-                    subprocess.run(copy_cmd, capture_output=True, timeout=30)
+                    subprocess.run(fb_cmd2, capture_output=True, timeout=60)
                     if raw_clip.exists() and raw_clip.stat().st_size > 5000:
-                        _vprogress(f"  > Clip {sd['idx']}: stream copy OK")
+                        _vprogress(f"  > Clip {sd['idx']}: simple re-encode OK")
                         return raw_clip
-                _vprogress(f"  > Clip {sd['idx']}: MISLUKT (alle fallbacks)")
+                # Allerlaatste noodoplossing: color background video
+                _vprogress(f"  > Clip {sd['idx']}: alle fallbacks mislukt, color clip")
+                scene_type = sd["scene"].get("type", "body")
+                _colors = {"hook": "0x1a1a2e", "problem": "0x16213e", "solution": "0x0f3460", "cta": "0x533483"}
+                bg_color = _colors.get(scene_type, "0x1a1a2e")
+                color_cmd = [
+                    "ffmpeg", "-y", "-f", "lavfi",
+                    "-i", f"color=c={bg_color}:s=1080x1920:d={sd['duration']}:r=30",
+                    "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
+                    "-pix_fmt", "yuv420p",
+                    str(raw_clip),
+                ]
+                subprocess.run(color_cmd, capture_output=True, timeout=30)
+                if raw_clip.exists() and raw_clip.stat().st_size > 1000:
+                    _vprogress(f"  > Clip {sd['idx']}: color fallback OK")
+                    return raw_clip
+                _vprogress(f"  > Clip {sd['idx']}: COMPLEET MISLUKT")
                 return None
             except Exception as e:
                 _vprogress(f"  > Clip {sd['idx']}: CRASH ({e})")
