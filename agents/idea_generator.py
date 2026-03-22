@@ -1,9 +1,16 @@
 """
 Idea Generator Agent.
 Genereert 5 campagne-ideeën op basis van app-context, brand memory en trending formats.
+
+v2: Diversiteits-engine — voorkomt dat elke run hetzelfde idee oplevert:
+  - Injecteert recente campagne-titels als VERBODEN onderwerpen
+  - Voegt datum + random invalshoek toe voor variatie
+  - Forceert minstens 3 VERSCHILLENDE hook_types per batch
 """
 
 import json
+import random
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +20,25 @@ from agents.base_agent import BaseAgent
 from agents import brand_memory as bm
 
 ROOT = Path(__file__).parent.parent
+
+# Invalshoeken die de LLM kan gebruiken — random gekozen per run
+_ANGLE_POOL = [
+    "Vertel het vanuit het perspectief van iemand die NET begonnen is",
+    "Focus op een EMOTIONEEL moment, niet het product",
+    "Gebruik een vergelijking met iets BUITEN de sector (sport, koken, reizen)",
+    "Draai het om: wat gebeurt er als je NIKS doet?",
+    "Maak het persoonlijk: een specifieke dag uit het leven van de doelgroep",
+    "Focus op het team/collega's, niet het individu",
+    "Gebruik humor of zelfspot als ingang",
+    "Vertel het als een ontdekking/geheim dat niemand kent",
+    "Begin vanuit een trending topic of actualiteit en link het naar het onderwerp",
+    "Focus op de resultaten na 30/60/90 dagen",
+    "Vertel het vanuit een scepticus die overtuigd wordt",
+    "Gebruik een 'voor en na' van een specifiek moment in de dag",
+    "Focus op wat de doelgroep MIST door het oude systeem",
+    "Maak een toekomstvisie: hoe ziet werk er over 5 jaar uit?",
+    "Vertel het als waarschuwing vanuit iemand die het fout deed",
+]
 
 
 class IdeaGeneratorAgent(BaseAgent):
@@ -25,6 +51,7 @@ class IdeaGeneratorAgent(BaseAgent):
         platform: str = "tiktok",
         recent_performance: dict | None = None,
         trending_formats: list | None = None,
+        recent_titles: list[str] | None = None,
     ) -> list[dict]:
         """
         Genereer 5 campagne-ideeën.
@@ -35,6 +62,7 @@ class IdeaGeneratorAgent(BaseAgent):
             platform: Doelplatform
             recent_performance: Dict met recente performance-cijfers
             trending_formats: Lijst van trending content-formats
+            recent_titles: Titels van recente campagnes (worden uitgesloten)
 
         Returns:
             Lijst van 5 ideeën als dicts
@@ -68,6 +96,27 @@ class IdeaGeneratorAgent(BaseAgent):
         else:
             persona_context = "Geen persona gedefinieerd — schrijf vanuit merkperspectief."
 
+        # ── v2: Diversiteits-injectie ──
+        # 1. Recente titels als verboden onderwerpen
+        exclusion_str = ""
+        if recent_titles:
+            titles_list = "\n".join(f"  - {t}" for t in recent_titles[-10:])
+            exclusion_str = (
+                f"\n\n⛔ VERBODEN — DEZE IDEEËN ZIJN AL GEBRUIKT:\n"
+                f"{titles_list}\n"
+                f"Genereer COMPLEET ANDERE invalshoeken. Geen variaties op bovenstaande titels.\n"
+                f"Gebruik ANDERE hook_types, ANDERE content_formats, ANDERE emoties.\n"
+            )
+
+        # 2. Random invalshoek + datum voor uniekheid
+        chosen_angles = random.sample(_ANGLE_POOL, min(3, len(_ANGLE_POOL)))
+        angle_str = (
+            f"\n\n🎯 CREATIEVE RICHTING VOOR DEZE RUN ({datetime.now().strftime('%d %B %Y, %H:%M')}):\n"
+            f"Gebruik minstens 2 van deze invalshoeken:\n"
+            + "\n".join(f"  → {a}" for a in chosen_angles)
+            + "\n\nDit is run #{random.randint(100, 999)} — maak het VERS en ANDERS dan alles hiervoor.\n"
+        )
+
         prompt = self._fill_template(
             template,
             {
@@ -79,6 +128,9 @@ class IdeaGeneratorAgent(BaseAgent):
                 "platform": platform.upper(),
             },
         )
+
+        # Voeg diversiteits-blokken toe aan het einde van de prompt
+        prompt += exclusion_str + angle_str
 
         system = self._build_system_prompt()
         raw = self._call_api(system, prompt)

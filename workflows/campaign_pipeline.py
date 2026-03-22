@@ -187,7 +187,23 @@ def run_pipeline(
         else:
             progress("Stap 2/7: Campagne-ideeën genereren...")
             idea_agent = IdeaGeneratorAgent()
-            ideas = idea_agent.run(app=app, memory=memory, platform=platform)
+            # Haal recente campagne-titels op zodat de LLM geen duplicaten genereert
+            recent_titles = []
+            try:
+                repo = get_campaign_repo(tenant_id=tenant_id)
+                recent_campaigns = repo.list(tenant_id=tenant_id)
+                recent_titles = [
+                    c.get("idea", {}).get("title", "") or c.get("display_name", "")
+                    for c in (recent_campaigns[-15:] if len(recent_campaigns) > 15 else recent_campaigns)
+                    if isinstance(c, dict)
+                ]
+                recent_titles = [t for t in recent_titles if t]
+            except Exception:
+                pass  # Niet kritiek — ideeën worden alsnog gegenereerd
+            ideas = idea_agent.run(
+                app=app, memory=memory, platform=platform,
+                recent_titles=recent_titles,
+            )
             total_cost += idea_agent.total_cost_usd
             guardrails.record_cost(idea_agent.total_cost_usd, "IdeaGeneratorAgent", bundle.id)
 
@@ -644,13 +660,18 @@ def _enforce_echo_loop(script: dict) -> dict:
 
 
 def _score_and_pick_idea(ideas: list[dict], idea_index: int, memory: dict) -> dict:
-    """Score ideas op relevantie en kies de beste (of de door gebruiker gekozen index)."""
-    # Defensieve validatie: elk element moet een dict zijn
+    """Score ideas op relevantie en kies de beste (of de door gebruiker gekozen index).
+
+    v2: Scoring is bewust MINDER biased naar brand memory top_hooks.
+    Voorheen: +15 per matching hook (+45 mogelijk) + +20 format = altijd hetzelfde.
+    Nu: +5 per hook (max +10) + +8 format + random jitter = meer variatie.
+    """
+    import random
+
     ideas = [i for i in ideas if isinstance(i, dict)]
     if not ideas:
         raise RuntimeError("Geen geldige ideeën beschikbaar na validatie (alle elementen zijn geen dict)")
     if idea_index > 0:
-        # Gebruiker heeft expliciet een index gekozen
         return ideas[min(idea_index, len(ideas) - 1)]
 
     top_hooks = [h.lower() for h in memory.get("top_performing_hooks", [])]
@@ -667,31 +688,49 @@ def _score_and_pick_idea(ideas: list[dict], idea_index: int, memory: dict) -> di
         hook = (idea.get("hook", "") or "").lower()
         fmt = (idea.get("content_format", "") or "").lower()
         goal = (idea.get("goal", "") or "").lower()
+        hook_type = (idea.get("hook_type", "") or "").lower()
 
-        # Bonus: title/hook lijkt op top performing hooks
+        # Kleine bonus voor overlap met top hooks (was +15, nu +5, max +10)
+        hook_bonus = 0
         for top in top_hooks:
             overlap = len(set(top.split()) & set((title + " " + hook).split()))
             if overlap >= 2:
-                score += 15
+                hook_bonus += 5
+        score += min(hook_bonus, 10)  # Cap: max +10 ipv onbeperkt
 
         # Penalty: bevat avoided topics
         for avoid in avoided:
             if avoid in title or avoid in hook:
                 score -= 30
 
-        # Bonus: format matcht best performing format
+        # Kleine bonus voor matching format (was +20, nu +8)
         if best_format and best_format in fmt:
-            score += 20
+            score += 8
 
-        # Bonus: engagement goals scoren hoger
+        # Bonus: engagement goals
         if goal in ("engagement", "conversion"):
-            score += 10
+            score += 8
         elif goal == "awareness":
-            score += 5
+            score += 4
 
         # Bonus: heeft een duidelijke hook
         if hook and len(hook) > 10:
-            score += 10
+            score += 8
+
+        # NIEUW: Bonus voor diversiteit in hook_type
+        # Minder gebruikte hook types krijgen een boost
+        if hook_type in ("controversy", "contrast", "pov_herkenning"):
+            score += 12  # Stimuleer variatie
+        elif hook_type == "pattern_interrupt":
+            score += 8
+
+        # NIEUW: Random jitter (+/- 10 punten) voorkomt dat ranking deterministisch is
+        score += random.randint(-10, 10)
+
+        # Bonus voor hoge viral_potential inschatting
+        perf = (idea.get("estimated_performance", "") or "").lower()
+        if perf == "high":
+            score += 6
 
         idea["_score"] = score
         scored.append((score, idea))

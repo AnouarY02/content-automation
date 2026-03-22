@@ -2,10 +2,10 @@
   "models": {
     "idea_generation": {
       "provider": "openai",
-      "model": "gpt-4o-mini",
+      "model": "gpt-4o",
       "max_tokens": 3000,
-      "temperature": 0.85,
-      "use_cache": true
+      "temperature": 0.95,
+      "use_cache": false
     },
     "script_writing": {
       "provider": "openai",
