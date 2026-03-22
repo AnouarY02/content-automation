@@ -1988,20 +1988,15 @@ class ProVideoProvider:
         audio_path = work_dir / "full_voiceover.mp3"
         text = self._prep_dutch_text(text)
 
-        # 1. Probeer Azure Neural TTS (beste Nederlands — nl-NL-MaartenNeural)
-        result = self._tts_azure(text, audio_path)
-        if result:
-            return result
-
-        # 2. ElevenLabs — gebruikerskeuze heeft prioriteit
+        # ── v10: Stem-prioriteit volgt ALTIJD de gebruikerskeuze ──
+        # 1. ElevenLabs — EERSTE KEUZE als gebruiker ElevenLabs stem selecteert
         api_key = os.getenv("ELEVENLABS_API_KEY", "")
         if api_key and len(api_key) >= 10:
-            # Respecteer de stemkeuze uit het dashboard
             if self._is_elevenlabs_voice():
                 voice_id = self.ELEVENLABS_VOICES[self.voice]["id"]
                 logger.info(f"[ProVideo] ElevenLabs {self.voice} gekozen door gebruiker ({len(text)} tekens)...")
             else:
-                # Alleen clone voice als fallback wanneer geen ElevenLabs stem gekozen
+                # Clone voice alleen als geen ElevenLabs stem gekozen
                 clone_id = os.getenv("ELEVENLABS_CLONE_VOICE_ID", "").strip()
                 if clone_id:
                     voice_id = clone_id
@@ -2048,27 +2043,33 @@ class ProVideoProvider:
                     audio_path = self._enhance_voice_audio(audio_path, 0)
                     dur = self._get_media_duration(audio_path)
                     self.total_cost_usd += len(text) * self.COST_PER_ELEVENLABS_CHAR
-                    label = "gekloond" if clone_id else self.voice
+                    is_clone = not self._is_elevenlabs_voice()
+                    label = "gekloond" if is_clone else self.voice
                     logger.info(f"[ProVideo] ElevenLabs ({label}) klaar: {dur:.1f}s")
                     return audio_path, dur
                 except Exception as e:
                     logger.warning(f"[ProVideo] ElevenLabs voiceover mislukt: {e}")
 
-        # 3. OpenAI TTS-HD fallback (onyx klinkt beter voor NL dan nova)
+        # 2. Azure Neural TTS als fallback (als ElevenLabs mislukt/niet beschikbaar)
+        result = self._tts_azure(text, audio_path)
+        if result:
+            return result
+
+        # 3. OpenAI TTS-HD als laatste fallback
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
+            logger.warning("[ProVideo] Geen TTS provider beschikbaar (ElevenLabs + Azure + OpenAI allemaal mislukt)")
             return None, None
 
         voice = self.voice
         if voice in self.ELEVENLABS_VOICES:
             el_desc = self.ELEVENLABS_VOICES[voice].get("desc", "").lower()
-            # onyx (diep, mannelijk) klinkt minder robotisch voor NL dan nova
             voice = "fable" if "vrouwelijk" in el_desc else "onyx"
 
         try:
             import openai
             client = openai.OpenAI(api_key=api_key)
-            logger.info(f"[ProVideo] OpenAI TTS-HD volledige voiceover ({voice}, {len(text)} tekens)...")
+            logger.warning(f"[ProVideo] ⚠ FALLBACK naar OpenAI TTS-HD ({voice}) — ElevenLabs en Azure niet beschikbaar")
             response = client.audio.speech.create(
                 model="tts-1-hd",
                 voice=voice,
@@ -2079,7 +2080,7 @@ class ProVideoProvider:
             response.stream_to_file(str(audio_path))
             dur = self._get_media_duration(audio_path)
             self.total_cost_usd += len(text) * self.COST_PER_TTS_CHAR
-            logger.info(f"[ProVideo] OpenAI TTS volledige voiceover klaar: {dur:.1f}s")
+            logger.warning(f"[ProVideo] OpenAI TTS fallback klaar: {dur:.1f}s — stem is NIET de gekozen ElevenLabs stem!")
             return audio_path, dur
         except Exception as e:
             logger.warning(f"[ProVideo] OpenAI TTS volledig mislukt: {e}")
