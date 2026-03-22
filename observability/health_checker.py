@@ -327,7 +327,7 @@ class HealthChecker:
         return result
 
     def _check_elevenlabs(self) -> ComponentHealth:
-        """Valideer ElevenLabs API key via /voices endpoint (werkt met alle key-scopes)."""
+        """Valideer ElevenLabs via een mini-TTS request (werkt ook met beperkte key-scopes)."""
         api_key = os.getenv("ELEVENLABS_API_KEY", "")
         if not api_key:
             return ComponentHealth(
@@ -335,22 +335,31 @@ class HealthChecker:
                 status=HealthStatus.DEGRADED,
                 error_message="ELEVENLABS_API_KEY niet ingesteld — voiceover niet beschikbaar",
             )
+        # Gebruik een echte TTS call met minimale text — /v1/voices en /v1/user
+        # vereisen extra permissions die niet alle keys hebben.
+        voice_id = os.getenv("ELEVENLABS_VOICE_ID", "9BWtsMINqrJLrRacOk9x")
         start = time.monotonic()
         try:
             with httpx.Client(timeout=HEALTH_TIKTOK_TIMEOUT_SEC) as client:
-                resp = client.get(
-                    "https://api.elevenlabs.io/v1/voices",
-                    headers={"xi-api-key": api_key},
+                resp = client.post(
+                    f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+                    headers={
+                        "xi-api-key": api_key,
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "text": "ok",
+                        "model_id": "eleven_multilingual_v2",
+                    },
                 )
             latency = (time.monotonic() - start) * 1000
             if resp.status_code == 200:
-                voices = resp.json().get("voices", [])
                 return ComponentHealth(
                     component=ComponentName.ELEVENLABS,
                     status=HealthStatus.HEALTHY,
                     latency_ms=latency,
                     last_success=datetime.utcnow(),
-                    details={"voices_available": len(voices)},
+                    details={"voice_id": voice_id, "tts_ok": True},
                 )
             return ComponentHealth(
                 component=ComponentName.ELEVENLABS,
