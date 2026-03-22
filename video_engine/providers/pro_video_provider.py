@@ -1651,10 +1651,13 @@ class ProVideoProvider:
         # Verwachte minimale duur: ~0.8s per 100 tekens (Nederlands spreektempo)
         min_expected_dur = max(0.5, len(text) * 0.008)
 
-        # Gebruik custom voice settings van dashboard, of defaults
-        base_stability = self._custom_voice_settings.get("stability", 0.58) if self._custom_voice_settings else 0.58
-        base_similarity = self._custom_voice_settings.get("similarity_boost", 0.92) if self._custom_voice_settings else 0.92
-        base_style = self._custom_voice_settings.get("style", 0.45) if self._custom_voice_settings else 0.45
+        # Gebruik custom voice settings van dashboard, of geoptimaliseerde defaults
+        # Stability 0.65 = consistenter zonder robotisch te klinken
+        # Similarity 0.88 = natuurlijker, minder over-cloning artifacts
+        # Style 0.20 = conversationeel ipv "geacteerd" — key voor realisme
+        base_stability = self._custom_voice_settings.get("stability", 0.65) if self._custom_voice_settings else 0.65
+        base_similarity = self._custom_voice_settings.get("similarity_boost", 0.88) if self._custom_voice_settings else 0.88
+        base_style = self._custom_voice_settings.get("style", 0.20) if self._custom_voice_settings else 0.20
 
         # Probeer max 2 keer: eerste keer normaal, tweede met hogere stability
         for attempt in range(2):
@@ -1667,17 +1670,19 @@ class ProVideoProvider:
                     "use_speaker_boost": True,
                 }
 
+                # Gebruik hoogste kwaliteit output format (192kbps MP3)
+                tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}?output_format=mp3_44100_192"
                 resp = httpx.post(
-                    f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+                    tts_url,
                     headers={
                         "xi-api-key": api_key,
                         "Content-Type": "application/json",
-                        "Accept": "audio/mpeg",
                     },
                     json={
                         "text": text,
                         "model_id": "eleven_multilingual_v2",
                         "voice_settings": voice_settings,
+                        "apply_text_normalization": "auto",
                     },
                     timeout=30,
                 )
@@ -1741,58 +1746,43 @@ class ProVideoProvider:
           → minder verschil in volume tussen zachte en luide passages
         - Removed: dubbele EQ boost op 3kHz die soms scherp klonk
         """
-        enhanced = audio_path.parent / f"tts_enhanced_{idx:02d}.mp3"
+        # ── v10: Lossless intermediates + natuurlijke audio processing ──
+        # Gebruik WAV (lossless) voor alle tussenbestanden.
+        # Voorheen: 5x lossy MP3 encode (API→reverb→EQ→assembly→AAC).
+        # Nu: API MP3 → WAV → WAV → AAC (slechts 1 lossy decode + 1 lossy encode).
+        enhanced = audio_path.parent / f"tts_enhanced_{idx:02d}.wav"
 
-        # Room reverb: enkele korte reflectie — minimaal effect maar
-        # voorkomt het "droge" gevoel dat TTS onnatuurlijk maakt
-        room_reverb = (
-            "aresample=44100,"
-            "asplit=2[dry][wet];"
-            "[wet]adelay=12|12,volume=0.05[r1];"
-            "[dry][r1]amix=inputs=2:duration=first:weights='0.95 0.05'"
-        )
-
-        # Twee-pass: eerst reverb (complexe filter), dan EQ chain
-        reverb_path = audio_path.parent / f"tts_reverb_{idx:02d}.mp3"
-        cmd_reverb = [
-            "ffmpeg", "-y", "-i", str(audio_path),
-            "-filter_complex", room_reverb,
-            "-c:a", "libmp3lame", "-q:a", "2",
-            str(reverb_path),
-        ]
-        result = subprocess.run(cmd_reverb, capture_output=True, timeout=30)
-        reverb_input = reverb_path if (
-            result.returncode == 0 and reverb_path.exists()
-            and reverb_path.stat().st_size > 1000
-        ) else audio_path
-
-        # Tweede pass: EQ chain + compressor + loudnorm
+        # Enkele pass: alle filters in één keer — geen onnodige reverb pass.
+        # Room reverb VERWIJDERD: ElevenLabs v2 heeft al subtiele room modeling,
+        # extra reverb maakte het juist onnatuurlijker (metallic single-tap echo).
         cmd = [
-            "ffmpeg", "-y", "-i", str(reverb_input),
+            "ffmpeg", "-y", "-i", str(audio_path),
             "-af", (
-                # Silence removal: milder dan v8 — behoud natuurlijke pauzes
-                "silenceremove=stop_periods=-1:stop_duration=0.5:stop_threshold=-42dB,"
+                # Silence: alleen ECHT lange pauzes (>1s) verwijderen.
+                # Natuurlijke adempauzes (0.3-0.8s) blijven behouden.
+                "silenceremove=stop_periods=-1:stop_duration=1.0:stop_threshold=-48dB,"
                 # Highpass: verwijder ruis/geroemel onder 80Hz
                 "highpass=f=80,"
-                # De-esser: dempt scherpe S/SJ klanken (Nederlands)
-                "equalizer=f=6500:t=q:w=2.0:g=-4,"
-                # Warmth: mid-presence boost voor telefoon (subtieler dan v8)
-                "equalizer=f=3000:t=q:w=1.5:g=2.0,"
+                # De-esser: smaller en minder agressief dan v9.
+                # Alleen de scherpe S-piek dempen, niet constant 6.5kHz afknippen.
+                "equalizer=f=7000:t=q:w=1.2:g=-2.5,"
+                # Warmth: mid-presence voor telefoon — EENMALIG (geen duplicate in assembly)
+                "equalizer=f=2500:t=q:w=1.5:g=1.5,"
                 # Body: lage mids voor warmte
                 "equalizer=f=220:t=q:w=1.0:g=1.5,"
-                # Air: hoge helderheid zonder scherpte
-                "equalizer=f=10000:t=q:w=1.5:g=1.5,"
-                # STRAKKE compressor: dit is de key voor consistentie
-                # Lagere threshold + hogere ratio = minder volume-variatie
-                # Langere release = vloeiendere overgang (geen pumping)
-                "acompressor=threshold=0.04:ratio=5:attack=3:release=80:makeup=2,"
-                # Hard limiter: voorkom clipping
-                "alimiter=limit=0.95:level=false,"
-                # Broadcast loudnorm — dit normaliseert ALLE output
-                # naar exact hetzelfde volume (-14 LUFS), ongeacht input
-                "loudnorm=I=-14:LRA=5:TP=-1.5"
+                # Air: subtiele helderheid
+                "equalizer=f=10000:t=q:w=1.5:g=1.0,"
+                # Compressor: ZACHTER dan v9 — bewaar natuurlijke dynamiek.
+                # Ratio 2.5:1 (was 5:1), hogere threshold, langere attack/release
+                # zodat volume-variatie NIET platgeslagen wordt.
+                "acompressor=threshold=0.08:ratio=2.5:attack=8:release=120:makeup=1.5,"
+                # Limiter: iets ruimer (0.98 ipv 0.95)
+                "alimiter=limit=0.98:level=false,"
+                # Loudnorm: LRA 8 (was 5) — meer dynamiek behouden
+                "loudnorm=I=-14:LRA=8:TP=-1.5"
             ),
-            "-c:a", "libmp3lame", "-q:a", "2",
+            # Lossless WAV output — geen kwaliteitsverlies
+            "-c:a", "pcm_s16le", "-ar", "44100",
             str(enhanced),
         ]
         result = subprocess.run(cmd, capture_output=True, timeout=30)
@@ -2025,23 +2015,31 @@ class ProVideoProvider:
                     # Consistente voice settings — identiek aan per-scene TTS
                     # Gebruik custom settings van dashboard als beschikbaar.
                     voice_settings = {
-                        "stability": (self._custom_voice_settings or {}).get("stability", 0.58),
-                        "similarity_boost": (self._custom_voice_settings or {}).get("similarity_boost", 0.92),
-                        "style": (self._custom_voice_settings or {}).get("style", 0.45),
+                        "stability": (self._custom_voice_settings or {}).get("stability", 0.65),
+                        "similarity_boost": (self._custom_voice_settings or {}).get("similarity_boost", 0.88),
+                        "style": (self._custom_voice_settings or {}).get("style", 0.20),
                         "use_speaker_boost": True,
                     }
 
+                    # Truncate op zinsgrens ipv midden in een woord
+                    safe_text = text[:5000]
+                    if len(text) > 5000:
+                        last_period = safe_text.rfind(".")
+                        if last_period > 4000:
+                            safe_text = safe_text[: last_period + 1]
+
+                    tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}?output_format=mp3_44100_192"
                     resp = httpx.post(
-                        f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+                        tts_url,
                         headers={
                             "xi-api-key": api_key,
                             "Content-Type": "application/json",
-                            "Accept": "audio/mpeg",
                         },
                         json={
-                            "text": text[:5000],
+                            "text": safe_text,
                             "model_id": "eleven_multilingual_v2",
                             "voice_settings": voice_settings,
+                            "apply_text_normalization": "auto",
                         },
                         timeout=60,
                     )
@@ -2915,14 +2913,12 @@ class ProVideoProvider:
             # Compressor + mid-presence EQ + stereo widening
             # Voice wordt gesplit: [voice_mix] voor finale mix,
             # [voice_sc] als sidechain trigger voor muziek ducking
+            # ── v10: Voice is al volledig geprocessed in _enhance_voice_audio.
+            # GEEN dubbele compressor/EQ meer — dat maakte de stem plat en robotisch.
+            # GEEN stereo widening — voice hoort mono/center te blijven.
             voice_chain = (
                 f"[1:a]atrim=0:{video_dur},asetpts=PTS-STARTPTS,"
-                f"acompressor=threshold=0.06:ratio=4:attack=2:release=35:makeup=1.4,"
-                f"equalizer=f=3000:t=q:w=1.2:g=2.0,"
-                f"equalizer=f=8000:t=q:w=2.0:g=1.0,"
-                f"aeval='val(0)|val(0)':channel_layout=stereo,"
-                f"extrastereo=m=0.3,"
-                # Split voice: één voor mix, één als sidechain signaal
+                # Split voice: één voor mix, één als sidechain trigger voor muziek
                 f"asplit=2[voice_mix][voice_sc];"
             )
 
@@ -2930,15 +2926,19 @@ class ProVideoProvider:
             # sidechaincompress: eerste input = signaal dat geduckt wordt (muziek)
             # tweede input = sidechain trigger (voice_sc)
             # Muziek gaat ~12dB omlaag tijdens spraak, komt langzaam terug
+            # ── v10: Zachtere sidechain ducking — minder "pumping" effect.
+            # Muziek: highpass 200Hz zodat bas niet met stem botst op telefoon.
+            # Lagere ratio (3:1 ipv 6:1), langere release (400ms ipv 180ms).
             music_chain = (
                 f"[2:a]atrim=0:{video_dur},asetpts=PTS-STARTPTS,"
-                f"volume=0.22,"
+                f"highpass=f=200,"
+                f"volume=0.18,"
                 f"afade=t=in:d=2.0,"
                 f"afade=t=out:st={fade_out_start:.1f}:d=4.0[music_raw];"
-                # Sidechain ducking: muziek duckt onder voice
+                # Sidechain ducking: zachter en vloeiender
                 f"[music_raw][voice_sc]sidechaincompress="
-                f"threshold=0.02:ratio=6:attack=8:release=180:"
-                f"level_in=3:level_sc=1[music];"
+                f"threshold=0.04:ratio=3:attack=15:release=400:"
+                f"level_in=2:level_sc=1[music];"
             )
 
             if has_sfx:
