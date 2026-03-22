@@ -4133,6 +4133,69 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                 )
                 page = context.new_page()
 
+                # ── Session-injectie (geen login/MFA nodig) ──
+                # Zet DEMO_APP_SESSION in Railway env vars met de waarde van je
+                # sessie-cookie. Playwright injecteert die cookie direct in de
+                # browser context, waardoor je al "ingelogd" bent.
+                #
+                # HOE TE KRIJGEN:
+                #   1. Log in op je app in Chrome
+                #   2. Open DevTools → Application → Cookies
+                #   3. Kopieer de waarde van je session cookie
+                #      (bijv. "next-auth.session-token" of "session" of "sb-*-auth-token")
+                #   4. Zet in Railway: DEMO_APP_SESSION=<cookie_waarde>
+                #   5. Optioneel: DEMO_APP_COOKIE_NAME=<cookie_naam> (default: auto-detect)
+                #
+                session_token = os.getenv("DEMO_APP_SESSION", "").strip()
+                if session_token:
+                    try:
+                        from urllib.parse import urlparse
+                        parsed = urlparse(url)
+                        domain = parsed.hostname or "localhost"
+
+                        # Cookie naam: eerst env var, anders probeer bekende namen
+                        cookie_name = os.getenv("DEMO_APP_COOKIE_NAME", "").strip()
+                        if not cookie_name:
+                            # Veelvoorkomende sessie-cookie namen voor Next.js / Supabase
+                            cookie_name = "next-auth.session-token"
+
+                        # Meerdere cookies ondersteunen (komma-gescheiden naam=waarde paren)
+                        # Format: "cookie_naam1=waarde1,cookie_naam2=waarde2"
+                        # Of simpel: alleen de waarde (dan wordt cookie_name gebruikt)
+                        cookies_to_add = []
+                        if "=" in session_token and "," in session_token:
+                            # Meerdere cookies: "name1=val1,name2=val2"
+                            for pair in session_token.split(","):
+                                pair = pair.strip()
+                                if "=" in pair:
+                                    cname, cval = pair.split("=", 1)
+                                    cookies_to_add.append({
+                                        "name": cname.strip(),
+                                        "value": cval.strip(),
+                                        "domain": domain,
+                                        "path": "/",
+                                        "httpOnly": True,
+                                        "secure": parsed.scheme == "https",
+                                        "sameSite": "Lax",
+                                    })
+                        else:
+                            # Enkele cookie waarde
+                            cookies_to_add.append({
+                                "name": cookie_name,
+                                "value": session_token,
+                                "domain": domain,
+                                "path": "/",
+                                "httpOnly": True,
+                                "secure": parsed.scheme == "https",
+                                "sameSite": "Lax",
+                            })
+
+                        context.add_cookies(cookies_to_add)
+                        logger.info(f"[ProVideo] Session cookie geïnjecteerd: {len(cookies_to_add)} cookie(s) voor {domain}")
+                    except Exception as cookie_err:
+                        logger.warning(f"[ProVideo] Session cookie injectie mislukt (niet kritiek): {cookie_err}")
+                        # Ga gewoon door — publieke pagina's worden alsnog gecaptured
+
                 for pi, subpath in enumerate(pages[:3]):  # Max 3 pagina's
                     page_url = url.rstrip("/") + subpath
                     try:
