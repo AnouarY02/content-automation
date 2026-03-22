@@ -167,9 +167,11 @@ def run_pipeline(
         memory["url"] = memory.get("url") or app.get("url", "")
         memory["app_name"] = memory.get("app_name") or app.get("name", "")
 
-        # Gebruik stem uit brand memory als die beschikbaar is (per persona)
-        if memory.get("tts_voice"):
-            voice = memory["tts_voice"]
+        # Brand memory stem wordt NIET meer geforceerd — gebruikerskeuze uit
+        # dashboard heeft altijd prioriteit. Brand memory voice is enkel een
+        # suggestie die het dashboard als default kan tonen.
+        # if memory.get("tts_voice"):
+        #     voice = memory["tts_voice"]
 
         # Genereer display_name: "Campagne N — AppNaam"
         app_name = memory.get("app_name") or app.get("name", app_id)

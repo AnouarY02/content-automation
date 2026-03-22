@@ -2003,19 +2003,21 @@ class ProVideoProvider:
         if result:
             return result
 
-        # 2. ElevenLabs — gekloonde stem heeft prioriteit boven premade
+        # 2. ElevenLabs — gebruikerskeuze heeft prioriteit
         api_key = os.getenv("ELEVENLABS_API_KEY", "")
         if api_key and len(api_key) >= 10:
-            # Gekloonde stem: ELEVENLABS_CLONE_VOICE_ID overschrijft alles
-            clone_id = os.getenv("ELEVENLABS_CLONE_VOICE_ID", "").strip()
-            if clone_id:
-                voice_id = clone_id
-                logger.info(f"[ProVideo] ElevenLabs GEKLOONDE stem ({len(text)} tekens)...")
-            elif self._is_elevenlabs_voice():
+            # Respecteer de stemkeuze uit het dashboard
+            if self._is_elevenlabs_voice():
                 voice_id = self.ELEVENLABS_VOICES[self.voice]["id"]
-                logger.info(f"[ProVideo] ElevenLabs {self.voice} ({len(text)} tekens)...")
+                logger.info(f"[ProVideo] ElevenLabs {self.voice} gekozen door gebruiker ({len(text)} tekens)...")
             else:
-                voice_id = None
+                # Alleen clone voice als fallback wanneer geen ElevenLabs stem gekozen
+                clone_id = os.getenv("ELEVENLABS_CLONE_VOICE_ID", "").strip()
+                if clone_id:
+                    voice_id = clone_id
+                    logger.info(f"[ProVideo] ElevenLabs GEKLOONDE stem als fallback ({len(text)} tekens)...")
+                else:
+                    voice_id = None
 
             if voice_id:
                 try:
