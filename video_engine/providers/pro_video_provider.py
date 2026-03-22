@@ -4093,7 +4093,7 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
         try:
             from playwright.sync_api import sync_playwright
         except ImportError:
-            logger.info("[ProVideo] Playwright niet beschikbaar — skip app recording")
+            logger.warning("[ProVideo] Playwright niet geinstalleerd — skip app recording. pip install playwright && playwright install chromium")
             return None
 
         if not url:
@@ -4103,13 +4103,21 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
         if not pages:
             pages = ["/"]
 
+        logger.info(f"[ProVideo] App scroll recording starten: {url} ({len(pages)} pagina's, {duration:.1f}s)")
+
         try:
             screenshots = []
 
             with sync_playwright() as p:
                 browser = p.chromium.launch(
                     headless=True,
-                    args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
+                    args=[
+                        "--no-sandbox",
+                        "--disable-gpu",
+                        "--disable-dev-shm-usage",
+                        "--disable-setuid-sandbox",
+                        "--single-process",  # Minder RAM op Railway
+                    ],
                 )
                 # Mobiel viewport — TikTok-stijl verticale app weergave
                 context = browser.new_context(
@@ -4259,7 +4267,11 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
             return final
 
         except Exception as e:
-            logger.warning(f"[ProVideo] App scroll recording mislukt: {e}")
+            import traceback
+            logger.error(
+                f"[ProVideo] App scroll recording MISLUKT voor {url}: {e}\n"
+                f"  Traceback: {traceback.format_exc()[-500:]}"
+            )
             return None
 
     # ── Product Demo — App UI in Phone Mockup ──────────────────────

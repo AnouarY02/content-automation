@@ -88,6 +88,35 @@ def readiness():
     return {"status": "ready", "filesystem": fs_health.status}
 
 
+@router.get("/playwright")
+def playwright_check():
+    """Test of Playwright + Chromium beschikbaar is voor app screen recording."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return {"status": "unavailable", "error": "playwright not installed"}
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
+                      "--disable-setuid-sandbox", "--single-process"],
+            )
+            page = browser.new_page(viewport={"width": 393, "height": 852})
+            page.goto("https://www.dossiertijd.nl", wait_until="load", timeout=15000)
+            title = page.title()
+            browser.close()
+            return {
+                "status": "healthy",
+                "browser": "chromium",
+                "test_url": "https://www.dossiertijd.nl",
+                "page_title": title,
+            }
+    except Exception as e:
+        return {"status": "error", "error": str(e)[:500]}
+
+
 # ──────────────────────────────────────────────
 # AUDIT ENDPOINTS
 # ──────────────────────────────────────────────

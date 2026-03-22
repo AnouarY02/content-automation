@@ -1,9 +1,15 @@
 # ── AY Marketing OS — Production Dockerfile ──
 FROM python:3.11-slim
 
-# FFmpeg + fonts voor video productie (drawtext vereist freetype + fontconfig)
+# FFmpeg + fonts + Chromium dependencies voor video productie + app recording
+# Combineer apt-get calls voor kleinere image layer
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core fontconfig libfreetype6 && \
+    apt-get install -y --no-install-recommends \
+        ffmpeg fonts-dejavu-core fontconfig libfreetype6 \
+        # Chromium dependencies (Playwright --with-deps doet dit ook, maar expliciet is betrouwbaarder)
+        libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 \
+        libasound2 libatspi2.0-0 libxshmfence1 libxdamage1 libxrandr2 \
+        libxcomposite1 libxfixes3 libcups2 libpango-1.0-0 libcairo2 && \
     fc-cache -f && \
     rm -rf /var/lib/apt/lists/*
 
@@ -14,7 +20,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Playwright Chromium browser voor app screen recording
-RUN playwright install chromium --with-deps 2>/dev/null || echo "Playwright browser install skipped"
+# --with-deps installeert ontbrekende system libs, maar we hebben de meeste al hierboven
+RUN playwright install --with-deps chromium && \
+    echo "Chromium installed at: $(python -c 'from playwright._impl._driver import compute_driver_executable; print(compute_driver_executable())'  2>/dev/null || echo 'unknown')"
 
 # Applicatiecode
 COPY . .
