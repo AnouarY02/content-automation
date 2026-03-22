@@ -13,6 +13,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Playwright Chromium browser voor app screen recording
+RUN playwright install chromium --with-deps 2>/dev/null || echo "Playwright browser install skipped"
+
 # Applicatiecode
 COPY . .
 

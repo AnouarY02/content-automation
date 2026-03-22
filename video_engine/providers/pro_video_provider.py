@@ -3054,12 +3054,27 @@ class ProVideoProvider:
         visual = None
         scene_type = scene.get("type", "body")
 
-        # 0. APP DEMO — phone mockup met echte app screenshots
-        # Dit is wat het product-specifiek maakt: de kijker ziet de echte app
-        if scene_type in ("demo", "feature"):
+        # 0. APP SCROLL RECORDING — echte app footage, smooth scroll
+        # Prioriteit voor demo/feature/solution: de kijker ziet de ECHTE app scrollen.
+        # Dit is authentieker dan stock footage en laat het product zien in actie.
+        if scene_type in ("demo", "feature", "solution") and app_url:
+            demo_pages = scene.get("demo_pages", None)
+            # Kies relevante pagina's per scene type
+            if not demo_pages:
+                if scene_type == "demo":
+                    demo_pages = ["/", "/features"]
+                elif scene_type == "feature":
+                    demo_pages = ["/features", "/#features"]
+                elif scene_type == "solution":
+                    demo_pages = ["/"]
+            visual = self._record_app_scroll(
+                app_url, work_dir, idx, duration, pages=demo_pages,
+            )
+
+        # Fallback: phone mockup met statische screenshots (als scroll recording mislukt)
+        if not visual and scene_type in ("demo", "feature"):
             app_screenshots = getattr(self, "_app_screenshots", None)
             if not app_screenshots and app_url:
-                # Capture app screenshots (gecached per sessie)
                 demo_pages = scene.get("demo_pages", None)
                 self._app_screenshots = self._capture_app_screenshots(
                     app_url, work_dir, pages=demo_pages
@@ -3067,28 +3082,18 @@ class ProVideoProvider:
                 app_screenshots = self._app_screenshots
 
             if app_screenshots:
-                # Kies screenshot op basis van scene index
-                # demo_page_index in scene dict kan specifiek screenshot aanwijzen
                 page_idx = scene.get("demo_page_index", idx % len(app_screenshots))
                 page_idx = min(page_idx, len(app_screenshots) - 1)
                 screenshot = app_screenshots[page_idx]
-
-                # Haal accent color uit memory
                 accent = memory.get("visual_style", {}).get("accent_color", "#6C63FF")
                 accent_hex = accent.lstrip("#")
-
-                # Maak achtergrond stock clip voor blur
                 bg_clip = self._get_stock_video(scene, memory, work_dir, idx, duration)
-
                 visual = self._create_phone_mockup_clip(
                     screenshot, work_dir, idx, duration,
                     bg_clip=bg_clip, accent_color=accent_hex,
                 )
 
-        # Voor solution scenes: ook phone mockup proberen als er screenshots zijn.
-        # Als een script geen expliciete demo-scene had, maar wel een echte product-URL,
-        # initialiseer de screenshot-cache hier alsnog zodat de bestaande rich app-demo
-        # route niet stil terugvalt op generieke stock.
+        # Solution fallback: phone mockup als scroll recording niet beschikbaar
         if not visual and scene_type == "solution":
             app_screenshots = getattr(self, "_app_screenshots", None)
             if not app_screenshots and app_url:
@@ -3098,7 +3103,6 @@ class ProVideoProvider:
                 )
                 app_screenshots = self._app_screenshots
             if app_screenshots:
-                # Gebruik een later screenshot (dashboard/resultaat pagina)
                 page_idx = min(len(app_screenshots) - 1, 1)
                 screenshot = app_screenshots[page_idx]
                 accent = memory.get("visual_style", {}).get("accent_color", "#6C63FF")
@@ -4065,84 +4069,197 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
 
     # ── Website Capture (Playwright) — FIXED timeout ──────────────
 
-    def _capture_website(
+    def _record_app_scroll(
         self, url: str, work_dir: Path, idx: int, duration: float,
+        pages: list[str] | None = None,
     ) -> Path | None:
-        """Maak een scrollende video van de website."""
+        """Maak een smooth-scroll video van de app — TikTok-style screen recording.
+
+        Werking:
+        1. Opent de app in een mobiel viewport (iPhone 14 Pro: 393x852, 3x)
+        2. Maakt een full-page screenshot (hele pagina in één keer)
+        3. Bouwt een smooth scroll-animatie met FFmpeg (ease-in/ease-out)
+        4. Output: 1080x1920 MP4 klaar voor de video pipeline
+
+        Als meerdere pagina's worden opgegeven, worden ze achter elkaar gescrolld.
+
+        Args:
+            url: App URL (bijv. https://dossiertijd.nl)
+            work_dir: Werk directory
+            idx: Scene index
+            duration: Gewenste duur in seconden
+            pages: Optionele lijst van subpaden (bijv. ["/", "/features"])
+        """
         try:
             from playwright.sync_api import sync_playwright
         except ImportError:
-            logger.info("[ProVideo] Playwright niet beschikbaar")
+            logger.info("[ProVideo] Playwright niet beschikbaar — skip app recording")
             return None
+
+        if not url:
+            return None
+
+        # Standaard pagina's als geen specifieke opgegeven
+        if not pages:
+            pages = ["/"]
 
         try:
-            screenshot_path = work_dir / f"web_{idx:02d}.png"
+            screenshots = []
 
             with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page(viewport={"width": 1280, "height": 800})
-                page.goto(url, wait_until="networkidle", timeout=15000)
-                page.wait_for_timeout(1500)
-                page.screenshot(path=str(screenshot_path), full_page=True)
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
+                )
+                # Mobiel viewport — TikTok-stijl verticale app weergave
+                context = browser.new_context(
+                    viewport={"width": 393, "height": 852},
+                    device_scale_factor=3,
+                    is_mobile=True,
+                    has_touch=True,
+                    user_agent=(
+                        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+                        "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 "
+                        "Mobile/15E148 Safari/604.1"
+                    ),
+                )
+                page = context.new_page()
+
+                for pi, subpath in enumerate(pages[:3]):  # Max 3 pagina's
+                    page_url = url.rstrip("/") + subpath
+                    try:
+                        page.goto(page_url, wait_until="networkidle", timeout=20000)
+                    except Exception:
+                        # Fallback: load ipv networkidle (sommige SPA's laden nooit "idle")
+                        try:
+                            page.goto(page_url, wait_until="load", timeout=15000)
+                        except Exception as nav_err:
+                            logger.warning(f"[ProVideo] App pagina {page_url} niet bereikbaar: {nav_err}")
+                            continue
+                    page.wait_for_timeout(2000)
+
+                    # Verberg cookie banners en popups
+                    try:
+                        page.evaluate("""
+                            for (const sel of [
+                                '[class*="cookie"]', '[id*="cookie"]', '[class*="consent"]',
+                                '[class*="popup"]', '[class*="modal"]', '[class*="banner"]',
+                                '[class*="overlay"]'
+                            ]) {
+                                document.querySelectorAll(sel).forEach(el => el.remove());
+                            }
+                        """)
+                    except Exception:
+                        pass
+
+                    # Full-page screenshot
+                    ss_path = work_dir / f"app_scroll_{idx:02d}_p{pi}.png"
+                    page.screenshot(path=str(ss_path), full_page=True)
+                    if ss_path.exists() and ss_path.stat().st_size > 5000:
+                        screenshots.append(ss_path)
+
                 browser.close()
 
-            if not screenshot_path.exists():
+            if not screenshots:
+                logger.warning("[ProVideo] App recording: geen screenshots verkregen")
                 return None
 
-            dimensions = _probe_dimensions(screenshot_path)
-            if dimensions:
-                w, h = dimensions
-            else:
-                w, h = 1280, 3000
+            # Verdeel duur over alle screenshots
+            dur_per_page = duration / len(screenshots)
+            page_clips = []
 
-            clip_path = work_dir / f"web_clip_{idx:02d}.mp4"
-            scroll_distance = max(0, h - 800)
+            for pi, ss_path in enumerate(screenshots):
+                dimensions = _probe_dimensions(ss_path)
+                if dimensions:
+                    w, h = dimensions
+                else:
+                    w, h = 1179, 2556  # iPhone 14 Pro 3x default
 
-            if scroll_distance > 200:
-                # Scrollende video (boven naar beneden)
+                clip_path = work_dir / f"app_scroll_clip_{idx:02d}_p{pi}.mp4"
+
+                # Bereken scroll afstand na scale naar 1080 breed
                 scale_h = int(h * (1080 / w))
                 crop_scroll = max(0, scale_h - 1920)
-                cmd = [
-                    "ffmpeg", "-y",
-                    "-loop", "1", "-t", str(duration),
-                    "-i", str(screenshot_path),
-                    "-vf", (
-                        f"scale=1080:{scale_h},"
-                        f"crop=1080:1920:0:"
-                        f"'min({crop_scroll},{crop_scroll}*t/{duration})',"
-                        f"format=yuv420p"
-                    ),
-                    "-r", "30",
-                    "-c:v", "libx264", "-preset", "ultrafast", "-crf", "22",
-                    str(clip_path),
-                ]
+
+                if crop_scroll > 300:
+                    # ── Smooth scroll met ease-in-out ──
+                    # Formule: sinusoïdale easing voor natuurlijke scroll-feel
+                    # t/dur geeft 0→1, sin() maakt het smooth (langzaam→snel→langzaam)
+                    # Pause 0.5s bovenaan voordat scroll begint
+                    scroll_dur = max(1, dur_per_page - 1.0)  # 0.5s pause begin + 0.5s pause eind
+                    scroll_expr = (
+                        f"if(lt(t\\,0.5)\\,0\\,"           # Eerste 0.5s: stil bovenaan
+                        f"if(gt(t\\,{dur_per_page - 0.5})\\,"  # Laatste 0.5s: stil onderaan
+                        f"{crop_scroll}\\,"
+                        f"{crop_scroll}*(1-cos(PI*(t-0.5)/{scroll_dur}))/2))"  # Smooth scroll
+                    )
+                    cmd = [
+                        "ffmpeg", "-y",
+                        "-loop", "1", "-t", str(dur_per_page),
+                        "-i", str(ss_path),
+                        "-vf", (
+                            f"scale=1080:{scale_h}:flags=lanczos,"
+                            f"crop=1080:1920:0:'{scroll_expr}',"
+                            f"format=yuv420p"
+                        ),
+                        "-r", "30",
+                        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "21",
+                        str(clip_path),
+                    ]
+                else:
+                    # Pagina past in één scherm — subtle zoom in
+                    cmd = [
+                        "ffmpeg", "-y",
+                        "-loop", "1", "-t", str(dur_per_page),
+                        "-i", str(ss_path),
+                        "-vf", (
+                            f"scale=1080:{scale_h}:flags=lanczos,"
+                            f"pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=0x111111,"
+                            f"zoompan=z='min(1.04,1+0.004*in/{30 * dur_per_page})':"
+                            f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
+                            f"d={int(30 * dur_per_page)}:s=1080x1920:fps=30,"
+                            f"format=yuv420p"
+                        ),
+                        "-r", "30",
+                        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "21",
+                        str(clip_path),
+                    ]
+
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                if clip_path.exists() and clip_path.stat().st_size > 5000:
+                    page_clips.append(clip_path)
+                else:
+                    logger.warning(f"[ProVideo] App scroll clip {pi} FFmpeg fout: {result.stderr[-200:]}")
+
+            if not page_clips:
+                return None
+
+            # Als meerdere clips: concat
+            if len(page_clips) == 1:
+                final = page_clips[0]
             else:
-                # Statisch — simpele scale+pad, GEEN zoompan (voorkomt timeout)
-                cmd = [
+                concat_list = work_dir / f"app_scroll_concat_{idx:02d}.txt"
+                concat_list.write_text(
+                    "\n".join(f"file '{c.name}'" for c in page_clips),
+                    encoding="utf-8",
+                )
+                final = work_dir / f"app_scroll_final_{idx:02d}.mp4"
+                cmd_concat = [
                     "ffmpeg", "-y",
-                    "-loop", "1", "-t", str(duration),
-                    "-i", str(screenshot_path),
-                    "-vf", (
-                        "scale=1080:-2,"
-                        "pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=0x111111,"
-                        "format=yuv420p"
-                    ),
-                    "-r", "30",
-                    "-c:v", "libx264", "-preset", "ultrafast", "-crf", "22",
-                    str(clip_path),
+                    "-f", "concat", "-safe", "0",
+                    "-i", str(concat_list),
+                    "-c", "copy",
+                    str(final),
                 ]
+                subprocess.run(cmd_concat, capture_output=True, timeout=30)
+                if not final.exists() or final.stat().st_size < 5000:
+                    final = page_clips[0]  # Fallback naar eerste clip
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-
-            if clip_path.exists() and clip_path.stat().st_size > 5000:
-                logger.info(f"[ProVideo] Website capture scene {idx}: {url}")
-                return clip_path
-
-            logger.warning(f"[ProVideo] Website clip FFmpeg fout: {result.stderr[-300:]}")
-            return None
+            logger.info(f"[ProVideo] App scroll recording scene {idx}: {url} ({len(page_clips)} pagina's, {duration:.1f}s)")
+            return final
 
         except Exception as e:
-            logger.warning(f"[ProVideo] Website capture mislukt: {e}")
+            logger.warning(f"[ProVideo] App scroll recording mislukt: {e}")
             return None
 
     # ── Product Demo — App UI in Phone Mockup ──────────────────────
