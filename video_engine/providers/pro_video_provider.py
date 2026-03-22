@@ -3055,9 +3055,10 @@ class ProVideoProvider:
         scene_type = scene.get("type", "body")
 
         # 0. APP SCROLL RECORDING — echte app footage, smooth scroll
-        # Prioriteit voor demo/feature/solution/cta: de kijker ziet de ECHTE app scrollen.
-        # Dit is authentieker dan stock footage en laat het product zien in actie.
-        app_scene_types = ("demo", "feature", "solution", "cta")
+        # ALLEEN voor solution scene — Playwright sync API is niet thread-safe,
+        # dus max 1 Playwright instance tegelijk (scenes draaien parallel).
+        # CTA scene krijgt phone mockup via gecachte screenshots.
+        app_scene_types = ("demo", "feature", "solution")
         if scene_type in app_scene_types and app_url:
             logger.info(f"[ProVideo] 🎬 App recording poging scene {idx} (type={scene_type}, url={app_url})")
             demo_pages = scene.get("demo_pages", None)
@@ -3067,7 +3068,7 @@ class ProVideoProvider:
                     demo_pages = ["/", "/features"]
                 elif scene_type == "feature":
                     demo_pages = ["/features", "/#features"]
-                elif scene_type in ("solution", "cta"):
+                elif scene_type == "solution":
                     demo_pages = ["/"]
             visual = self._record_app_scroll(
                 app_url, work_dir, idx, duration, pages=demo_pages,
@@ -3076,8 +3077,6 @@ class ProVideoProvider:
                 logger.info(f"[ProVideo] ✅ App scroll recording scene {idx}: {visual}")
             else:
                 logger.warning(f"[ProVideo] ❌ App scroll recording MISLUKT scene {idx} — fallback naar phone mockup/stock")
-        elif app_url and scene_type not in app_scene_types:
-            logger.info(f"[ProVideo] ℹ️ Scene {idx} type={scene_type} — skip app recording, gebruik stock")
 
         # Fallback: phone mockup met statische screenshots (als scroll recording mislukt)
         if not visual and scene_type in ("demo", "feature"):
@@ -3101,8 +3100,8 @@ class ProVideoProvider:
                     bg_clip=bg_clip, accent_color=accent_hex,
                 )
 
-        # Solution/CTA fallback: phone mockup als scroll recording niet beschikbaar
-        if not visual and scene_type in ("solution", "cta"):
+        # Solution fallback: phone mockup als scroll recording niet beschikbaar
+        if not visual and scene_type == "solution":
             logger.info(f"[ProVideo] 📱 Phone mockup fallback scene {idx} (type={scene_type})")
             app_screenshots = getattr(self, "_app_screenshots", None)
             if not app_screenshots and app_url:
@@ -3112,7 +3111,7 @@ class ProVideoProvider:
                 )
                 app_screenshots = self._app_screenshots
             if app_screenshots:
-                page_idx = min(len(app_screenshots) - 1, 1 if scene_type == "solution" else 0)
+                page_idx = min(len(app_screenshots) - 1, 1)
                 screenshot = app_screenshots[page_idx]
                 accent = memory.get("visual_style", {}).get("accent_color", "#6C63FF")
                 bg_clip = self._get_stock_video(scene, memory, work_dir, idx, duration)
