@@ -288,6 +288,68 @@ def resolve_dead_letter(dl_id: str, resolution: str, app_id: str | None = Query(
 
 
 # ──────────────────────────────────────────────
+# VISUAL PIPELINE DIAGNOSTICS
+# ──────────────────────────────────────────────
+
+@router.get("/visual-sources")
+def visual_sources_check():
+    """Diagnose welke visuele bronnen beschikbaar zijn voor video productie."""
+    import os
+    sources = {}
+
+    # Pexels
+    pexels = os.getenv("PEXELS_API_KEY", "")
+    sources["pexels"] = {
+        "configured": bool(pexels and len(pexels) >= 10 and not pexels.startswith("...")),
+        "key_length": len(pexels) if pexels else 0,
+    }
+
+    # Pixabay
+    pixabay = os.getenv("PIXABAY_API_KEY", "")
+    sources["pixabay"] = {
+        "configured": bool(pixabay and len(pixabay) >= 10),
+        "key_length": len(pixabay) if pixabay else 0,
+    }
+
+    # OpenAI (images)
+    openai_key = os.getenv("OPENAI_API_KEY", "")
+    sources["openai_images"] = {
+        "configured": bool(openai_key and len(openai_key) >= 10),
+        "key_length": len(openai_key) if openai_key else 0,
+    }
+
+    # D-ID
+    did_key = os.getenv("DID_API_KEY", "")
+    did_skip = os.getenv("DID_SKIP", "")
+    sources["did_talking_head"] = {
+        "configured": bool(did_key and len(did_key) >= 10),
+        "skipped": bool(did_skip),
+    }
+
+    # App recording (Playwright)
+    bot_secret = os.getenv("RECORDING_BOT_SECRET", "")
+    sources["app_recording"] = {
+        "bot_secret_configured": bool(bot_secret and len(bot_secret) >= 20),
+        "playwright_available": False,
+    }
+    try:
+        from playwright.sync_api import sync_playwright
+        sources["app_recording"]["playwright_available"] = True
+    except ImportError:
+        pass
+
+    # Overall
+    any_visual = any(s.get("configured", False) for k, s in sources.items() if k != "app_recording")
+    sources["_summary"] = {
+        "any_visual_source_available": any_visual,
+        "will_produce_blue_screen": not any_visual,
+        "fix": "Zet PEXELS_API_KEY en/of PIXABAY_API_KEY in Railway env vars" if not any_visual else "OK",
+    }
+
+    return sources
+
+
+# ──────────────────────────────────────────────
 # SINGLE COMPONENT CHECK (catch-all — MUST be last)
 # ──────────────────────────────────────────────
 
