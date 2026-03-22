@@ -3118,7 +3118,15 @@ class ProVideoProvider:
 
         # 2. PRIMAIR: Pexels stock video (gratis, goede kwaliteit)
         if not visual:
-            visual = self._get_stock_video(scene, memory, work_dir, idx, duration)
+            try:
+                visual = self._get_stock_video(scene, memory, work_dir, idx, duration)
+                if visual:
+                    logger.info(f"[ProVideo] ✅ Pexels visual scene {idx}: {visual} ({visual.stat().st_size}b)")
+                else:
+                    logger.warning(f"[ProVideo] ❌ Pexels visual scene {idx}: returned None")
+            except Exception as pex_err:
+                logger.error(f"[ProVideo] ❌ Pexels CRASH scene {idx}: {pex_err}")
+                visual = None
 
         # Kwaliteitscheck na elke bron
         if visual and visual.exists() and visual.stat().st_size < 5000:
@@ -3127,14 +3135,30 @@ class ProVideoProvider:
 
         # 3. SECUNDAIR: Pixabay stock video (gratis, extra variatie)
         if not visual:
-            visual = self._get_pixabay_video(scene, memory, work_dir, idx, duration)
+            try:
+                visual = self._get_pixabay_video(scene, memory, work_dir, idx, duration)
+                if visual:
+                    logger.info(f"[ProVideo] ✅ Pixabay visual scene {idx}: {visual} ({visual.stat().st_size}b)")
+                else:
+                    logger.warning(f"[ProVideo] ❌ Pixabay visual scene {idx}: returned None")
+            except Exception as pix_err:
+                logger.error(f"[ProVideo] ❌ Pixabay CRASH scene {idx}: {pix_err}")
+                visual = None
             if visual and visual.exists() and visual.stat().st_size < 5000:
                 logger.warning(f"[ProVideo] Pixabay visual scene {idx} te klein, skip")
                 visual = None
 
         # 4. FALLBACK: AI-gegenereerd beeld (kost ~$0.04 per beeld)
         if not visual:
-            visual = self._generate_ai_clip(scene, memory, work_dir, idx, duration)
+            try:
+                visual = self._generate_ai_clip(scene, memory, work_dir, idx, duration)
+                if visual:
+                    logger.info(f"[ProVideo] ✅ AI visual scene {idx}: {visual} ({visual.stat().st_size if visual.exists() else 'n/a'}b)")
+                else:
+                    logger.warning(f"[ProVideo] ❌ AI visual scene {idx}: returned None")
+            except Exception as ai_err:
+                logger.error(f"[ProVideo] ❌ AI visual CRASH scene {idx}: {ai_err}")
+                visual = None
             if visual and visual.exists() and visual.stat().st_size < 5000:
                 logger.warning(f"[ProVideo] AI visual scene {idx} te klein, skip")
                 visual = None
