@@ -20,8 +20,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Playwright Chromium browser voor app screen recording
-# --with-deps installeert ontbrekende system libs, maar we hebben de meeste al hierboven
-RUN playwright install --with-deps chromium && \
+# NIET --with-deps gebruiken: die probeert ttf-unifont en ttf-ubuntu-font-family
+# te installeren die niet bestaan in python:3.11-slim. Alle benodigde libs staan
+# al hierboven geïnstalleerd.
+RUN playwright install chromium && \
     echo "Chromium installed at: $(python -c 'from playwright._impl._driver import compute_driver_executable; print(compute_driver_executable())'  2>/dev/null || echo 'unknown')"
 
 # Applicatiecode
