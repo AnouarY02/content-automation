@@ -761,7 +761,8 @@ def _determine_video_type(
     has_app_visuals = bool(app_url)
     did_enabled = bool(os.getenv("DID_API_KEY")) and os.getenv("DID_SKIP", "false").lower() != "true"
 
-    demo_formats = {"problem-solution", "before-after", "tutorial"}
+    # Alle formats die de app visueel moeten laten zien als app_url beschikbaar is
+    demo_formats = {"problem-solution", "before-after", "tutorial", "social-proof", "trend"}
     if has_app_visuals and content_format in demo_formats:
         return "mixed" if did_enabled else "screen_demo"
 
@@ -772,7 +773,7 @@ def _determine_video_type(
         "problem-solution": "screen_demo",
         "before-after": "screen_demo",
         "tutorial": "screen_demo",
-        "social-proof": "text_on_screen",
+        "social-proof": "screen_demo",  # Was text_on_screen — app moet zichtbaar zijn
         "trend": "mixed",
         "talking-head": "talking_head",
     }

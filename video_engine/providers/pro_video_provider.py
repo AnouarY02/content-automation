@@ -3055,9 +3055,11 @@ class ProVideoProvider:
         scene_type = scene.get("type", "body")
 
         # 0. APP SCROLL RECORDING — echte app footage, smooth scroll
-        # Prioriteit voor demo/feature/solution: de kijker ziet de ECHTE app scrollen.
+        # Prioriteit voor demo/feature/solution/cta: de kijker ziet de ECHTE app scrollen.
         # Dit is authentieker dan stock footage en laat het product zien in actie.
-        if scene_type in ("demo", "feature", "solution") and app_url:
+        app_scene_types = ("demo", "feature", "solution", "cta")
+        if scene_type in app_scene_types and app_url:
+            logger.info(f"[ProVideo] 🎬 App recording poging scene {idx} (type={scene_type}, url={app_url})")
             demo_pages = scene.get("demo_pages", None)
             # Kies relevante pagina's per scene type
             if not demo_pages:
@@ -3065,11 +3067,17 @@ class ProVideoProvider:
                     demo_pages = ["/", "/features"]
                 elif scene_type == "feature":
                     demo_pages = ["/features", "/#features"]
-                elif scene_type == "solution":
+                elif scene_type in ("solution", "cta"):
                     demo_pages = ["/"]
             visual = self._record_app_scroll(
                 app_url, work_dir, idx, duration, pages=demo_pages,
             )
+            if visual:
+                logger.info(f"[ProVideo] ✅ App scroll recording scene {idx}: {visual}")
+            else:
+                logger.warning(f"[ProVideo] ❌ App scroll recording MISLUKT scene {idx} — fallback naar phone mockup/stock")
+        elif app_url and scene_type not in app_scene_types:
+            logger.info(f"[ProVideo] ℹ️ Scene {idx} type={scene_type} — skip app recording, gebruik stock")
 
         # Fallback: phone mockup met statische screenshots (als scroll recording mislukt)
         if not visual and scene_type in ("demo", "feature"):
@@ -3093,8 +3101,9 @@ class ProVideoProvider:
                     bg_clip=bg_clip, accent_color=accent_hex,
                 )
 
-        # Solution fallback: phone mockup als scroll recording niet beschikbaar
-        if not visual and scene_type == "solution":
+        # Solution/CTA fallback: phone mockup als scroll recording niet beschikbaar
+        if not visual and scene_type in ("solution", "cta"):
+            logger.info(f"[ProVideo] 📱 Phone mockup fallback scene {idx} (type={scene_type})")
             app_screenshots = getattr(self, "_app_screenshots", None)
             if not app_screenshots and app_url:
                 demo_pages = scene.get("demo_pages", None)
@@ -3103,7 +3112,7 @@ class ProVideoProvider:
                 )
                 app_screenshots = self._app_screenshots
             if app_screenshots:
-                page_idx = min(len(app_screenshots) - 1, 1)
+                page_idx = min(len(app_screenshots) - 1, 1 if scene_type == "solution" else 0)
                 screenshot = app_screenshots[page_idx]
                 accent = memory.get("visual_style", {}).get("accent_color", "#6C63FF")
                 bg_clip = self._get_stock_video(scene, memory, work_dir, idx, duration)
@@ -3111,6 +3120,12 @@ class ProVideoProvider:
                     screenshot, work_dir, idx, duration,
                     bg_clip=bg_clip, accent_color=accent.lstrip("#"),
                 )
+                if visual:
+                    logger.info(f"[ProVideo] ✅ Phone mockup scene {idx}: {visual}")
+                else:
+                    logger.warning(f"[ProVideo] ❌ Phone mockup MISLUKT scene {idx}")
+            else:
+                logger.warning(f"[ProVideo] ❌ Geen app screenshots beschikbaar voor scene {idx}")
 
         # 1. D-ID TALKING HEAD — alleen voor hook scene
         if not visual and scene_type == "hook" and os.getenv("DID_API_KEY") and not os.getenv("DID_SKIP"):
