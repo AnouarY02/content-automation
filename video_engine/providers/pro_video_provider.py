@@ -2960,11 +2960,6 @@ class ProVideoProvider:
         signaal naar de muziek compressor, de andere gaat naar de finale mix.
         """
         video_dur = self._get_media_duration(raw_video) or 30.0
-        audio_dur = self._get_media_duration(full_audio) if full_audio and full_audio.exists() else 0.0
-        # Gebruik de KORSTE duur als target — FFmpeg kan video niet verlengen zonder loop
-        # Dit voorkomt crashes wanneer audio langer is dan video
-        target_dur = min(video_dur, audio_dur) if audio_dur > 1.0 else video_dur
-        logger.info(f"[ProVideo] Assembly: video={video_dur:.1f}s, audio={audio_dur:.1f}s, target={target_dur:.1f}s")
 
         # Gebruik gecachte muziek (zelfde track als beat-sync) of selecteer nieuwe
         music_track = getattr(self, "_selected_music", None) or self._select_music_for_mood(script)
@@ -3047,7 +3042,7 @@ class ProVideoProvider:
                 "-c:v", "libx264", "-profile:v", "baseline", "-level", "4.0",
                 "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "23",
                 "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2",
-                "-t", str(target_dur), "-movflags", "+faststart",
+                "-shortest", "-movflags", "+faststart",
                 str(output_path),
             ]
         elif has_audio:
@@ -3059,7 +3054,7 @@ class ProVideoProvider:
                 "-c:v", "libx264", "-profile:v", "baseline", "-level", "4.0",
                 "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "23",
                 "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
-                "-t", str(target_dur), "-movflags", "+faststart",
+                "-shortest", "-movflags", "+faststart",
                 str(output_path),
             ]
         elif has_music:
@@ -3099,7 +3094,7 @@ class ProVideoProvider:
                     "-map", "0:v", "-map", "1:a", "-c:v", "libx264",
                     "-preset", "ultrafast", "-crf", "28",
                     "-c:a", "aac", "-b:a", "128k",
-                    "-t", str(target_dur),
+                    "-shortest",
                     str(output_path),
                 ], capture_output=True, timeout=120)
             else:
