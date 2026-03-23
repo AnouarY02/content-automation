@@ -744,12 +744,51 @@ class ProVideoProvider:
         _vprogress(f"Clips renderen ({len(scene_data)} scenes)...")
         total_scenes = len(scene_data)
 
+        def _probe_clip_duration(clip_path) -> float:
+            """Probe de werkelijke duur van een clip in seconden."""
+            try:
+                r = subprocess.run(
+                    ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                     "-of", "csv=p=0", str(clip_path)],
+                    capture_output=True, text=True, timeout=10,
+                )
+                return float(r.stdout.strip()) if r.stdout.strip() else 0.0
+            except Exception:
+                return 0.0
+
+        def _make_color_clip(sd, raw_clip) -> Path | None:
+            """Genereer een solid-color clip als ultieme fallback. Werkt ALTIJD."""
+            scene_type = sd["scene"].get("type", "body")
+            _colors = {"hook": "0x1a1a2e", "problem": "0x16213e", "solution": "0x0f3460", "cta": "0x533483"}
+            bg_color = _colors.get(scene_type, "0x1a1a2e")
+            dur = max(1.0, sd["duration"])
+            color_cmd = [
+                "ffmpeg", "-y", "-f", "lavfi",
+                "-i", f"color=c={bg_color}:s=1080x1920:d={dur}:r=30",
+                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
+                "-pix_fmt", "yuv420p", "-t", str(dur),
+                str(raw_clip),
+            ]
+            result = subprocess.run(color_cmd, capture_output=True, text=True, timeout=30)
+            if raw_clip.exists() and raw_clip.stat().st_size > 1000:
+                actual_dur = _probe_clip_duration(raw_clip)
+                if actual_dur >= dur * 0.5:
+                    return raw_clip
+                logger.error(f"[ProVideo] Color clip te kort: {actual_dur:.2f}s vs verwacht {dur:.1f}s")
+            logger.error(f"[ProVideo] Color clip generatie MISLUKT: {result.stderr[-300:] if result.stderr else 'no stderr'}")
+            return None
+
         def _make_clip(sd):
+            target_dur = max(1.0, sd["duration"])
+            min_dur = target_dur * 0.3  # Minimaal 30% van doelduur
             try:
                 result = self._create_visual_clip(sd, sd["idx"], work_dir, total_scenes)
                 if result and result.exists() and result.stat().st_size > 5000:
-                    _vprogress(f"  > Clip {sd['idx']}: OK ({result.stat().st_size} bytes)")
-                    return result
+                    actual_dur = _probe_clip_duration(result)
+                    if actual_dur >= min_dur:
+                        _vprogress(f"  > Clip {sd['idx']}: OK ({result.stat().st_size} bytes, {actual_dur:.1f}s)")
+                        return result
+                    logger.warning(f"[ProVideo] Clip {sd['idx']} te kort: {actual_dur:.2f}s vs min {min_dur:.1f}s")
                 # Clip rendering mislukt — gebruik visual direct als noodoplossing
                 visual = sd.get("visual")
                 raw_clip = work_dir / f"raw_clip_{sd['idx']:02d}.mp4"
@@ -766,13 +805,16 @@ class ProVideoProvider:
                         *inp, "-i", str(visual),
                         "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p",
                         "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
-                        "-an", "-t", str(sd["duration"]), "-r", "30",
+                        "-an", "-t", str(target_dur), "-r", "30",
                         str(raw_clip),
                     ]
                     subprocess.run(fb_cmd, capture_output=True, timeout=60)
                     if raw_clip.exists() and raw_clip.stat().st_size > 5000:
-                        _vprogress(f"  > Clip {sd['idx']}: raw fallback OK ({raw_clip.stat().st_size} bytes)")
-                        return raw_clip
+                        actual_dur = _probe_clip_duration(raw_clip)
+                        if actual_dur >= min_dur:
+                            _vprogress(f"  > Clip {sd['idx']}: raw fallback OK ({raw_clip.stat().st_size} bytes, {actual_dur:.1f}s)")
+                            return raw_clip
+                        logger.warning(f"[ProVideo] Clip {sd['idx']} raw fallback te kort: {actual_dur:.2f}s")
                     # Probeer origineel raw bestand (pre-processing kan corrupt zijn)
                     raw_stock = work_dir / f"stock_raw_{sd['idx']:02d}.mp4"
                     if raw_stock.exists() and raw_stock.stat().st_size > 50000:
@@ -783,48 +825,55 @@ class ProVideoProvider:
                             "-i", str(raw_stock),
                             "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,format=yuv420p",
                             "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
-                            "-an", "-t", str(sd["duration"]), "-r", "30",
+                            "-an", "-t", str(target_dur), "-r", "30",
                             str(raw_clip),
                         ]
                         subprocess.run(fb_raw, capture_output=True, timeout=60)
                         if raw_clip.exists() and raw_clip.stat().st_size > 5000:
-                            _vprogress(f"  > Clip {sd['idx']}: origineel stock OK ({raw_clip.stat().st_size} bytes)")
-                            return raw_clip
-                    # Zonder loop — misschien is input al juiste lengte
+                            actual_dur = _probe_clip_duration(raw_clip)
+                            if actual_dur >= min_dur:
+                                _vprogress(f"  > Clip {sd['idx']}: origineel stock OK ({raw_clip.stat().st_size} bytes, {actual_dur:.1f}s)")
+                                return raw_clip
+                            logger.warning(f"[ProVideo] Clip {sd['idx']} stock loop te kort: {actual_dur:.2f}s")
+                    # Re-encode MET loop (fix voor korte stock videos)
                     fb_cmd2 = [
                         "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
+                        "-stream_loop", "-1",
                         "-i", str(visual),
                         "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,format=yuv420p",
                         "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
                         "-pix_fmt", "yuv420p", "-an",
-                        "-t", str(sd["duration"]), "-r", "30",
+                        "-t", str(target_dur), "-r", "30",
                         str(raw_clip),
                     ]
                     subprocess.run(fb_cmd2, capture_output=True, timeout=60)
                     if raw_clip.exists() and raw_clip.stat().st_size > 5000:
-                        _vprogress(f"  > Clip {sd['idx']}: simple re-encode OK")
-                        return raw_clip
+                        actual_dur = _probe_clip_duration(raw_clip)
+                        if actual_dur >= min_dur:
+                            _vprogress(f"  > Clip {sd['idx']}: loop re-encode OK ({actual_dur:.1f}s)")
+                            return raw_clip
+                        logger.warning(f"[ProVideo] Clip {sd['idx']} loop re-encode te kort: {actual_dur:.2f}s")
                 # Allerlaatste noodoplossing: color background video
                 _vprogress(f"  > Clip {sd['idx']}: alle fallbacks mislukt, color clip")
-                scene_type = sd["scene"].get("type", "body")
-                _colors = {"hook": "0x1a1a2e", "problem": "0x16213e", "solution": "0x0f3460", "cta": "0x533483"}
-                bg_color = _colors.get(scene_type, "0x1a1a2e")
-                color_cmd = [
-                    "ffmpeg", "-y", "-f", "lavfi",
-                    "-i", f"color=c={bg_color}:s=1080x1920:d={sd['duration']}:r=30",
-                    "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
-                    "-pix_fmt", "yuv420p",
-                    str(raw_clip),
-                ]
-                subprocess.run(color_cmd, capture_output=True, timeout=30)
-                if raw_clip.exists() and raw_clip.stat().st_size > 1000:
-                    _vprogress(f"  > Clip {sd['idx']}: color fallback OK")
-                    return raw_clip
+                color_clip = _make_color_clip(sd, raw_clip)
+                if color_clip:
+                    _vprogress(f"  > Clip {sd['idx']}: color fallback OK ({target_dur:.1f}s)")
+                    return color_clip
                 _vprogress(f"  > Clip {sd['idx']}: COMPLEET MISLUKT")
+                logger.error(f"[ProVideo] Clip {sd['idx']} COMPLEET MISLUKT — zelfs color clip faalde")
                 return None
             except Exception as e:
                 _vprogress(f"  > Clip {sd['idx']}: CRASH ({e})")
                 logger.error(f"[ProVideo] Clip {sd['idx']} CRASH: {e}")
+                # Bij crash: probeer nog color clip als allerlaatste redmiddel
+                try:
+                    raw_clip = work_dir / f"raw_clip_{sd['idx']:02d}.mp4"
+                    color_clip = _make_color_clip(sd, raw_clip)
+                    if color_clip:
+                        _vprogress(f"  > Clip {sd['idx']}: color recovery na crash OK")
+                        return color_clip
+                except Exception:
+                    pass
                 return None
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=_clip_render_workers()) as ex:
@@ -2888,6 +2937,10 @@ class ProVideoProvider:
         signaal naar de muziek compressor, de andere gaat naar de finale mix.
         """
         video_dur = self._get_media_duration(raw_video) or 30.0
+        audio_dur = self._get_media_duration(full_audio) if full_audio and full_audio.exists() else 0.0
+        # Gebruik de langste duur — video mag NOOIT korter zijn dan audio
+        # Als video te kort is (bv. 0.068s door assembly bug), gebruik audio duur als target
+        target_dur = max(video_dur, audio_dur) if audio_dur > 1.0 else video_dur
 
         # Gebruik gecachte muziek (zelfde track als beat-sync) of selecteer nieuwe
         music_track = getattr(self, "_selected_music", None) or self._select_music_for_mood(script)
@@ -2970,19 +3023,19 @@ class ProVideoProvider:
                 "-c:v", "libx264", "-profile:v", "baseline", "-level", "4.0",
                 "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "23",
                 "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2",
-                "-shortest", "-movflags", "+faststart",
+                "-t", str(target_dur), "-movflags", "+faststart",
                 str(output_path),
             ]
         elif has_audio:
             cmd = [
                 "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
-                "-i", str(raw_video),
+                "-stream_loop", "-1", "-i", str(raw_video),
                 "-i", str(full_audio),
                 "-map", "0:v", "-map", "1:a",
                 "-c:v", "libx264", "-profile:v", "baseline", "-level", "4.0",
                 "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "23",
                 "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
-                "-shortest", "-movflags", "+faststart",
+                "-t", str(target_dur), "-movflags", "+faststart",
                 str(output_path),
             ]
         elif has_music:
@@ -3016,9 +3069,13 @@ class ProVideoProvider:
             logger.warning(f"[ProVideo] Final assembly mislukt: {result.stderr[-300:]}")
             if has_audio:
                 subprocess.run([
-                    "ffmpeg", "-y", "-i", str(raw_video), "-i", str(full_audio),
-                    "-map", "0:v", "-map", "1:a", "-c:v", "copy",
-                    "-c:a", "aac", "-b:a", "128k", "-shortest",
+                    "ffmpeg", "-y",
+                    "-stream_loop", "-1", "-i", str(raw_video),
+                    "-i", str(full_audio),
+                    "-map", "0:v", "-map", "1:a", "-c:v", "libx264",
+                    "-preset", "ultrafast", "-crf", "28",
+                    "-c:a", "aac", "-b:a", "128k",
+                    "-t", str(target_dur),
                     str(output_path),
                 ], capture_output=True, timeout=120)
             else:
