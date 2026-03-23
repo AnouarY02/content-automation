@@ -68,7 +68,7 @@ def liveness():
     Kubernetes-stijl liveness probe.
     Geeft altijd 200 terug als het process draait.
     """
-    return {"status": "alive", "timestamp": datetime.utcnow().isoformat(), "code_version": "v3-duration-fix"}
+    return {"status": "alive", "timestamp": datetime.utcnow().isoformat(), "code_version": "v4-concat-loop"}
 
 
 @router.get("/ready")
