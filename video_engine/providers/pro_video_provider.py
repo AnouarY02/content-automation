@@ -770,12 +770,9 @@ class ProVideoProvider:
                 str(raw_clip),
             ]
             result = subprocess.run(color_cmd, capture_output=True, text=True, timeout=30)
-            if raw_clip.exists() and raw_clip.stat().st_size > 1000:
-                actual_dur = _probe_clip_duration(raw_clip)
-                if actual_dur >= dur * 0.5:
-                    return raw_clip
-                logger.error(f"[ProVideo] Color clip te kort: {actual_dur:.2f}s vs verwacht {dur:.1f}s")
-            logger.error(f"[ProVideo] Color clip generatie MISLUKT: {result.stderr[-300:] if result.stderr else 'no stderr'}")
+            if raw_clip.exists() and raw_clip.stat().st_size > 500:
+                return raw_clip
+            logger.error(f"[ProVideo] Color clip MISLUKT: {result.stderr[-300:] if result.stderr else 'no stderr'}")
             return None
 
         def _make_clip(sd):
@@ -835,10 +832,10 @@ class ProVideoProvider:
                                 _vprogress(f"  > Clip {sd['idx']}: origineel stock OK ({raw_clip.stat().st_size} bytes, {actual_dur:.1f}s)")
                                 return raw_clip
                             logger.warning(f"[ProVideo] Clip {sd['idx']} stock loop te kort: {actual_dur:.2f}s")
-                    # Re-encode MET loop (fix voor korte stock videos)
+                    # Re-encode ZONDER loop — accepteer ELKE geldige clip
+                    # Beter een korte clip met echt beeld dan helemaal geen clip
                     fb_cmd2 = [
                         "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
-                        "-stream_loop", "-1",
                         "-i", str(visual),
                         "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,format=yuv420p",
                         "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
@@ -849,10 +846,8 @@ class ProVideoProvider:
                     subprocess.run(fb_cmd2, capture_output=True, timeout=60)
                     if raw_clip.exists() and raw_clip.stat().st_size > 5000:
                         actual_dur = _probe_clip_duration(raw_clip)
-                        if actual_dur >= min_dur:
-                            _vprogress(f"  > Clip {sd['idx']}: loop re-encode OK ({actual_dur:.1f}s)")
-                            return raw_clip
-                        logger.warning(f"[ProVideo] Clip {sd['idx']} loop re-encode te kort: {actual_dur:.2f}s")
+                        _vprogress(f"  > Clip {sd['idx']}: simple re-encode OK ({actual_dur:.1f}s)")
+                        return raw_clip  # Accepteer ALTIJD — zelfs kort beeld is beter dan niets
                 # Allerlaatste noodoplossing: color background video
                 _vprogress(f"  > Clip {sd['idx']}: alle fallbacks mislukt, color clip")
                 color_clip = _make_color_clip(sd, raw_clip)
