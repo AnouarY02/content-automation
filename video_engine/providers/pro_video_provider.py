@@ -832,22 +832,54 @@ class ProVideoProvider:
                                 _vprogress(f"  > Clip {sd['idx']}: origineel stock OK ({raw_clip.stat().st_size} bytes, {actual_dur:.1f}s)")
                                 return raw_clip
                             logger.warning(f"[ProVideo] Clip {sd['idx']} stock loop te kort: {actual_dur:.2f}s")
-                    # Re-encode ZONDER loop — accepteer ELKE geldige clip
-                    # Beter een korte clip met echt beeld dan helemaal geen clip
-                    fb_cmd2 = [
+                    # Re-encode met concat-loop — herhaalt video tot target duur
+                    # Dit werkt ALTIJD, ongeacht videoformaat (geen -stream_loop nodig)
+                    # Stap 1: maak eerst een genormaliseerde versie
+                    norm_clip = work_dir / f"norm_{sd['idx']:02d}.mp4"
+                    norm_cmd = [
                         "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
                         "-i", str(visual),
                         "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,format=yuv420p",
                         "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
-                        "-pix_fmt", "yuv420p", "-an",
-                        "-t", str(target_dur), "-r", "30",
-                        str(raw_clip),
+                        "-pix_fmt", "yuv420p", "-an", "-r", "30",
+                        str(norm_clip),
                     ]
-                    subprocess.run(fb_cmd2, capture_output=True, timeout=60)
-                    if raw_clip.exists() and raw_clip.stat().st_size > 5000:
-                        actual_dur = _probe_clip_duration(raw_clip)
-                        _vprogress(f"  > Clip {sd['idx']}: simple re-encode OK ({actual_dur:.1f}s)")
-                        return raw_clip  # Accepteer ALTIJD — zelfs kort beeld is beter dan niets
+                    subprocess.run(norm_cmd, capture_output=True, timeout=60)
+                    if norm_clip.exists() and norm_clip.stat().st_size > 5000:
+                        norm_dur = _probe_clip_duration(norm_clip)
+                        if norm_dur > 0 and norm_dur < target_dur * 0.8:
+                            # Video is te kort — herhaal via concat demuxer
+                            repeats = int(target_dur / norm_dur) + 2
+                            concat_file = work_dir / f"repeat_{sd['idx']:02d}.txt"
+                            concat_file.write_text(
+                                "\n".join([f"file '{norm_clip.name}'"] * repeats),
+                                encoding="utf-8",
+                            )
+                            repeat_cmd = [
+                                "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+                                "-i", str(concat_file),
+                                "-t", str(target_dur),
+                                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
+                                "-pix_fmt", "yuv420p", "-an", "-r", "30",
+                                str(raw_clip),
+                            ]
+                            subprocess.run(repeat_cmd, capture_output=True, timeout=90)
+                            if raw_clip.exists() and raw_clip.stat().st_size > 5000:
+                                actual_dur = _probe_clip_duration(raw_clip)
+                                _vprogress(f"  > Clip {sd['idx']}: concat-loop OK ({actual_dur:.1f}s, {repeats}x herhaald)")
+                                return raw_clip
+                        elif norm_dur >= target_dur * 0.8:
+                            # Video is lang genoeg — gebruik direct
+                            import shutil
+                            shutil.copy(str(norm_clip), str(raw_clip))
+                            _vprogress(f"  > Clip {sd['idx']}: re-encode OK ({norm_dur:.1f}s)")
+                            return raw_clip
+                        else:
+                            # norm_dur is 0 maar bestand bestaat — gebruik het toch
+                            import shutil
+                            shutil.copy(str(norm_clip), str(raw_clip))
+                            _vprogress(f"  > Clip {sd['idx']}: re-encode OK (dur onbekend)")
+                            return raw_clip
                 # Allerlaatste noodoplossing: color background video
                 _vprogress(f"  > Clip {sd['idx']}: alle fallbacks mislukt, color clip")
                 color_clip = _make_color_clip(sd, raw_clip)
