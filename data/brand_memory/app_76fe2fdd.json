@@ -1,0 +1,91 @@
+{
+  "app_id": "app_76fe2fdd",
+  "app_name": "Dossiertijd",
+  "niche": "health",
+  "url": "https://dossiertijd-app.vercel.app/",
+  "tone_of_voice": "Direct, eerlijk, warm. Praat als een collega die een tip deelt. Geen corporate jargon. Gebruik spreektaal en herkenbare situaties uit de zorg.",
+  "visual_style": "Authentiek, herkenbaar. Echte zorgmedewerkers in herkenbare settings (kantoor, ziekenhuis, bij patienten). Warme kleurtonen. Geen stockfoto-poses.",
+  "best_cta": "Link in bio, probeer het gratis",
+  "top_performing_hooks": [
+    "Oke wist je dat zorgmedewerkers 10+ uur per week kwijt zijn aan admin",
+    "Serieus waarom heeft niemand mij dit eerder verteld",
+    "POV je bent klaar met administratie voor 5 uur"
+  ],
+  "avoided_topics": [
+    "zorgsysteem kritiek",
+    "politiek",
+    "specifieke ziektebeelden",
+    "negatief over andere tools"
+  ],
+  "content_formats": {
+    "best_performing": "problem-solution",
+    "tried": [
+      "problem-solution",
+      "social-proof",
+      "tutorial"
+    ],
+    "to_try": [
+      "before-after",
+      "trend"
+    ]
+  },
+  "target_audience_details": {
+    "primary": "Zorgmedewerkers (verpleegkundigen, verzorgenden, artsen)",
+    "age_range": "25-55",
+    "pain_points": [
+      "Te veel administratie",
+      "Weinig tijd voor patienten",
+      "Werkdruk",
+      "Overwerk door dossiers"
+    ],
+    "motivation": "Meer tijd voor wat echt telt: de patient"
+  },
+  "brand_keywords": [
+    "tijdwinst",
+    "administratie",
+    "zorg",
+    "efficient",
+    "AI",
+    "slim",
+    "dossier"
+  ],
+  "learned_insights": [
+    {
+      "date": "2026-03-11",
+      "insight": "Hook met concrete cijfers (10 uur per week) werkt beter dan vage claims"
+    },
+    {
+      "date": "2026-03-11",
+      "insight": "Roger stem past goed bij de doelgroep - warm en professioneel"
+    },
+    {
+      "date": "2026-03-11",
+      "insight": "Stock footage van echte verpleegkundigen/zorgmedewerkers is effectiever dan generieke kantoorbeelden"
+    },
+    {
+      "date": "2026-03-13",
+      "insight": "Pipeline fout: Geen ideeën gegenereerd door AI"
+    },
+    {
+      "date": "2026-03-14",
+      "insight": "Pipeline fout: 'list' object has no attribute 'get'"
+    },
+    {
+      "date": "2026-03-15",
+      "insight": "Pipeline fout: cannot access local variable 'verdict' where it is not associated with a value"
+    },
+    {
+      "date": "2026-03-15",
+      "insight": "Pipeline fout: Budget overschreden voor tenant 'default': daily_limit $5.3492 >= $5.00"
+    },
+    {
+      "date": "2026-03-16",
+      "insight": "Pipeline fout: Budget overschreden voor tenant 'default': daily_limit $5.0413 >= $5.00"
+    }
+  ],
+  "performance_history": {
+    "best_post_type": "problem-solution",
+    "avg_engagement": "nog geen data"
+  },
+  "last_updated": "2026-03-16"
+}

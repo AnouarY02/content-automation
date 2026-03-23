@@ -3,7 +3,8 @@
     {
       "id": "app_76fe2fdd",
       "name": "Dossiertijd",
-      "url": "https://www.dossiertijd.nl/",
+      "url": "https://dossiertijd-app.vercel.app/",
+      "public_url": "https://www.dossiertijd.nl/",
       "description": "Een zorg innovatie die administratie verkort doormiddel van slimme ai integratie",
       "target_audience": "zorgmedewerkers",
       "usp": "Bespaart uren administratie per week per medewerker",
