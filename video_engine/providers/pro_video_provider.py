@@ -3029,7 +3029,7 @@ class ProVideoProvider:
         elif has_audio:
             cmd = [
                 "ffmpeg", "-y", "-threads", *_FFMPEG_THREADS,
-                "-stream_loop", "-1", "-i", str(raw_video),
+                "-i", str(raw_video),
                 "-i", str(full_audio),
                 "-map", "0:v", "-map", "1:a",
                 "-c:v", "libx264", "-profile:v", "baseline", "-level", "4.0",
@@ -3070,7 +3070,7 @@ class ProVideoProvider:
             if has_audio:
                 subprocess.run([
                     "ffmpeg", "-y",
-                    "-stream_loop", "-1", "-i", str(raw_video),
+                    "-i", str(raw_video),
                     "-i", str(full_audio),
                     "-map", "0:v", "-map", "1:a", "-c:v", "libx264",
                     "-preset", "ultrafast", "-crf", "28",
