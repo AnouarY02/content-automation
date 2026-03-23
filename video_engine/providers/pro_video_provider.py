@@ -2933,9 +2933,10 @@ class ProVideoProvider:
         """
         video_dur = self._get_media_duration(raw_video) or 30.0
         audio_dur = self._get_media_duration(full_audio) if full_audio and full_audio.exists() else 0.0
-        # Gebruik de langste duur — video mag NOOIT korter zijn dan audio
-        # Als video te kort is (bv. 0.068s door assembly bug), gebruik audio duur als target
-        target_dur = max(video_dur, audio_dur) if audio_dur > 1.0 else video_dur
+        # Gebruik de KORSTE duur als target — FFmpeg kan video niet verlengen zonder loop
+        # Dit voorkomt crashes wanneer audio langer is dan video
+        target_dur = min(video_dur, audio_dur) if audio_dur > 1.0 else video_dur
+        logger.info(f"[ProVideo] Assembly: video={video_dur:.1f}s, audio={audio_dur:.1f}s, target={target_dur:.1f}s")
 
         # Gebruik gecachte muziek (zelfde track als beat-sync) of selecteer nieuwe
         music_track = getattr(self, "_selected_music", None) or self._select_music_for_mood(script)
