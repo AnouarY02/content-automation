@@ -323,7 +323,24 @@ class OpenAIImageProvider:
             "-frames:v", "1",
             str(output_path),
         ]
-        subprocess.run(cmd, capture_output=True, timeout=15)
+        result = subprocess.run(cmd, capture_output=True, timeout=15)
+        if result.returncode != 0 or not output_path.exists():
+            logger.warning(f"[OpenAIImage] Fallback afbeelding mislukt voor scene {index}, gebruik lege PNG")
+            # Maak een minimale geldige PNG via Python als FFmpeg ook faalt
+            try:
+                import struct, zlib
+                def _minimal_png(w: int, h: int) -> bytes:
+                    def chunk(name, data):
+                        c = struct.pack(">I", len(data)) + name + data
+                        return c + struct.pack(">I", zlib.crc32(name + data) & 0xFFFFFFFF)
+                    raw = b"".join(b"\x00" + b"\x0a\x0d\x14" * w for _ in range(h))
+                    return (b"\x89PNG\r\n\x1a\n"
+                            + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+                            + chunk(b"IDAT", zlib.compress(raw))
+                            + chunk(b"IEND", b""))
+                output_path.write_bytes(_minimal_png(1080, 1920))
+            except Exception:
+                output_path.write_bytes(b"")
         return output_path
 
     # ── Video Assembly ────────────────────────────────────────────────
@@ -346,7 +363,7 @@ class OpenAIImageProvider:
         accent = visual_style.get("accent_color", "#6C63FF")
         app_name = memory.get("app_name", "") if memory else ""
 
-        durations = [scene.get("duration_sec", 5) for scene in scenes]
+        durations = [max(2.0, float(scene.get("duration_sec") or 5)) for scene in scenes]
         total_duration = sum(durations)
         crossfade = 0.4
 

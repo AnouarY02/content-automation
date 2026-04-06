@@ -1055,9 +1055,9 @@ async function submitStartCampaign() {
     platform: document.getElementById('campaign-platform').value,
     voice: document.getElementById('campaign-voice').value,
     tts_speed: parseFloat(document.getElementById('campaign-tts-speed').value) || 1.0,
-    voice_stability: parseFloat(document.getElementById('campaign-stability').value) || 0.58,
-    voice_similarity: parseFloat(document.getElementById('campaign-similarity').value) || 0.92,
-    voice_style: parseFloat(document.getElementById('campaign-style').value) || 0.45,
+    voice_stability: parseFloat(document.getElementById('campaign-stability')?.value) || 0.58,
+    voice_similarity: parseFloat(document.getElementById('campaign-similarity')?.value) || 0.92,
+    voice_style: parseFloat(document.getElementById('campaign-style')?.value) || 0.45,
     chosen_idea: _chosenIdea,
   };
   if (!body.app_id) { toast('Selecteer een app', 'warning'); return; }
@@ -1184,11 +1184,6 @@ function startProgressStream(campaignId) {
     if (_progressTimer) { clearInterval(_progressTimer); _progressTimer = null; }
     loadCampaigns(); loadBadges();
   });
-
-  activeEventSource.onerror = () => {
-    if (activeEventSource) { activeEventSource.close(); activeEventSource = null; }
-    if (_progressTimer) { clearInterval(_progressTimer); _progressTimer = null; }
-  };
 }
 
 function closeProgress() {
