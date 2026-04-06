@@ -490,6 +490,7 @@ async def stream_progress(campaign_id: str):
     async def event_generator():
         seen = 0
         stale_count = 0
+        ping_count = 0
         while True:
             with _progress_lock:
                 messages = _progress_store.get(campaign_id, [])
@@ -498,6 +499,7 @@ async def stream_progress(campaign_id: str):
 
             for msg in new_msgs:
                 stale_count = 0
+                ping_count = 0
                 if msg == "__DONE__":
                     yield {"event": "done", "data": json.dumps({"status": "completed"})}
                     # Cleanup
@@ -514,8 +516,13 @@ async def stream_progress(campaign_id: str):
 
             if not new_msgs:
                 stale_count += 1
-                # Timeout na 5 minuten inactiviteit
-                if stale_count > 300:
+                ping_count += 1
+                # Keepalive ping elke 15s — voorkomt dat Railway/proxy verbinding sluit
+                if ping_count >= 15:
+                    ping_count = 0
+                    yield {"event": "ping", "data": json.dumps({"ts": stale_count})}
+                # Timeout na 10 minuten inactiviteit
+                if stale_count > 600:
                     yield {"event": "timeout", "data": json.dumps({"status": "timeout"})}
                     with _progress_lock:
                         _progress_store.pop(campaign_id, None)

@@ -569,11 +569,13 @@ class OpenAIImageProvider:
         if audio_map:
             cmd += ["-c:a", "aac", "-b:a", "192k", "-shortest"]
 
+        threads = os.getenv("FFMPEG_THREADS", "2")
         cmd += [
             "-c:v", "libx264",
             "-profile:v", "high",
             "-preset", "fast",
             "-crf", "22",
+            "-threads", threads,
             "-r", "30",
             "-t", str(total_duration),
             str(output_path),
