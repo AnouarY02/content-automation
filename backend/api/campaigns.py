@@ -358,6 +358,7 @@ def start_campaign(req: StartCampaignRequest, background_tasks: BackgroundTasks)
                 on_progress=on_progress,
                 chosen_idea=req.chosen_idea,
                 campaign_id=campaign_id,
+                custom_brief=req.custom_brief,
             )
             on_progress("__DONE__")
         except Exception as e:

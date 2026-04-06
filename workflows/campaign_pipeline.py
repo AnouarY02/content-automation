@@ -110,6 +110,7 @@ def run_pipeline(
     on_progress: Callable[[str], None] | None = None,
     chosen_idea: dict | None = None,
     campaign_id: str | None = None,
+    custom_brief: str | None = None,
 ) -> CampaignBundle:
     """
     Voer de volledige campagne-pipeline uit voor een app.
@@ -200,10 +201,15 @@ def run_pipeline(
                 recent_titles = [t for t in recent_titles if t]
             except Exception:
                 pass  # Niet kritiek — ideeën worden alsnog gegenereerd
-            ideas = idea_agent.run(
-                app=app, memory=memory, platform=platform,
-                recent_titles=recent_titles,
-            )
+            from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+            with ThreadPoolExecutor(max_workers=1) as _pool:
+                _f = _pool.submit(idea_agent.run, app=app, memory=memory,
+                                  platform=platform, recent_titles=recent_titles,
+                                  custom_brief=custom_brief)
+                try:
+                    ideas = _f.result(timeout=120)
+                except FuturesTimeout:
+                    raise RuntimeError("Idee generatie timeout (>2 min) — probeer opnieuw")
             total_cost += idea_agent.total_cost_usd
             guardrails.record_cost(idea_agent.total_cost_usd, "IdeaGeneratorAgent", bundle.id)
 
