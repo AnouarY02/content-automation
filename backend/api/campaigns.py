@@ -101,6 +101,7 @@ _start_progress_cleanup()
 class GenerateIdeasRequest(BaseModel):
     app_id: str
     platform: str = "tiktok"
+    custom_brief: str | None = None  # Optionele eigen opdracht van de gebruiker
 
 
 class StartCampaignRequest(BaseModel):
@@ -182,7 +183,7 @@ def generate_ideas(req: GenerateIdeasRequest):
     memory["app_name"] = memory.get("app_name") or app.get("name", "")
 
     agent = IdeaGeneratorAgent()
-    ideas = agent.run(app=app, memory=memory, platform=req.platform)
+    ideas = agent.run(app=app, memory=memory, platform=req.platform, custom_brief=req.custom_brief)
 
     if not ideas:
         raise HTTPException(status_code=500, detail="Geen ideeën gegenereerd")

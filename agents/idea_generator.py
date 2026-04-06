@@ -52,6 +52,7 @@ class IdeaGeneratorAgent(BaseAgent):
         recent_performance: dict | None = None,
         trending_formats: list | None = None,
         recent_titles: list[str] | None = None,
+        custom_brief: str | None = None,
     ) -> list[dict]:
         """
         Genereer 5 campagne-ideeën.
@@ -129,8 +130,18 @@ class IdeaGeneratorAgent(BaseAgent):
             },
         )
 
+        # Custom brief — overschrijft willekeurige invalshoek als opgegeven
+        brief_str = ""
+        if custom_brief and custom_brief.strip():
+            brief_str = (
+                f"\n\n🎯 SPECIFIEKE OPDRACHT VAN DE GEBRUIKER:\n"
+                f"\"{custom_brief.strip()}\"\n\n"
+                f"Verwerk dit DIRECT in de ideeën. Alle 5 ideeën moeten aansluiten bij deze opdracht.\n"
+                f"De invalshoek hieronder is secundair — de opdracht heeft voorrang.\n"
+            )
+
         # Voeg diversiteits-blokken toe aan het einde van de prompt
-        prompt += exclusion_str + angle_str
+        prompt += exclusion_str + brief_str + angle_str
 
         system = self._build_system_prompt()
         raw = self._call_api(system, prompt)

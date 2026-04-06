@@ -949,16 +949,20 @@ function closeStartCampaignModal() {
 async function generateIdeas() {
   const appId = document.getElementById('campaign-app').value;
   const platform = document.getElementById('campaign-platform').value;
+  const customBrief = (document.getElementById('campaign-custom-brief')?.value || '').trim();
   if (!appId) { toast('Selecteer eerst een app', 'warning'); return; }
 
   document.getElementById('campaign-step-1').classList.add('hidden');
   document.getElementById('campaign-loading').classList.remove('hidden');
 
   try {
+    const payload = { app_id: appId, platform };
+    if (customBrief) payload.custom_brief = customBrief;
+
     const res = await api('/api/campaigns/generate-ideas', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ app_id: appId, platform }),
+      body: JSON.stringify(payload),
       _timeout: 120000,
     });
 

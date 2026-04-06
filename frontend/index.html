@@ -698,6 +698,19 @@
               <option value="youtube">YouTube</option>
             </select>
           </div>
+          <div>
+            <label class="text-[0.65rem] text-muted uppercase tracking-wider block mb-1.5 font-semibold">
+              Eigen opdracht <span class="normal-case text-[0.6rem] font-normal">(optioneel)</span>
+            </label>
+            <textarea
+              id="campaign-custom-brief"
+              rows="3"
+              placeholder="Bijv: Maak een video over onze nieuwe zomercollectie gericht op jongeren van 18-25. Focus op duurzaamheid en prijs."
+              class="w-full text-xs rounded-lg border border-border bg-bg px-3 py-2 text-gray-800 placeholder-muted resize-none focus:outline-none focus:border-accent transition-colors"
+            ></textarea>
+            <p class="text-[0.58rem] text-muted mt-1">Laat leeg voor volledig AI-gegenereerde ideeën. Vul in om de AI te sturen naar jouw onderwerp.</p>
+          </div>
+
           <div class="flex justify-end gap-2 pt-2">
             <button type="button" onclick="closeStartCampaignModal()" class="btn btn-outline btn-sm">Annuleren</button>
             <button type="button" id="generate-ideas-btn" onclick="generateIdeas()" class="btn btn-primary btn-sm">
