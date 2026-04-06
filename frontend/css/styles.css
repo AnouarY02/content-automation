@@ -288,24 +288,68 @@ input[type="range"]:focus { box-shadow: none; }
 
 /* ── Modal ─────────────────────────────────────── */
 .modal-backdrop {
-  background: rgba(0,0,0,0.35);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  /* Desktop: centreer de modal */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+/* Tailwind hidden override — zorg dat hidden altijd werkt */
+.hidden { display: none !important; }
 .modal {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
   max-width: 560px;
   width: 90%;
-  max-height: 90vh;
+  max-height: 85vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: var(--shadow-lg);
   animation: modalIn 0.2s ease-out;
+  position: relative;
+  z-index: 1;
 }
 @keyframes modalIn {
   from { opacity: 0; transform: translateY(10px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Modal mobiel — bottom sheet ─────────────────── */
+@media (max-width: 640px) {
+  .modal-backdrop {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(0,0,0,0.6) !important;
+    display: block !important;         /* Geen flex, simpele block */
+    padding-top: 40px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    border-radius: 20px 20px 0 0 !important;
+    margin: 0 !important;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    animation: modalSlideUp 0.25s ease-out !important;
+  }
+  @keyframes modalSlideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  select, input[type=text], input[type=email], input[type=number], textarea {
+    font-size: 16px !important; /* Voorkomt iOS auto-zoom */
+  }
+  .btn { min-height: 44px; }
 }
 
 /* ── Skeleton ──────────────────────────────────── */

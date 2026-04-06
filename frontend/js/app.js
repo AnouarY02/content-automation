@@ -119,13 +119,7 @@ function truncate(str, len=80) { return str && str.length > len ? str.substring(
 function openModal(name) {
   const el = document.getElementById(`modal-${name}`);
   el.classList.remove('hidden');
-  // Op mobiel: zet align-items naar flex-end zodat modal van onderaf schuift
-  if (window.innerWidth <= 768) {
-    el.style.alignItems = 'flex-end';
-    el.style.paddingBottom = '0';
-    // Voorkom body scroll terwijl modal open is
-    document.body.style.overflow = 'hidden';
-  }
+  document.body.style.overflow = 'hidden';
   if (name === 'start-campaign') populateCampaignAppSelect();
 }
 function closeModal(name) {
