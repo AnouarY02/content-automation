@@ -86,7 +86,7 @@ Geef een JSON object terug met exact deze velden:
 Antwoord ALLEEN met het JSON object, geen uitleg."""
 
         raw = self._call_api(system, user_message)
-        result = self._parse_json_response(raw)
+        result = self._parse_json_response(raw, default={})
 
         logger.info(f"[URLAnalyzer] Analyse compleet: {result.get('name', '?')}")
         return result

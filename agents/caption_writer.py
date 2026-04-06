@@ -125,7 +125,7 @@ class CaptionWriterAgent(BaseAgent):
 
         system = self._build_system_prompt()
         raw    = self._call_api(system, prompt)
-        result = self._parse_json_response(raw)
+        result = self._parse_json_response(raw, default={})
         result["experiment_cta_type"] = cta_type_override
         result["is_variant"] = True
 
@@ -188,7 +188,7 @@ class CaptionWriterAgent(BaseAgent):
 
         system = self._build_system_prompt()
         raw    = self._call_api(system, prompt)
-        result = self._parse_json_response(raw)
+        result = self._parse_json_response(raw, default={})
         result["experiment_caption_style"] = style_override
         result["is_variant"] = True
 
