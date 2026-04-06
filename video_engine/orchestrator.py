@@ -128,14 +128,17 @@ class VideoOrchestrator:
         return os.getenv("ENVIRONMENT", "development").lower() != "production"
 
     @staticmethod
-    def _has_rich_video_stack() -> bool:
-        """Bepaal of de bestaande rich video-engine bruikbare inputs heeft.
+    def _has_openai() -> bool:
+        key = os.getenv("OPENAI_API_KEY", "").strip()
+        return len(key) >= 10
 
-        De ProVideoProvider kan al hoogwaardige output leveren met stock footage,
-        echte TTS en optioneel D-ID hooks. Daarvoor is OPENAI niet de enige
-        ingang; Pexels/Pixabay/ElevenLabs zijn al voldoende om uit de simpele
-        slide-render te blijven.
-        """
+    @staticmethod
+    def _has_pexels() -> bool:
+        key = os.getenv("PEXELS_API_KEY", "").strip()
+        return len(key) >= 10 and not key.startswith("...")
+
+    @staticmethod
+    def _has_rich_video_stack() -> bool:
         keys = (
             os.getenv("OPENAI_API_KEY", ""),
             os.getenv("PEXELS_API_KEY", ""),
@@ -147,50 +150,56 @@ class VideoOrchestrator:
         return any(value and len(value.strip()) >= 10 for value in keys)
 
     def _select_provider(self, video_type: str) -> str:
-        """Selecteer de beste beschikbare provider."""
-        has_did = bool(os.getenv("DID_API_KEY"))
-        fast_video_mode = os.getenv("FAST_VIDEO_MODE", "")
-        rich_stack = self._has_rich_video_stack()
+        """Selecteer de beste beschikbare provider.
 
-        # Gebruik alleen de lichte FFmpeg route als daar expliciet om gevraagd wordt.
-        # Standaard hoort productie de volledige geoptimaliseerde videoketen te gebruiken.
-        if fast_video_mode:
-            use_fast_video = fast_video_mode.lower() == "true"
-        else:
-            use_fast_video = False
-
-        if use_fast_video:
+        Prioriteit:
+        1. D-ID: talking_head type + DID_API_KEY → beste avatar-kwaliteit
+        2. OpenAI Image: OpenAI key beschikbaar → DALL-E per scene, meest coherent
+        3. Pro (Pexels): alleen Pexels/ElevenLabs, geen OpenAI → stock footage
+        4. FFmpeg: gratis fallback (gradient + tekst)
+        """
+        if os.getenv("FAST_VIDEO_MODE", "").lower() == "true":
             return "ffmpeg"
 
-        # De rich productievideo hoort standaard via de ProVideoProvider te lopen.
-        # Die provider kan zelf een D-ID hook, echte stock footage, phone mockups
-        # en TTS combineren. Alleen als de rich stack echt ontbreekt, vallen we terug.
-        if rich_stack:
-            return "pro"
-
-        # Legacy full D-ID route alleen als er geen bredere rich stack beschikbaar is.
+        # 1. D-ID voor talking head met expliciete key
+        has_did = bool(os.getenv("DID_API_KEY"))
         did_skip = os.getenv("DID_SKIP", "false").lower() == "true"
         if has_did and video_type == "talking_head" and not did_skip:
             return "did"
+
+        # 2. OpenAI Image: contextspecifieke AI-beelden, meest coherente output
+        if self._has_openai():
+            return "openai_image"
+
+        # 3. Pro (Pexels stock footage)
+        if self._has_pexels():
+            return "pro"
 
         return "ffmpeg"
 
     def _get_fallbacks(self, failed_provider: str) -> list[str]:
         """Geef fallback providers na een gefaalde provider."""
-        rich_stack = self._has_rich_video_stack()
         allow_degraded = self._allow_degraded_video()
 
-        # In productie is inferieure fallback uit. Liever hard falen dan
-        # een dia-video als "succes" opslaan.
         if not allow_degraded:
-            if failed_provider == "did" and rich_stack:
-                return ["pro"]
+            # Productie: alleen waardige fallbacks, geen gradient-slideshow
+            if failed_provider == "did":
+                return ["openai_image"] if self._has_openai() else (["pro"] if self._has_pexels() else [])
+            if failed_provider == "openai_image":
+                return ["pro"] if self._has_pexels() else []
             return []
 
+        # Development: volledige fallback keten
         if failed_provider == "did":
-            return (["pro", "ffmpeg"] if rich_stack else ["ffmpeg"])
-        elif failed_provider == "pro":
-            return (["openai_image", "ffmpeg"] if rich_stack else ["ffmpeg"])
+            chain = []
+            if self._has_openai():
+                chain.append("openai_image")
+            if self._has_pexels():
+                chain.append("pro")
+            chain.append("ffmpeg")
+            return chain
         elif failed_provider == "openai_image":
+            return (["pro", "ffmpeg"] if self._has_pexels() else ["ffmpeg"])
+        elif failed_provider == "pro":
             return ["ffmpeg"]
         return []
