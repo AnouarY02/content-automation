@@ -633,9 +633,19 @@ def regenerate_video(
                     updated.total_cost_usd += video_engine.total_cost_usd
                     updated.status = CampaignStatus.PENDING_APPROVAL
                     repo.save(updated)
-
-            on_progress("[3/3] Video regeneratie voltooid!")
-            on_progress("__DONE__")
+                on_progress("[3/3] Video regeneratie voltooid!")
+                on_progress("__DONE__")
+            else:
+                error_msg = video_engine.last_error or "Video productie gaf geen bestand terug"
+                try:
+                    failed = repo.get(campaign_id, tenant_id)
+                    if failed:
+                        failed.status = CampaignStatus.FAILED
+                        failed.approval_notes = f"Regeneratie mislukt: {error_msg}"
+                        repo.save(failed)
+                except Exception:
+                    pass
+                on_progress(f"__ERROR__:{error_msg}")
         except Exception as e:
             logger.error(f"[Campaigns] Video regeneratie mislukt ({campaign_id}): {e}")
             try:
