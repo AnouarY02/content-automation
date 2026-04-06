@@ -201,22 +201,13 @@ class OpenAIImageProvider:
             client = openai.OpenAI(api_key=api_key, timeout=60.0)
             logger.info(f"[OpenAIImage] Genereer scene {index + 1}/{total_scenes}: {prompt[:80]}...")
 
-            try:
-                response = client.images.generate(
-                    model="gpt-image-1",
-                    prompt=prompt,
-                    n=1,
-                    size="1024x1792",
-                    quality="medium",
-                )
-            except Exception:
-                response = client.images.generate(
-                    model="dall-e-3",
-                    prompt=prompt,
-                    n=1,
-                    size="1024x1792",
-                    quality="standard",
-                )
+            response = client.images.generate(
+                model="dall-e-3",
+                prompt=prompt,
+                n=1,
+                size="1024x1792",
+                quality="standard",
+            )
 
             image_url = response.data[0].url
             if image_url:
@@ -416,8 +407,9 @@ class OpenAIImageProvider:
                       f"crop=1080:1920:'(iw-1080)/2':'(ih-1920)*(1-t/{total_d})',"
                       f"setsar=1,format=yuv420p")
 
+            # Input is al -loop 1 -t duration, dus geen extra loop filter nodig
             filters.append(
-                f"[{i}:v]loop=loop=-1:size=999,trim=duration={total_d},"
+                f"[{i}:v]trim=duration={total_d},"
                 f"setpts=PTS-STARTPTS,{vf}[v{i}]"
             )
 
@@ -532,20 +524,15 @@ class OpenAIImageProvider:
         music_idx = audio_idx + (1 if has_voice else 0)
 
         if has_voice and has_music:
-            # Muziek zacht (0.12) + ducking tijdens spraak via sidechaincompress
+            # Muziek zacht (0.10) gemixed met voice — geen sidechaincompress (niet altijd beschikbaar)
             filters.append(
                 f"[{audio_idx}:a]aformat=sample_rates=44100:channel_layouts=stereo[voice]"
             )
             filters.append(
-                f"[{music_idx}:a]volume=0.12,aformat=sample_rates=44100:channel_layouts=stereo[music_raw]"
-            )
-            # Sidechain: muziek gaat zachter als er stem is
-            filters.append(
-                "[voice][music_raw]sidechaincompress="
-                "threshold=0.02:ratio=4:attack=100:release=500[music_duck]"
+                f"[{music_idx}:a]volume=0.10,aformat=sample_rates=44100:channel_layouts=stereo[music_bg]"
             )
             filters.append(
-                "[voice][music_duck]amix=inputs=2:duration=shortest:normalize=0[outa]"
+                "[voice][music_bg]amix=inputs=2:duration=shortest:normalize=0[outa]"
             )
             audio_map = ["-map", "[outa]"]
         elif has_voice:
