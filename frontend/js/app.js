@@ -803,7 +803,7 @@ async function showCampaignDetail(id) {
     ${data.status === 'failed' ? `
     <div class="mt-4 p-4 bg-danger/5 rounded-lg border border-danger/20">
       <h4 class="text-xs text-danger uppercase tracking-wider mb-2 font-semibold">Campagne mislukt</h4>
-      <p class="text-xs text-muted mb-3">De video productie is mislukt. Je kunt de video opnieuw laten genereren.</p>
+      ${data.approval_notes ? `<p class="text-xs text-danger/80 bg-danger/10 rounded p-2 mb-3 font-mono break-all">${data.approval_notes}</p>` : '<p class="text-xs text-muted mb-3">De video productie is mislukt. Je kunt de video opnieuw laten genereren.</p>'}
       <button onclick="regenerateVideo('${data.id}')" class="btn btn-primary w-full">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
         Opnieuw Genereren
