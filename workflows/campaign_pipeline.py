@@ -382,6 +382,9 @@ def run_pipeline(
                 )
                 total_cost += rewrite_agent.total_cost_usd
                 guardrails.record_cost(rewrite_agent.total_cost_usd, "ScriptWriterAgent-rewrite", bundle.id)
+                if not script.get("scenes"):
+                    logger.warning("[Pipeline] Herschreven script mist scenes — gebruik vorig script")
+                    script = bundle.script  # Behou het vorige werkende script
                 script = _enforce_echo_loop(script)  # Garandeer echo-loop na rewrite
                 bundle.script = script
 

@@ -390,22 +390,22 @@ class OpenAIImageProvider:
                 # Pan links → rechts
                 vf = (f"scale=1200:2133:force_original_aspect_ratio=increase,"
                       f"crop=1080:1920:'(iw-1080)*t/{total_d}':'(ih-1920)/2',"
-                      f"setsar=1,format=yuv420p")
+                      f"setsar=1")
             elif effect == 1:
                 # Pan boven → onder
                 vf = (f"scale=1200:2133:force_original_aspect_ratio=increase,"
                       f"crop=1080:1920:'(iw-1080)/2':'(ih-1920)*t/{total_d}',"
-                      f"setsar=1,format=yuv420p")
+                      f"setsar=1")
             elif effect == 2:
                 # Pan rechts → links
                 vf = (f"scale=1200:2133:force_original_aspect_ratio=increase,"
                       f"crop=1080:1920:'(iw-1080)*(1-t/{total_d})':'(ih-1920)/2',"
-                      f"setsar=1,format=yuv420p")
+                      f"setsar=1")
             else:
                 # Pan onder → boven
                 vf = (f"scale=1200:2133:force_original_aspect_ratio=increase,"
                       f"crop=1080:1920:'(iw-1080)/2':'(ih-1920)*(1-t/{total_d})',"
-                      f"setsar=1,format=yuv420p")
+                      f"setsar=1")
 
             # Input is al -loop 1 -t duration, dus geen extra loop filter nodig
             filters.append(
