@@ -349,6 +349,25 @@ input[type="range"]:focus { box-shadow: none; }
   main { margin-left: 0 !important; }
   .mobile-toggle { display: flex !important; }
   .mobile-overlay { display: block !important; }
+
+  /* Modal als bottom-sheet op mobiel */
+  .modal-backdrop {
+    align-items: flex-end !important;
+  }
+  .modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92vh !important;
+    border-radius: 20px 20px 0 0 !important;
+    margin: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Grotere knoppen op mobiel */
+  .btn { min-height: 40px; font-size: 0.8rem; }
+  .btn-sm { min-height: 36px; }
+  /* Meer ruimte voor form elementen */
+  select, input, textarea { font-size: 16px !important; } /* Voorkomt auto-zoom iOS */
 }
 .mobile-toggle { display: none; }
 .mobile-overlay {
