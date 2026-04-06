@@ -198,7 +198,7 @@ class OpenAIImageProvider:
 
         try:
             import openai
-            client = openai.OpenAI(api_key=api_key)
+            client = openai.OpenAI(api_key=api_key, timeout=60.0)
             logger.info(f"[OpenAIImage] Genereer scene {index + 1}/{total_scenes}: {prompt[:80]}...")
 
             try:

@@ -462,8 +462,13 @@ def run_pipeline(
             guardrails.record_cost(caption_cost, "CaptionWriterAgent", bundle.id)
             progress("  > Caption klaar!")
 
-            # Wacht op video (langzamer, ~60-120s)
-            video_path, video_cost, video_error = video_future.result()
+            # Wacht op video (langzamer, ~60-180s) — timeout voorkomt eindeloos hangen
+            from concurrent.futures import TimeoutError as FuturesTimeout
+            try:
+                video_path, video_cost, video_error = video_future.result(timeout=540)
+            except FuturesTimeout:
+                video_future.cancel()
+                raise RuntimeError("Video productie timeout (>9 min) — probeer opnieuw of gebruik een kortere video")
             if not video_path:
                 raise RuntimeError(
                     f"Video productie mislukt: {video_error or 'geen videobestand aangemaakt'}"
