@@ -531,8 +531,9 @@ class OpenAIImageProvider:
             filters.append(
                 f"[{music_idx}:a]volume=0.10,aformat=sample_rates=44100:channel_layouts=stereo[music_bg]"
             )
+            # duration=longest: muziek vult de volledige video, -t total_duration kapt af
             filters.append(
-                "[voice][music_bg]amix=inputs=2:duration=shortest:normalize=0[outa]"
+                "[voice][music_bg]amix=inputs=2:duration=longest:normalize=0[outa]"
             )
             audio_map = ["-map", "[outa]"]
         elif has_voice:
@@ -554,7 +555,8 @@ class OpenAIImageProvider:
         cmd += audio_map
 
         if audio_map:
-            cmd += ["-c:a", "aac", "-b:a", "192k", "-shortest"]
+            # Geen -shortest: -t total_duration bepaalt de lengte, audio vult volledig
+            cmd += ["-c:a", "aac", "-b:a", "192k"]
 
         threads = os.getenv("FFMPEG_THREADS", "2")
         cmd += [

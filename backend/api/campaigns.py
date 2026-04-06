@@ -522,9 +522,9 @@ async def stream_progress(campaign_id: str):
                 if ping_count >= 15:
                     ping_count = 0
                     yield {"event": "ping", "data": json.dumps({"ts": stale_count})}
-                # Timeout na 10 minuten inactiviteit
+                # Timeout na 10 minuten inactiviteit — stuur error zodat frontend reageert
                 if stale_count > 600:
-                    yield {"event": "timeout", "data": json.dumps({"status": "timeout"})}
+                    yield {"event": "error", "data": json.dumps({"error": "Pipeline timeout — geen activiteit voor 10 minuten"})}
                     with _progress_lock:
                         _progress_store.pop(campaign_id, None)
                     return
