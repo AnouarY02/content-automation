@@ -291,13 +291,13 @@ input[type="range"]:focus { box-shadow: none; }
   background: rgba(0,0,0,0.5);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  /* Desktop: centreer de modal */
-  display: flex;
+}
+/* Desktop: centreer de modal — alleen als hij zichtbaar is */
+.modal-backdrop:not(.hidden) {
+  display: flex !important;
   align-items: center;
   justify-content: center;
 }
-/* Tailwind hidden override — zorg dat hidden altijd werkt */
-.hidden { display: none !important; }
 .modal {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -319,11 +319,11 @@ input[type="range"]:focus { box-shadow: none; }
 
 /* ── Modal mobiel — bottom sheet ─────────────────── */
 @media (max-width: 640px) {
-  .modal-backdrop {
+  .modal-backdrop:not(.hidden) {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     background: rgba(0,0,0,0.6) !important;
-    display: block !important;         /* Geen flex, simpele block */
+    display: block !important;
     padding-top: 40px;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
