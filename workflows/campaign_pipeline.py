@@ -17,7 +17,7 @@ import json
 import os
 import threading
 import uuid
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout, as_completed
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
@@ -201,7 +201,6 @@ def run_pipeline(
                 recent_titles = [t for t in recent_titles if t]
             except Exception:
                 pass  # Niet kritiek — ideeën worden alsnog gegenereerd
-            from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
             with ThreadPoolExecutor(max_workers=1) as _pool:
                 _f = _pool.submit(idea_agent.run, app=app, memory=memory,
                                   platform=platform, recent_titles=recent_titles,
@@ -477,7 +476,6 @@ def run_pipeline(
             progress("  > Caption klaar!")
 
             # Wacht op video (langzamer, ~60-180s) — timeout voorkomt eindeloos hangen
-            from concurrent.futures import TimeoutError as FuturesTimeout
             try:
                 video_path, video_cost, video_error = video_future.result(timeout=540)
             except FuturesTimeout:
