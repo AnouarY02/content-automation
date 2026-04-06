@@ -212,6 +212,7 @@ def run_pipeline(
                     raise RuntimeError("Idee generatie timeout (>2 min) — probeer opnieuw")
             total_cost += idea_agent.total_cost_usd
             guardrails.record_cost(idea_agent.total_cost_usd, "IdeaGeneratorAgent", bundle.id)
+            del idea_agent  # Vrijgeven voor GC
 
             if not ideas:
                 raise RuntimeError("Geen ideeën gegenereerd door AI")
@@ -437,6 +438,10 @@ def run_pipeline(
             "algorithm_tips": viral_result.get("algorithm_tips", []),
             "rewrites_needed": rewrite_count,
         }
+
+        # Geheugen vrijmaken na tournament voordat zware video-encode start
+        import gc
+        gc.collect()
 
         # Stap 5+6: Video produceren EN caption schrijven (parallel)
         vs_info = f", stability={voice_settings['stability']}" if voice_settings else ""

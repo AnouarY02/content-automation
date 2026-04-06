@@ -174,14 +174,27 @@ class OpenAIImageProvider:
             logger.info(f"[OpenAIImage] Muziek: {music_path.name}")
 
         # Stap 4: Assembleer
-        self._assemble_video(
-            image_paths=image_paths,
-            scenes=scenes,
-            audio_path=audio_path,
-            music_path=music_path,
-            output_path=output_path,
-            memory=memory,
-        )
+        try:
+            self._assemble_video(
+                image_paths=image_paths,
+                scenes=scenes,
+                audio_path=audio_path,
+                music_path=music_path,
+                output_path=output_path,
+                memory=memory,
+            )
+        finally:
+            # Ruim altijd temp bestanden op — ook bij fouten (voorkomt schijf volloop)
+            import shutil
+            try:
+                shutil.rmtree(str(image_dir), ignore_errors=True)
+            except Exception:
+                pass
+            if audio_path and audio_path.exists():
+                try:
+                    audio_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
 
         logger.success(f"[OpenAIImage] Video klaar: {output_path} | kosten=${self.total_cost_usd:.3f}")
         return output_path

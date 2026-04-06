@@ -41,7 +41,7 @@ _HEAVY_ROUTES = {
 
 # Thread-safe state
 _lock = threading.Lock()
-_windows: dict[str, deque] = defaultdict(deque)   # IP -> deque van timestamps
+_windows: dict[str, deque] = defaultdict(lambda: deque(maxlen=150))  # max 150 timestamps per IP
 _last_cleanup = time.monotonic()
 
 

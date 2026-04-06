@@ -32,8 +32,13 @@ COPY . .
 # Runtime directories aanmaken
 RUN mkdir -p assets/generated/videos data/campaigns data/brand_memory logs
 
-# FFmpeg memory limiet — voorkom dat encoding alle RAM claimt
-ENV FFMPEG_THREADS=2
+# FFmpeg: 1 thread om RAM te besparen op Railway (512 MB container)
+ENV FFMPEG_THREADS=1
+# Playwright uit — bespaart 200-400 MB RAM (Chromium browser)
+ENV SKIP_PLAYWRIGHT=true
+# Python memory: geef RAM direct terug aan OS na grote allocaties
+ENV MALLOC_TRIM_THRESHOLD_=65536
+ENV PYTHONUNBUFFERED=1
 
 # Port configuratie (Railway injecteert PORT env var)
 ENV PORT=8000

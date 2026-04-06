@@ -4132,10 +4132,13 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
             duration: Gewenste duur in seconden
             pages: Optionele lijst van subpaden (bijv. ["/", "/features"])
         """
+        if os.getenv("SKIP_PLAYWRIGHT", "true").lower() == "true":
+            return None
+
         try:
             from playwright.sync_api import sync_playwright
         except ImportError:
-            logger.warning("[ProVideo] Playwright niet geinstalleerd — skip app recording. pip install playwright && playwright install chromium")
+            logger.warning("[ProVideo] Playwright niet geinstalleerd — skip app recording")
             return None
 
         if not url:
