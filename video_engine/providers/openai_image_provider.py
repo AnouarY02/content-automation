@@ -369,25 +369,39 @@ class OpenAIImageProvider:
         filters = []
         n = len(image_paths)
 
-        # Ken Burns per scene
+        # Ken Burns per scene — snelle scale+crop aanpak (geen zoompan, veel sneller op server)
+        # Schaal naar 1200x2133 (10% groter), crop met lineaire offset voor pan-effect
         for i, scene in enumerate(scenes):
             d = durations[i] if i < len(durations) else 5
             total_d = d + crossfade + 0.1
-            frames = max(1, int(total_d * 30))
             scene_type = scene.get("type", "body")
 
-            presets = _KB_PRESETS.get(scene_type, _KB_PRESETS["body"])
-            z_expr, x_expr, y_expr = presets[i % len(presets)]
-            # Vervang {f} placeholder met frames
-            x_expr = x_expr.replace("{f}", str(frames))
-            y_expr = y_expr.replace("{f}", str(frames))
+            # Pan richting afwisselen per scene voor dynamisch gevoel
+            effect = i % 4
+            if effect == 0:
+                # Pan links → rechts
+                vf = (f"scale=1200:2133:force_original_aspect_ratio=increase,"
+                      f"crop=1080:1920:'(iw-1080)*t/{total_d}':'(ih-1920)/2',"
+                      f"setsar=1,format=yuv420p")
+            elif effect == 1:
+                # Pan boven → onder
+                vf = (f"scale=1200:2133:force_original_aspect_ratio=increase,"
+                      f"crop=1080:1920:'(iw-1080)/2':'(ih-1920)*t/{total_d}',"
+                      f"setsar=1,format=yuv420p")
+            elif effect == 2:
+                # Pan rechts → links
+                vf = (f"scale=1200:2133:force_original_aspect_ratio=increase,"
+                      f"crop=1080:1920:'(iw-1080)*(1-t/{total_d})':'(ih-1920)/2',"
+                      f"setsar=1,format=yuv420p")
+            else:
+                # Pan onder → boven
+                vf = (f"scale=1200:2133:force_original_aspect_ratio=increase,"
+                      f"crop=1080:1920:'(iw-1080)/2':'(ih-1920)*(1-t/{total_d})',"
+                      f"setsar=1,format=yuv420p")
 
             filters.append(
-                f"[{i}:v]scale=2160:3840:force_original_aspect_ratio=increase,"
-                f"crop=2160:3840:(iw-2160)/2:(ih-3840)/2,"
-                f"zoompan=z='{z_expr}':x='{x_expr}':y='{y_expr}'"
-                f":d={frames}:s=1080x1920:fps=30,"
-                f"format=yuv420p[v{i}]"
+                f"[{i}:v]loop=loop=-1:size=999,trim=duration={total_d},"
+                f"setpts=PTS-STARTPTS,{vf}[v{i}]"
             )
 
         # Crossfade keten
@@ -541,15 +555,15 @@ class OpenAIImageProvider:
         cmd += [
             "-c:v", "libx264",
             "-profile:v", "high",
-            "-preset", "medium",
-            "-crf", "18",
+            "-preset", "fast",
+            "-crf", "22",
             "-r", "30",
             "-t", str(total_duration),
             str(output_path),
         ]
 
         logger.info(f"[OpenAIImage] Render {n} scenes, {total_duration:.1f}s...")
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=360)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=480)
 
         if result.returncode != 0:
             stderr_tail = (result.stderr or "")[-1200:]
