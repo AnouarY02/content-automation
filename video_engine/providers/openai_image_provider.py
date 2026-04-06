@@ -149,6 +149,8 @@ class OpenAIImageProvider:
         scenes = script.get("scenes", [])
         if not scenes:
             scenes = [{"voiceover": "Content wordt gegenereerd...", "duration_sec": 5, "type": "hook"}]
+        # Max 4 scenes om Railway geheugen te ontzien
+        scenes = scenes[:4]
 
         # Stap 1: DALL-E afbeeldingen per scene
         image_dir = ASSETS_DIR / "images" / video_id
@@ -210,14 +212,31 @@ class OpenAIImageProvider:
             )
 
             image_url = response.data[0].url
+            raw_path = image_dir / f"scene_{index:02d}_raw.png"
             if image_url:
                 import httpx
                 r = httpx.get(image_url, timeout=45, follow_redirects=True)
                 r.raise_for_status()
-                output_path.write_bytes(r.content)
+                raw_path.write_bytes(r.content)
             elif hasattr(response.data[0], "b64_json") and response.data[0].b64_json:
                 import base64
-                output_path.write_bytes(base64.b64decode(response.data[0].b64_json))
+                raw_path.write_bytes(base64.b64decode(response.data[0].b64_json))
+
+            # Pre-resize naar 1200x2133 (pan-canvas) zodat FFmpeg geen zware scale doet
+            ffmpeg = _resolve_ffmpeg()
+            resize_result = subprocess.run([
+                ffmpeg, "-y", "-i", str(raw_path),
+                "-vf", "scale=1200:2133:force_original_aspect_ratio=increase,crop=1200:2133",
+                "-frames:v", "1", str(output_path)
+            ], capture_output=True, timeout=20)
+            if resize_result.returncode != 0 or not output_path.exists():
+                # Fallback: gebruik raw afbeelding
+                raw_path.rename(output_path)
+            else:
+                try:
+                    raw_path.unlink()
+                except Exception:
+                    pass
 
             self.total_cost_usd += self.COST_PER_IMAGE
             logger.info(f"[OpenAIImage] Scene {index + 1} klaar: {output_path}")
@@ -386,26 +405,19 @@ class OpenAIImageProvider:
 
             # Pan richting afwisselen per scene voor dynamisch gevoel
             effect = i % 4
+            # Afbeelding is al pre-resized naar 1200x2133 — alleen crop nodig (licht op RAM)
             if effect == 0:
                 # Pan links → rechts
-                vf = (f"scale=1200:2133:force_original_aspect_ratio=increase,"
-                      f"crop=1080:1920:'(iw-1080)*t/{total_d}':'(ih-1920)/2',"
-                      f"setsar=1")
+                vf = f"crop=1080:1920:'(iw-1080)*t/{total_d}':'(ih-1920)/2',setsar=1"
             elif effect == 1:
                 # Pan boven → onder
-                vf = (f"scale=1200:2133:force_original_aspect_ratio=increase,"
-                      f"crop=1080:1920:'(iw-1080)/2':'(ih-1920)*t/{total_d}',"
-                      f"setsar=1")
+                vf = f"crop=1080:1920:'(iw-1080)/2':'(ih-1920)*t/{total_d}',setsar=1"
             elif effect == 2:
                 # Pan rechts → links
-                vf = (f"scale=1200:2133:force_original_aspect_ratio=increase,"
-                      f"crop=1080:1920:'(iw-1080)*(1-t/{total_d})':'(ih-1920)/2',"
-                      f"setsar=1")
+                vf = f"crop=1080:1920:'(iw-1080)*(1-t/{total_d})':'(ih-1920)/2',setsar=1"
             else:
                 # Pan onder → boven
-                vf = (f"scale=1200:2133:force_original_aspect_ratio=increase,"
-                      f"crop=1080:1920:'(iw-1080)/2':'(ih-1920)*(1-t/{total_d})',"
-                      f"setsar=1")
+                vf = f"crop=1080:1920:'(iw-1080)/2':'(ih-1920)*(1-t/{total_d})',setsar=1"
 
             # Input is al -loop 1 -t duration, dus geen extra loop filter nodig
             filters.append(
