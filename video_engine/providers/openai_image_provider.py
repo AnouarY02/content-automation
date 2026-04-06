@@ -264,6 +264,8 @@ class OpenAIImageProvider:
     ) -> str:
         """Bouw een cinematic DALL-E prompt voor TikTok/Reels content."""
         visual_style = memory.get("visual_style", {}) if memory else {}
+        if not isinstance(visual_style, dict):
+            visual_style = {}
         app_name = memory.get("app_name", "") if memory else ""
         niche = memory.get("niche", "") if memory else ""
         color_scheme = visual_style.get("color_scheme", "")
@@ -383,6 +385,8 @@ class OpenAIImageProvider:
         ffmpeg = _resolve_ffmpeg()
         font_arg = _fontfile_arg()
         visual_style = memory.get("visual_style", {}) if memory else {}
+        if not isinstance(visual_style, dict):
+            visual_style = {}
         accent = visual_style.get("accent_color", "#6C63FF")
         app_name = memory.get("app_name", "") if memory else ""
 

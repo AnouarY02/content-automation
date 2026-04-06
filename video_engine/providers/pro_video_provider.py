@@ -3096,7 +3096,7 @@ class ProVideoProvider:
                 page_idx = scene.get("demo_page_index", idx % len(app_screenshots))
                 page_idx = min(page_idx, len(app_screenshots) - 1)
                 screenshot = app_screenshots[page_idx]
-                accent = memory.get("visual_style", {}).get("accent_color", "#6C63FF")
+                accent = ( memory.get("visual_style", {}) if isinstance(memory.get("visual_style", {}), dict) else {} ).get("accent_color", "#6C63FF")
                 accent_hex = accent.lstrip("#")
                 bg_clip = self._get_stock_video(scene, memory, work_dir, idx, duration)
                 visual = self._create_phone_mockup_clip(
@@ -3117,7 +3117,7 @@ class ProVideoProvider:
             if app_screenshots:
                 page_idx = min(len(app_screenshots) - 1, 1)
                 screenshot = app_screenshots[page_idx]
-                accent = memory.get("visual_style", {}).get("accent_color", "#6C63FF")
+                accent = ( memory.get("visual_style", {}) if isinstance(memory.get("visual_style", {}), dict) else {} ).get("accent_color", "#6C63FF")
                 bg_clip = self._get_stock_video(scene, memory, work_dir, idx, duration)
                 visual = self._create_phone_mockup_clip(
                     screenshot, work_dir, idx, duration,
