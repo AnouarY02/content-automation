@@ -163,6 +163,20 @@ async function loadApps() {
   cf.innerHTML = '<option value="">Selecteer app...</option>' +
     allApps.map(app => { const id = app.id || app.app_id; return `<option value="${id}">${escapeHtml(app.name || id)}</option>`; }).join('');
 
+  // Herstel laatste geselecteerde app na page refresh
+  const saved = localStorage.getItem('currentApp');
+  if (saved && allApps.some(a => (a.id || a.app_id) === saved)) {
+    sel.value = saved;
+    currentApp = saved;
+    cf.value = saved;
+  } else if (allApps.length === 1) {
+    // Automatisch selecteren als er maar 1 app is
+    const id = allApps[0].id || allApps[0].app_id;
+    sel.value = id;
+    currentApp = id;
+    cf.value = id;
+  }
+
   const badge = document.getElementById('badge-apps');
   if (allApps.length > 0) { badge.textContent = allApps.length; badge.classList.remove('hidden'); }
 }
@@ -170,6 +184,8 @@ async function loadApps() {
 function onAppChange() {
   currentApp = document.getElementById('app-selector').value;
   document.getElementById('content-app-filter').value = currentApp;
+  if (currentApp) localStorage.setItem('currentApp', currentApp);
+  else localStorage.removeItem('currentApp');
   refreshTab(currentTab);
 }
 
