@@ -115,6 +115,7 @@ class StartCampaignRequest(BaseModel):
     voice_similarity: float = 0.92     # 0.0-1.0 — hoger = dichter bij originele stem
     voice_style: float = 0.45          # 0.0-1.0 — hoger = meer expressief
     chosen_idea: dict | None = None  # Pre-gekozen idee (skip idee-generatie)
+    custom_brief: str | None = None  # Optionele extra instructies voor de pipeline
 
 
 class VoicePreviewRequest(BaseModel):
