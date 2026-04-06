@@ -390,7 +390,7 @@ class OpenAIImageProvider:
         accent = visual_style.get("accent_color", "#6C63FF")
         app_name = memory.get("app_name", "") if memory else ""
 
-        durations = [max(2.0, float(scene.get("duration_sec") or 5)) for scene in scenes]
+        durations = [max(2.0, float(d) if (d := scene.get("duration_sec")) is not None else 5.0) for scene in scenes]
         total_duration = sum(durations)
         crossfade = 0.4
 
