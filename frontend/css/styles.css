@@ -352,22 +352,24 @@ input[type="range"]:focus { box-shadow: none; }
 
   /* Modal als bottom-sheet op mobiel */
   .modal-backdrop {
-    align-items: flex-end !important;
+    backdrop-filter: none !important;         /* Geen blur — te zwaar op mobiel */
+    -webkit-backdrop-filter: none !important;
+    background: rgba(0,0,0,0.55) !important;
   }
   .modal {
     width: 100% !important;
     max-width: 100% !important;
-    max-height: 92vh !important;
+    max-height: 88vh !important;
     border-radius: 20px 20px 0 0 !important;
     margin: 0 !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
   }
   /* Grotere knoppen op mobiel */
-  .btn { min-height: 40px; font-size: 0.8rem; }
-  .btn-sm { min-height: 36px; }
-  /* Meer ruimte voor form elementen */
-  select, input, textarea { font-size: 16px !important; } /* Voorkomt auto-zoom iOS */
+  .btn { min-height: 42px; font-size: 0.82rem; }
+  .btn-sm { min-height: 38px; }
+  /* Voorkomt auto-zoom iOS bij focus op input */
+  select, input, textarea { font-size: 16px !important; }
 }
 .mobile-toggle { display: none; }
 .mobile-overlay {

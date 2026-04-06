@@ -117,10 +117,21 @@ function timeAgo(ts) {
 function truncate(str, len=80) { return str && str.length > len ? str.substring(0,len)+'...' : (str||''); }
 
 function openModal(name) {
-  document.getElementById(`modal-${name}`).classList.remove('hidden');
+  const el = document.getElementById(`modal-${name}`);
+  el.classList.remove('hidden');
+  // Op mobiel: zet align-items naar flex-end zodat modal van onderaf schuift
+  if (window.innerWidth <= 768) {
+    el.style.alignItems = 'flex-end';
+    el.style.paddingBottom = '0';
+    // Voorkom body scroll terwijl modal open is
+    document.body.style.overflow = 'hidden';
+  }
   if (name === 'start-campaign') populateCampaignAppSelect();
 }
-function closeModal(name) { document.getElementById(`modal-${name}`).classList.add('hidden'); }
+function closeModal(name) {
+  document.getElementById(`modal-${name}`).classList.add('hidden');
+  document.body.style.overflow = '';
+}
 function closePanel(id) { document.getElementById(id).classList.add('hidden'); }
 
 // ── Navigation ───────────────────────────────────────────────────────
