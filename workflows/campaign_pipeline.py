@@ -488,6 +488,10 @@ def run_pipeline(
             total_cost += video_cost
             guardrails.record_cost(video_cost, "VideoOrchestrator", bundle.id)
             if has_supabase_env():
+                video_size = video_path.stat().st_size if video_path and video_path.exists() else 0
+                logger.info(f"[Pipeline] Video uploaden naar Supabase: {video_path} ({video_size} bytes)")
+                if video_size < 10_000:
+                    raise RuntimeError(f"Video te klein voor upload ({video_size} bytes) — FFmpeg heeft stilletjes gefaald")
                 progress("  > Video uploaden naar storage...")
                 bundle.video_path = upload_file_to_public_bucket(
                     "campaign-videos",

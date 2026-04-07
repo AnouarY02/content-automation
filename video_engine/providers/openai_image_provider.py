@@ -436,11 +436,8 @@ class OpenAIImageProvider:
                 # Pan onder → boven
                 vf = f"crop=1080:1920:'(iw-1080)/2':'(ih-1920)*(1-t/{total_d})',setsar=1"
 
-            # Input is al -loop 1 -t duration, dus geen extra loop filter nodig
-            filters.append(
-                f"[{i}:v]trim=duration={total_d},"
-                f"setpts=PTS-STARTPTS,{vf}[v{i}]"
-            )
+            # Input is al -loop 1 -t duration — geen extra trim nodig (trim+xfade geeft leeg resultaat)
+            filters.append(f"[{i}:v]{vf}[v{i}]")
 
         # Crossfade keten
         if n == 1:
