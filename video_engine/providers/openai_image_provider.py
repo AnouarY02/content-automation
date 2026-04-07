@@ -607,6 +607,13 @@ class OpenAIImageProvider:
             logger.error(f"[OpenAIImage] FFmpeg fout:\n{stderr_tail}")
             raise RuntimeError(f"FFmpeg mislukt (code {result.returncode})")
 
+        # Valideer output — een geldige video moet groter zijn dan 10 KB
+        if not output_path.exists() or output_path.stat().st_size < 10_000:
+            size = output_path.stat().st_size if output_path.exists() else 0
+            stderr_tail = (result.stderr or "")[-800:]
+            logger.error(f"[OpenAIImage] Video te klein ({size} bytes), FFmpeg stderr:\n{stderr_tail}")
+            raise RuntimeError(f"FFmpeg produceerde lege video ({size} bytes)")
+
     # ── Voiceover ─────────────────────────────────────────────────────
 
     def _generate_voiceover(self, text: str, video_id: str) -> Path | None:
