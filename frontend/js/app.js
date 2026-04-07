@@ -94,7 +94,7 @@ function videoUrl(path) {
   if (!path) return '';
   if (/^https?:\/\//i.test(path)) return path;
   const filename = path.split(/[/\\]/).pop();
-  return `/assets/videos/${filename}`;
+  return `${API}/assets/videos/${filename}`;
 }
 function timeAgo(ts) {
   if (!ts || ts==='None') return '-';
