@@ -817,7 +817,7 @@ class ProVideoProvider:
                     str(raw_clip),
                 ]
                 subprocess.run(color_cmd, capture_output=True, timeout=30)
-                if raw_clip.exists() and raw_clip.stat().st_size > 1000:
+                if raw_clip.exists() and raw_clip.stat().st_size > 10_000:
                     _vprogress(f"  > Clip {sd['idx']}: color fallback OK")
                     return raw_clip
                 _vprogress(f"  > Clip {sd['idx']}: COMPLEET MISLUKT")
@@ -3015,7 +3015,7 @@ class ProVideoProvider:
         if result.returncode != 0:
             logger.warning(f"[ProVideo] Final assembly mislukt: {result.stderr[-300:]}")
             if has_audio:
-                subprocess.run([
+                fb_result = subprocess.run([
                     "ffmpeg", "-y",
                     "-i", str(raw_video),
                     "-i", str(full_audio),
@@ -3025,6 +3025,8 @@ class ProVideoProvider:
                     "-shortest",
                     str(output_path),
                 ], capture_output=True, timeout=120)
+                if fb_result.returncode != 0 or not output_path.exists() or output_path.stat().st_size < 10_000:
+                    raise RuntimeError(f"Audio fallback assembly mislukt (rc={fb_result.returncode})")
             else:
                 import shutil
                 shutil.copy(str(raw_video), str(output_path))
@@ -3219,7 +3221,7 @@ class ProVideoProvider:
                     str(fallback_path),
                 ]
                 subprocess.run(fb_cmd2, capture_output=True, timeout=30)
-            if fallback_path.exists() and fallback_path.stat().st_size > 1000:
+            if fallback_path.exists() and fallback_path.stat().st_size > 10_000:
                 visual = fallback_path
                 logger.info(f"[ProVideo] Color fallback scene {idx}: {fallback_path.stat().st_size}b")
 

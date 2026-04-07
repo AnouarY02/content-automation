@@ -364,8 +364,8 @@ class OpenAIImageProvider:
                             + chunk(b"IDAT", zlib.compress(raw))
                             + chunk(b"IEND", b""))
                 output_path.write_bytes(_minimal_png(1080, 1920))
-            except Exception:
-                output_path.write_bytes(b"")
+            except Exception as e2:
+                raise RuntimeError(f"Fallback PNG aanmaken mislukt voor scene {index}: {e2}")
         return output_path
 
     # ── Video Assembly ────────────────────────────────────────────────
