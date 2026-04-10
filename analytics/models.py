@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field, field_validator
 class Platform(str, Enum):
     TIKTOK = "tiktok"
     INSTAGRAM = "instagram"
+    FACEBOOK = "facebook"
     YOUTUBE = "youtube"
     LINKEDIN = "linkedin"
 

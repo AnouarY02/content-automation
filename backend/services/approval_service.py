@@ -24,6 +24,8 @@ from backend.models.campaign import (
 )
 from workflows.campaign_pipeline import load_bundle, save_bundle
 from channels.tiktok.publisher import TikTokPublisher
+from channels.instagram.publisher import InstagramPublisher
+from channels.facebook.publisher import FacebookPublisher
 
 
 def get_pending_campaigns() -> list[CampaignBundle]:
@@ -99,7 +101,17 @@ def _publish_now(bundle: CampaignBundle) -> CampaignBundle:
     save_bundle(bundle)
 
     try:
-        publisher = TikTokPublisher()
+        platform = (bundle.platform or "tiktok").lower()
+        if platform == "instagram":
+            publisher = InstagramPublisher()
+            platform_label = "Instagram"
+        elif platform == "facebook":
+            publisher = FacebookPublisher()
+            platform_label = "Facebook"
+        else:
+            publisher = TikTokPublisher()
+            platform_label = "TikTok"
+
         post_id = publisher.publish(bundle)
 
         bundle.status = CampaignStatus.PUBLISHED
@@ -118,7 +130,7 @@ def _publish_now(bundle: CampaignBundle) -> CampaignBundle:
         except Exception as fb_err:
             logger.warning(f"Feedback registratie mislukt (niet kritiek): {fb_err}")
 
-        logger.success(f"✓ Gepubliceerd op TikTok! Post ID: {post_id}")
+        logger.success(f"✓ Gepubliceerd op {platform_label}! Post ID: {post_id}")
 
     except Exception as e:
         bundle.status = CampaignStatus.FAILED
