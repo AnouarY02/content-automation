@@ -53,6 +53,7 @@ class IdeaGeneratorAgent(BaseAgent):
         trending_formats: list | None = None,
         recent_titles: list[str] | None = None,
         custom_brief: str | None = None,
+        market_research: str | None = None,
     ) -> list[dict]:
         """
         Genereer 5 campagne-ideeën.
@@ -127,6 +128,7 @@ class IdeaGeneratorAgent(BaseAgent):
                 "recent_performance": perf_str,
                 "trending_formats": trending_str,
                 "platform": platform.upper(),
+                "market_research": market_research or "",
             },
         )
 

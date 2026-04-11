@@ -25,6 +25,7 @@ from typing import Callable
 from loguru import logger
 
 from agents.idea_generator import IdeaGeneratorAgent
+from agents.market_researcher import MarketResearchAgent
 from agents.script_writer import ScriptWriterAgent
 from agents.caption_writer import CaptionWriterAgent
 from agents.viral_checker import ViralCheckerAgent
@@ -180,12 +181,28 @@ def run_pipeline(
         existing_count = len(repo.list(tenant_id=tenant_id))
         bundle.display_name = f"Campagne {existing_count + 1} — {app_name}"
 
-        # Stap 2: Ideeën genereren (of pre-gekozen idee gebruiken)
+        # Stap 2: Marktonderzoek + Ideeën genereren (of pre-gekozen idee gebruiken)
         if chosen_idea:
             progress("Stap 2/7: Pre-gekozen idee laden...")
             bundle.idea = chosen_idea
             progress(f"  > Idee: '{chosen_idea.get('title', '?')}'")
         else:
+            # Stap 2a: Marktonderzoek (verrijkt idee-generatie met niche-inzichten)
+            market_research_str = ""
+            try:
+                progress("Stap 2/7: Marktonderzoek uitvoeren...")
+                research_agent = MarketResearchAgent()
+                raw_research = research_agent.run(app=app, platform=platform, custom_brief=custom_brief)
+                market_research_str = MarketResearchAgent.format_for_idea_prompt(raw_research)
+                total_cost += research_agent.total_cost_usd
+                guardrails.record_cost(research_agent.total_cost_usd, "MarketResearchAgent", bundle.id)
+                del research_agent
+                progress(f"  > Marktonderzoek klaar — {len(raw_research.get('content_opportunities', []))} kansen gevonden")
+            except Exception as research_err:
+                logger.warning(f"[Pipeline] Marktonderzoek mislukt (niet kritiek): {research_err}")
+                # Niet kritiek — pipeline gaat door zonder research
+
+            # Stap 2b: Ideeën genereren met marktonderzoek als context
             progress("Stap 2/7: Campagne-ideeën genereren...")
             idea_agent = IdeaGeneratorAgent()
             # Haal recente campagne-titels op zodat de LLM geen duplicaten genereert
@@ -204,7 +221,8 @@ def run_pipeline(
             with ThreadPoolExecutor(max_workers=1) as _pool:
                 _f = _pool.submit(idea_agent.run, app=app, memory=memory,
                                   platform=platform, recent_titles=recent_titles,
-                                  custom_brief=custom_brief)
+                                  custom_brief=custom_brief,
+                                  market_research=market_research_str)
                 try:
                     ideas = _f.result(timeout=120)
                 except FuturesTimeout:

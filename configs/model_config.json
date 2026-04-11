@@ -1,5 +1,13 @@
 {
   "models": {
+    "market_research": {
+      "provider": "openai",
+      "model": "gpt-4o",
+      "max_tokens": 3000,
+      "temperature": 0.5,
+      "response_format": "json_object",
+      "use_cache": true
+    },
     "idea_generation": {
       "provider": "openai",
       "model": "gpt-4o",
