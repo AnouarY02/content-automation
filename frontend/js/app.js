@@ -798,16 +798,16 @@ async function showCampaignDetail(id) {
         ${['pending_approval','approved','draft'].includes(data.status) ? `<button onclick="toggleScriptEdit('${data.id}')" id="script-edit-btn-${data.id}" class="btn btn-outline btn-sm text-xs">Bewerk</button>` : ''}
       </div>
       <div id="script-view-${data.id}" class="bg-bg p-3 rounded-lg text-xs text-muted max-h-52 overflow-y-auto space-y-2">
-        ${data.script.scenes.map((s,i) => `<div class="border-b border-border/40 pb-1.5 last:border-0"><span class="text-accent font-medium">Scene ${i+1}${s.hook ? ' ('+s.hook+')' : ''}:</span><p class="mt-0.5">${escapeHtml(s.voiceover || s.description || '')}</p>${s.visual ? `<p class="text-[0.6rem] text-muted/70 mt-0.5">Visueel: ${escapeHtml(s.visual)}</p>` : ''}</div>`).join('')}
+        ${data.script.scenes.map((s,i) => `<div class="border-b border-border/40 pb-1.5 last:border-0"><span class="text-accent font-medium">Scene ${i+1}${s.hook ? ' ('+escapeHtml(s.hook)+')' : ''}:</span><p class="mt-0.5">${escapeHtml(s.voiceover || s.description || '')}</p>${s.visual ? `<p class="text-[0.6rem] text-muted/70 mt-0.5">Visueel: ${escapeHtml(s.visual)}</p>` : ''}</div>`).join('')}
       </div>
       <div id="script-edit-${data.id}" class="hidden space-y-2 mt-2">
         ${data.script.scenes.map((s,i) => `<div class="border border-border/60 rounded-lg p-2">
-          <div class="text-[0.65rem] text-accent font-medium mb-1">Scene ${i+1}${s.hook ? ' · '+s.hook : ''}</div>
+          <div class="text-[0.65rem] text-accent font-medium mb-1">Scene ${i+1}${s.hook ? ' · '+escapeHtml(s.hook) : ''}</div>
           <textarea data-scene-idx="${i}" data-scene-field="voiceover" rows="2" class="w-full text-xs resize-none border-0 bg-bg p-1 rounded focus:outline-none focus:ring-1 focus:ring-accent/30">${escapeHtml(s.voiceover || '')}</textarea>
           ${s.visual !== undefined ? `<input data-scene-idx="${i}" data-scene-field="visual" type="text" placeholder="Visuele instructie..." value="${escapeHtml(s.visual || '')}" class="w-full text-[0.65rem] mt-1 border-0 bg-bg/50 rounded px-1 py-0.5 text-muted focus:outline-none">` : ''}
         </div>`).join('')}
         <div class="flex gap-2 pt-1">
-          <button onclick="saveScript('${data.id}', ${JSON.stringify(data.script.scenes).replace(/"/g,'&quot;')})" class="btn btn-primary btn-sm text-xs">Opslaan</button>
+          <button onclick="saveScript('${data.id}')" class="btn btn-primary btn-sm text-xs">Opslaan</button>
           <button onclick="toggleScriptEdit('${data.id}')" class="btn btn-outline btn-sm text-xs">Annuleren</button>
         </div>
       </div>
@@ -1012,30 +1012,28 @@ function toggleScriptEdit(campaignId) {
   if (btn) btn.textContent = isEditing ? 'Bewerk' : 'Annuleren';
 }
 
-async function saveScript(campaignId, _originalScenes) {
+async function saveScript(campaignId) {
   const edit = document.getElementById(`script-edit-${campaignId}`);
   if (!edit) return;
 
-  // Collect edited scene data
-  const textareas = edit.querySelectorAll('textarea[data-scene-idx]');
-  const inputs    = edit.querySelectorAll('input[data-scene-idx]');
-  const scenes    = [];
-
-  textareas.forEach(ta => {
-    const idx = parseInt(ta.getAttribute('data-scene-idx'));
-    if (!scenes[idx]) scenes[idx] = { ..._originalScenes[idx] };
-    scenes[idx].voiceover = ta.value;
-  });
-  inputs.forEach(inp => {
-    const idx = parseInt(inp.getAttribute('data-scene-idx'));
-    if (!scenes[idx]) scenes[idx] = { ..._originalScenes[idx] };
-    scenes[idx].visual = inp.value;
+  // Build scenes map from DOM inputs
+  const sceneMap = {};
+  edit.querySelectorAll('[data-scene-idx]').forEach(el => {
+    const idx   = parseInt(el.getAttribute('data-scene-idx'));
+    const field = el.getAttribute('data-scene-field');
+    if (!sceneMap[idx]) sceneMap[idx] = {};
+    sceneMap[idx][field] = el.value;
   });
 
-  const cleaned = scenes.filter(Boolean);
+  const scenes = Object.keys(sceneMap)
+    .sort((a, b) => parseInt(a) - parseInt(b))
+    .map(idx => sceneMap[idx]);
+
+  if (!scenes.length) { toast('Geen scenes gevonden', 'warning'); return; }
+
   const result = await api(`/api/campaigns/${campaignId}/script`, {
     method: 'PATCH',
-    body: JSON.stringify({ scenes: cleaned }),
+    body: JSON.stringify({ scenes }),
   });
   if (result) {
     toast('Script opgeslagen', 'success');
