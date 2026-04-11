@@ -2,7 +2,7 @@
   "models": {
     "market_research": {
       "provider": "openai",
-      "model": "gpt-4o",
+      "model": "gpt-4o-mini",
       "max_tokens": 3000,
       "temperature": 0.5,
       "response_format": "json_object",
@@ -10,14 +10,14 @@
     },
     "idea_generation": {
       "provider": "openai",
-      "model": "gpt-4o",
+      "model": "gpt-4o-mini",
       "max_tokens": 3000,
       "temperature": 0.95,
       "use_cache": false
     },
     "script_writing": {
       "provider": "openai",
-      "model": "gpt-4o",
+      "model": "gpt-4o-mini",
       "max_tokens": 8000,
       "temperature": 0.92,
       "response_format": "json_object",

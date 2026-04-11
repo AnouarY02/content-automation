@@ -3,20 +3,21 @@
   "app_name": "GLP Coach",
   "niche": "health",
   "url": "https://glpcoach.nl",
-  "tone_of_voice": "Eerlijk, motiverend, wetenschappelijk onderbouwd. Spreekt mensen aan die worstelen met gewicht en GLP-1 medicatie overwegen of al gebruiken. Geen valse beloftes, wel echte resultaten.",
-  "target_audience": "Mensen 30-60 jaar met overgewicht die GLP-1/Ozempic/Wegovy overwegen of al gebruiken. Worstelen met gewicht, hebben veel geprobeerd, zoeken begeleiding.",
-  "usp": "Persoonlijke GLP-1 coaching: voeding, leefstijl en mentale begeleiding gecombineerd",
+  "tone_of_voice": "Eerlijk, motiverend en wetenschappelijk onderbouwd. Gericht op mensen die hun leefstijl veranderen met professionele begeleiding. Geen medische claims, wel echte resultaten door coaching.",
+  "target_audience": "Mensen 30-60 jaar met overgewicht die op zoek zijn naar professionele leefstijlbegeleiding. Hebben veel methodes geprobeerd, willen nu duurzame resultaten met echte coaching.",
+  "usp": "Persoonlijke leefstijlcoaching: voeding, beweging en mentale begeleiding gecombineerd voor duurzaam gewichtsverlies",
   "visual_style": "Clean, professioneel, medisch betrouwbaar. Witte achtergrond, groene accenten. Echte mensen, geen stockfotos.",
   "best_cta": "Gratis intake via link in bio",
   "top_performing_hooks": [
-    "Ozempic werkt - maar dit vergeet iedereen",
-    "Waarom 60% stopt met GLP-1 na 3 maanden",
-    "Dit veranderde alles voor mijn GLP-1 resultaten"
+    "Dit veranderde alles voor mijn gewichtsverlies reis",
+    "Waarom 60% opgeeft na 3 maanden (en hoe je dat voorkomt)",
+    "De leefstijlverandering die niemand je vertelt"
   ],
   "avoided_topics": [
-    "Exacte doseringen noemen",
-    "Medische claims zonder onderbouwing",
-    "Negatief over artsen of apothekers"
+    "Specifieke medicijnnamen of doseringen",
+    "Medische claims of diagnoses",
+    "Negatief over artsen of apothekers",
+    "Garanties over gewichtsverlies"
   ],
   "content_formats": {
     "best_performing": "problem-solution",
@@ -27,12 +28,9 @@
   "learned_insights": [
     {
       "date": "2026-04-11",
-      "insight": "Pipeline fout: RetryError[<Future at 0x7dca486a7b00 state=finished raised OpenAIError>]"
-    },
-    {
-      "date": "2026-04-11",
-      "insight": "Pipeline fout: 'list' object has no attribute 'get'"
+      "insight": "Pipeline fout: Geen ideeën gegenereerd door AI"
     }
   ],
-  "last_updated": "2026-04-11"
+  "last_updated": "2026-04-11",
+  "description": "Leefstijl coaching app voor duurzaam gewichtsverlies via gepersonaliseerde voedings- en bewegingsprogrammas met professionele begeleiding"
 }

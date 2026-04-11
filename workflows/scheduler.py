@@ -114,8 +114,20 @@ def job_produce_content(slot: str = "morning"):
 
     Slots: morning (07:00), afternoon (13:00), evening (19:00)
     Gecontroleerd via DAILY_POSTS_PER_APP (standaard 2 — morning + evening).
+
+    Post type per slot:
+      morning   → text post
+      afternoon → photo post
+      evening   → video post (volledige pipeline)
     """
-    from workflows.campaign_pipeline import run_pipeline
+    from workflows.campaign_pipeline import run_post_pipeline
+
+    # Slot → post type mapping
+    slot_post_type = {
+        "morning": "text",
+        "afternoon": "photo",
+        "evening": "video",
+    }
 
     daily_posts = int(os.getenv("DAILY_POSTS_PER_APP", "2"))
 
@@ -128,23 +140,31 @@ def job_produce_content(slot: str = "morning"):
     if slot not in active_slots:
         return  # Dit slot is niet actief vandaag
 
-    apps = load_active_app_ids()
-    logger.info(f"[Scheduler] Content productie gestart — slot={slot}, apps={len(apps)}")
+    post_type = slot_post_type.get(slot, "video")
 
-    for app_id in apps:
+    apps_raw = get_app_repo(tenant_id="default").list_apps()
+    active_apps = [a for a in apps_raw if a.get("active", True)]
+    logger.info(f"[Scheduler] Content productie gestart — slot={slot}, post_type={post_type}, apps={len(active_apps)}")
+
+    for app in active_apps:
+        app_id = app["id"]
+        # Gebruik het eerste actieve kanaal van de app (facebook vóór tiktok als beschikbaar)
+        channels = app.get("active_channels", ["tiktok"])
+        platform = channels[0] if channels else "tiktok"
         try:
-            logger.info(f"[Scheduler] Produceer content voor {app_id} ({slot})")
-            bundle = run_pipeline(
+            logger.info(f"[Scheduler] Produceer {post_type} post voor {app_id} ({slot}) op {platform}")
+            bundle = run_post_pipeline(
                 app_id=app_id,
-                platform="tiktok",
+                platform=platform,
+                post_type=post_type,
                 on_progress=lambda msg: logger.info(f"  {msg}"),
             )
             logger.success(
-                f"[Scheduler] {app_id} — campagne klaar: {bundle.id} "
+                f"[Scheduler] {app_id} — {post_type} post klaar: {bundle.id} "
                 f"(status={bundle.status})"
             )
         except Exception as e:
-            logger.error(f"[Scheduler] Content productie mislukt voor {app_id}: {e}")
+            logger.error(f"[Scheduler] Content productie mislukt voor {app_id} ({platform}, {post_type}): {e}")
 
 
 def job_monthly_cleanup():

@@ -96,6 +96,9 @@ class CampaignBundle(BaseModel):
     # Geplande publicatietijd
     scheduled_for: datetime | None = None
 
+    # Post type — bepaalt welke media aanwezig is en hoe gepubliceerd wordt
+    post_type: str = "video"  # "text" | "photo" | "video"
+
     class Config:
         use_enum_values = True
 

@@ -597,6 +597,161 @@ def run_pipeline(
     return bundle
 
 
+def run_post_pipeline(
+    app_id: str,
+    platform: str = "facebook",
+    post_type: str = "video",
+    tenant_id: str = "default",
+    on_progress: Callable[[str], None] | None = None,
+) -> CampaignBundle:
+    """
+    Lichtgewicht pipeline voor tekst-, foto- en videoposts.
+
+    Args:
+        app_id:     ID van de app (uit app_registry.json)
+        platform:   Doelplatform ("facebook", "tiktok", ...)
+        post_type:  "text" | "photo" | "video"
+        tenant_id:  Tenant isolatie
+        on_progress: Optionele voortgangs-callback
+
+    Returns:
+        CampaignBundle met status PENDING_APPROVAL en post_type gezet
+    """
+    if post_type == "video":
+        bundle = run_pipeline(app_id=app_id, platform=platform, tenant_id=tenant_id, on_progress=on_progress)
+        bundle.post_type = "video"
+        save_bundle(bundle, tenant_id=tenant_id)
+        return bundle
+
+    def progress(msg: str):
+        logger.info(msg)
+        if on_progress:
+            on_progress(msg)
+
+    bundle = CampaignBundle(
+        app_id=app_id,
+        tenant_id=tenant_id,
+        platform=platform,
+        post_type=post_type,
+        status=CampaignStatus.GENERATING,
+    )
+
+    total_cost = 0.0
+    guardrails = CostGuardrails(tenant_id=tenant_id)
+
+    try:
+        guardrails.check_budget()
+
+        # Stap 1: App + brand memory laden
+        progress(f"Stap 1/3: App-context laden ({post_type} post)...")
+        app = load_app(app_id)
+        memory = bm.load(app_id)
+        memory["niche"] = memory.get("niche") or app.get("niche", "")
+        memory["url"] = memory.get("url") or app.get("url", "")
+        memory["app_name"] = memory.get("app_name") or app.get("name", "")
+
+        app_name = memory.get("app_name") or app.get("name", app_id)
+        repo = get_campaign_repo(tenant_id=tenant_id)
+        existing_count = len(repo.list(tenant_id=tenant_id))
+        bundle.display_name = f"Post {existing_count + 1} — {app_name}"
+
+        # Stap 2: Idee genereren
+        progress("Stap 2/3: Post-idee genereren...")
+        idea_agent = IdeaGeneratorAgent()
+        with ThreadPoolExecutor(max_workers=1) as _pool:
+            _f = _pool.submit(
+                idea_agent.run,
+                app=app,
+                memory=memory,
+                platform=platform,
+                recent_titles=[],
+                custom_brief=f"Kort {post_type} post — geen script of video nodig",
+            )
+            try:
+                ideas = _f.result(timeout=120)
+            except TimeoutError:
+                raise RuntimeError("Idee generatie timeout (>2 min) — probeer opnieuw")
+        total_cost += idea_agent.total_cost_usd
+        guardrails.record_cost(idea_agent.total_cost_usd, "IdeaGeneratorAgent", bundle.id)
+
+        if not ideas:
+            raise RuntimeError("Geen ideeën gegenereerd")
+        if isinstance(ideas, dict):
+            ideas = next((v for v in ideas.values() if isinstance(v, list)), list(ideas.values()))
+        if not isinstance(ideas, list):
+            raise RuntimeError(f"IdeaGeneratorAgent retourneerde ongeldig type: {type(ideas).__name__}")
+        ideas = [i for i in ideas if isinstance(i, dict) and i.get("title")]
+        if not ideas:
+            raise RuntimeError("Geen geldige ideeën (geen dicts met 'title')")
+
+        chosen_idea = ideas[0]
+        bundle.idea = chosen_idea
+        progress(f"  > Idee: '{chosen_idea.get('title', '?')}'")
+
+        # Stap 2b (foto): één DALL-E afbeelding genereren
+        if post_type == "photo":
+            progress("Stap 2b/3: Afbeelding genereren (DALL-E)...")
+            try:
+                import openai as _openai
+                _client = _openai.OpenAI()
+                visual_prompt = (
+                    chosen_idea.get("visual_description")
+                    or chosen_idea.get("hook", "")
+                    or chosen_idea.get("title", "")
+                )
+                image_resp = _client.images.generate(
+                    model="dall-e-3",
+                    prompt=f"{visual_prompt[:900]} — high quality, social media marketing photo",
+                    size="1024x1024",
+                    quality="standard",
+                    n=1,
+                )
+                image_url = image_resp.data[0].url
+                bundle.thumbnail_path = image_url
+                # Voeg image_url ook toe aan idea zodat Facebook publisher het vindt
+                bundle.idea = {**chosen_idea, "image_url": image_url}
+                # DALL-E 3 standaard kosten: ~$0.04 per afbeelding
+                total_cost += 0.04
+                guardrails.record_cost(0.04, "DALL-E-3", bundle.id)
+                progress(f"  > Afbeelding gegenereerd")
+            except Exception as img_err:
+                logger.warning(f"[Pipeline] DALL-E afbeelding mislukt (niet kritiek): {img_err}")
+
+        # Stap 3: Caption schrijven
+        progress("Stap 3/3: Caption schrijven...")
+        caption_agent = CaptionWriterAgent()
+        caption = caption_agent.run(
+            script={},
+            app=app,
+            memory=memory,
+            platform=platform,
+            post_goal=chosen_idea.get("goal", "awareness"),
+        )
+        bundle.caption = caption
+        total_cost += caption_agent.total_cost_usd
+        guardrails.record_cost(caption_agent.total_cost_usd, "CaptionWriterAgent", bundle.id)
+        progress("  > Caption klaar!")
+
+        bundle.total_cost_usd = total_cost
+        bundle.status = CampaignStatus.PENDING_APPROVAL
+        save_bundle(bundle, tenant_id=tenant_id)
+
+        progress(
+            f"[OK] {post_type.capitalize()} post klaar! ID={bundle.id} | "
+            f"Kosten=${total_cost:.4f} | Status=WACHT OP GOEDKEURING"
+        )
+
+    except Exception as e:
+        bundle.status = CampaignStatus.FAILED
+        bundle.total_cost_usd = total_cost
+        bundle.approval_notes = f"Pipeline fout: {str(e)[:200]}"
+        logger.error(f"run_post_pipeline mislukt voor {app_id} ({post_type}): {e}")
+        save_bundle(bundle, tenant_id=tenant_id)
+        raise
+
+    return bundle
+
+
 def _enforce_echo_loop(script: dict) -> dict:
     """
     Garandeert dat de allerlaatste zin van scene 4 een echo-vraag is die
@@ -715,8 +870,9 @@ def _score_and_pick_idea(ideas: list[dict], idea_index: int, memory: dict) -> di
 
     top_hooks = [h.lower() for h in memory.get("top_performing_hooks", [])]
     avoided = [a.lower() for a in memory.get("avoided_topics", [])]
+    perf_history = memory.get("performance_history", {})
     best_format = (
-        memory.get("performance_history", {}).get("best_post_type", "")
+        (perf_history.get("best_post_type", "") if isinstance(perf_history, dict) else "")
         or memory.get("content_formats", {}).get("best_performing", "")
     ).lower()
 

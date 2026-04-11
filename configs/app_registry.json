@@ -20,11 +20,12 @@
       "id": "app_b906968f",
       "name": "GLP Coach",
       "url": "https://glpcoach.nl",
-      "description": "GLP-1/Ozempic coaching app voor gewichtsverlies",
-      "target_audience": "",
-      "usp": "",
+      "description": "Leefstijl coaching app voor duurzaam gewichtsverlies via gepersonaliseerde voedings- en bewegingsbegeleiding",
+      "target_audience": "Mensen 30-60 jaar met overgewicht die professionele leefstijlbegeleiding zoeken voor duurzame resultaten",
+      "usp": "Persoonlijke coaching: voeding, beweging en mindset gecombineerd voor blijvend gewichtsverlies",
       "niche": "health",
       "active_channels": [
+        "facebook",
         "tiktok"
       ],
       "active": true,
