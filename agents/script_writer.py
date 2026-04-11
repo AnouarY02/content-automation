@@ -7,6 +7,7 @@ from loguru import logger
 
 from agents.base_agent import BaseAgent
 from agents import brand_memory as bm
+from analytics.feedback_injector import load_agent_context
 
 
 class ScriptWriterAgent(BaseAgent):
@@ -105,7 +106,13 @@ class ScriptWriterAgent(BaseAgent):
             },
         )
 
-        system = self._build_system_prompt()
+        # Injecteer script-optimalisatie patronen uit eerdere performance-data
+        try:
+            feedback_ctx = load_agent_context(app.get("id", ""), "script_writer")
+        except Exception:
+            feedback_ctx = ""
+
+        system = self._build_system_prompt(extra=feedback_ctx)
         raw = self._call_api(system, prompt)
         script = self._parse_json_response(raw, default={})
 

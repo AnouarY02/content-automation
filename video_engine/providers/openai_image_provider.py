@@ -441,7 +441,8 @@ class OpenAIImageProvider:
 
         # Crossfade keten
         if n == 1:
-            filters.append(f"[v0]trim=duration={durations[0]},setpts=PTS-STARTPTS[vblend]")
+            # Geen trim — input heeft al -t duration; trim+setpts geeft lege output
+            filters.append(f"[v0]setpts=PTS-STARTPTS[vblend]")
         else:
             prev = "v0"
             offset = durations[0] - crossfade

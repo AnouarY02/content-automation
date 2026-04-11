@@ -212,9 +212,10 @@ async function refreshTab(tab) {
 }
 
 async function loadBadges() {
-  const [pending, alerts] = await Promise.all([
+  const [pending, alerts, daily] = await Promise.all([
     api('/api/campaigns/pending'),
     api('/api/health/alerts'),
+    api('/api/costs/daily'),
   ]);
   const bp = document.getElementById('badge-pending');
   if (pending && pending.length > 0) { bp.textContent = pending.length; bp.classList.remove('hidden'); }
@@ -223,6 +224,28 @@ async function loadBadges() {
   const ba = document.getElementById('badge-alerts');
   if (alerts && Array.isArray(alerts) && alerts.length > 0) { ba.textContent = alerts.length; ba.classList.remove('hidden'); }
   else ba.classList.add('hidden');
+
+  // Budget waarschuwing banner
+  _updateBudgetBanner(daily);
+}
+
+function _updateBudgetBanner(daily) {
+  const banner = document.getElementById('budget-warning-banner');
+  if (!banner || !daily) return;
+  const spent = daily.total_usd || 0;
+  const limit = daily.daily_limit_usd || 1;
+  const pct = (spent / limit) * 100;
+  if (pct >= 80) {
+    const color = pct >= 100 ? 'bg-danger/10 border-danger/30 text-danger' : 'bg-warning/10 border-warning/30 text-warning';
+    banner.className = `border-l-4 rounded-lg px-4 py-2.5 text-xs font-medium flex items-center justify-between ${color}`;
+    banner.innerHTML = `
+      <span>${pct >= 100 ? '🚨 Dagbudget overschreden!' : '⚠️ Dagbudget bijna bereikt'} — $${spent.toFixed(3)} / $${limit.toFixed(2)} (${Math.round(pct)}%)</span>
+      <a onclick="switchTab('costs')" class="underline cursor-pointer opacity-70 hover:opacity-100 ml-4">Bekijk kosten</a>
+    `;
+    banner.classList.remove('hidden');
+  } else {
+    banner.classList.add('hidden');
+  }
 }
 
 // ═══════ OVERVIEW TAB ════════════════════════════════════════════════
@@ -781,20 +804,36 @@ async function showCampaignDetail(id) {
         </div>
       </div></div>` : ''}
     ${data.status === 'pending_approval' ? `
-    <div class="mt-4 p-4 bg-bg rounded-lg border border-border">
-      <h4 class="text-xs text-muted uppercase tracking-wider mb-3">Goedkeuring</h4>
-      <div class="mb-3">
-        <label class="text-xs text-muted block mb-1">Notities (optioneel)</label>
-        <textarea id="approval-notes" placeholder="Feedback of opmerkingen..." class="w-full text-sm" rows="2"></textarea>
+    <div class="mt-4 p-4 bg-bg rounded-lg border border-border space-y-3">
+      <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+        <svg class="w-3.5 h-3.5 text-warning" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        Goedkeuring vereist
+      </h4>
+
+      <!-- Inplannen (optioneel) -->
+      <div>
+        <label class="text-xs text-muted block mb-1 font-medium">Inplannen op (optioneel — leeg = direct publiceren)</label>
+        <input type="datetime-local" id="schedule-for-${data.id}" class="w-full text-xs" min="${new Date().toISOString().slice(0,16)}">
       </div>
+
+      <!-- Notities -->
+      <div>
+        <label class="text-xs text-muted block mb-1 font-medium">Notities (optioneel)</label>
+        <textarea id="approval-notes" placeholder="Feedback of wijzigingsverzoeken..." class="w-full text-xs resize-none" rows="2"></textarea>
+      </div>
+
+      <!-- Knoppen -->
       <div class="flex gap-2">
-        <button onclick="approveCampaign('${data.id}')" class="btn btn-success flex-1">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-          Goedkeuren
+        <button onclick="approveCampaign('${data.id}')" class="btn btn-success flex-1 text-xs">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+          Goedkeuren & Publiceren
         </button>
-        <button onclick="rejectCampaign('${data.id}')" class="btn btn-danger flex-1">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
-          Afwijzen
+        <button onclick="requestChangesCampaign('${data.id}')" class="btn btn-outline flex-1 text-xs">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          Wijzigingen vragen
+        </button>
+        <button onclick="rejectCampaign('${data.id}')" class="btn btn-danger text-xs px-3">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
     </div>` : ''}
@@ -841,24 +880,49 @@ async function showCampaignDetail(id) {
 
 async function approveCampaign(campaignId) {
   const notes = document.getElementById('approval-notes')?.value || '';
+  const scheduleEl = document.getElementById(`schedule-for-${campaignId}`);
+  const scheduledFor = scheduleEl?.value ? new Date(scheduleEl.value).toISOString() : null;
+
+  const body = { campaign_id: campaignId, decision: 'approve', notes };
+  if (scheduledFor) body.scheduled_for = scheduledFor;
+
   const res = await api('/api/approvals/decide', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ campaign_id: campaignId, decision: 'approve', notes }),
+    body: JSON.stringify(body),
   });
   if (res) {
-    toast('Campagne goedgekeurd!', 'success');
+    const msg = scheduledFor
+      ? `Campagne ingepland voor ${new Date(scheduledFor).toLocaleString('nl-NL')}!`
+      : 'Campagne goedgekeurd en wordt gepubliceerd!';
+    toast(msg, 'success');
     closeCampaignDetail();
-    loadCampaigns();
-    loadBadges();
+    loadCampaigns(); loadBadges();
   } else {
     toast('Goedkeuring mislukt', 'error');
   }
 }
 
+async function requestChangesCampaign(campaignId) {
+  const notes = document.getElementById('approval-notes')?.value || '';
+  if (!notes.trim()) { toast('Beschrijf welke wijzigingen je wilt', 'warning'); return; }
+  const res = await api('/api/approvals/decide', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ campaign_id: campaignId, decision: 'request_changes', notes }),
+  });
+  if (res) {
+    toast('Campagne teruggestuurd voor wijzigingen', 'info');
+    closeCampaignDetail(); loadCampaigns(); loadBadges();
+  } else {
+    toast('Verzoek mislukt', 'error');
+  }
+}
+
 async function rejectCampaign(campaignId) {
   const notes = document.getElementById('approval-notes')?.value || '';
-  if (!notes.trim()) { toast('Vul een reden in bij notities', 'warning'); return; }
+  if (!notes.trim()) { toast('Vul een afwijzingsreden in bij notities', 'warning'); return; }
+  if (!confirm('Campagne definitief afwijzen?')) return;
   const res = await api('/api/approvals/decide', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
@@ -866,9 +930,7 @@ async function rejectCampaign(campaignId) {
   });
   if (res) {
     toast('Campagne afgewezen', 'info');
-    closeCampaignDetail();
-    loadCampaigns();
-    loadBadges();
+    closeCampaignDetail(); loadCampaigns(); loadBadges();
   } else {
     toast('Afwijzing mislukt', 'error');
   }
@@ -1475,6 +1537,29 @@ function loadInsightsTab() {
   if (currentApp) { sel.value = currentApp; loadInsights(); }
 }
 
+function _confidenceBadge(conf) {
+  const map = { high: 'bg-success/15 text-success', medium: 'bg-warning/15 text-warning', low: 'bg-gray-100 text-muted' };
+  const labels = { high: 'Hoog', medium: 'Medium', low: 'Laag' };
+  const cls = map[conf] || map.low;
+  return `<span class="inline-block text-[0.6rem] font-semibold px-1.5 py-0.5 rounded ${cls} uppercase tracking-wider">${labels[conf] || conf}</span>`;
+}
+
+function _categoryIcon(cat) {
+  const icons = {
+    hook: '🎣', content_format: '📋', video_type: '🎬', cta: '👆', caption: '✍️',
+    timing: '⏰', duration: '⏱️', voice: '🎙️', music: '🎵',
+  };
+  return icons[cat] || '📌';
+}
+
+function _categoryLabel(cat) {
+  const labels = {
+    hook: 'Hook', content_format: 'Formaat', video_type: 'Videotype', cta: 'CTA',
+    caption: 'Caption', timing: 'Timing', duration: 'Duur', voice: 'Stem', music: 'Muziek',
+  };
+  return labels[cat] || cat;
+}
+
 async function loadInsights() {
   const appId = document.getElementById('insights-app-filter').value;
   const container = document.getElementById('insights-content');
@@ -1487,79 +1572,133 @@ async function loadInsights() {
     return;
   }
 
-  container.innerHTML = '<div class="text-center py-8"><div class="skeleton h-8 w-48 mx-auto"></div></div>';
+  container.innerHTML = `<div class="grid grid-cols-4 gap-3">
+    ${[1,2,3,4].map(() => '<div class="card p-4"><div class="skeleton h-8 w-12 mb-1"></div><div class="skeleton h-3 w-20"></div></div>').join('')}
+  </div>`;
 
-  const data = await api(`/api/apps/${appId}/insights`);
-  if (!data) {
-    container.innerHTML = '<div class="card p-8 text-center text-muted"><p>Geen leerinzichten beschikbaar</p></div>';
-    return;
-  }
+  const [ldata, idata] = await Promise.all([
+    api(`/api/apps/${appId}/learnings`),
+    api(`/api/apps/${appId}/insights`),
+  ]);
+
+  const learnings = ldata?.learnings || [];
+  const benchmark = ldata?.benchmark || {};
+  const positives = learnings.filter(l => l.type === 'positive');
+  const negatives = learnings.filter(l => l.type === 'negative');
+  const highConf = learnings.filter(l => l.confidence === 'high');
+
+  // Groepeer per categorie
+  const byCategory = {};
+  learnings.forEach(l => {
+    if (!byCategory[l.category]) byCategory[l.category] = [];
+    byCategory[l.category].push(l);
+  });
 
   container.innerHTML = `
-    <div class="grid grid-cols-4 gap-3">
+    <!-- KPI Strip -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <div class="card p-4 text-center">
-        <div class="kpi-value text-lg text-accent">${data.insights_count}</div>
-        <div class="kpi-label">Geleerde Lessen</div>
+        <div class="kpi-value text-xl text-accent">${learnings.length}</div>
+        <div class="kpi-label">Actieve Lessen</div>
       </div>
       <div class="card p-4 text-center">
-        <div class="kpi-value text-lg text-success">${data.top_hooks.length}</div>
-        <div class="kpi-label">Top Hooks</div>
+        <div class="kpi-value text-xl text-success">${positives.length}</div>
+        <div class="kpi-label">Wat Werkt</div>
       </div>
       <div class="card p-4 text-center">
-        <div class="kpi-value text-lg text-danger">${data.avoided_topics.length}</div>
-        <div class="kpi-label">Vermijdingen</div>
+        <div class="kpi-value text-xl text-danger">${negatives.length}</div>
+        <div class="kpi-label">Wat Niet Werkt</div>
       </div>
       <div class="card p-4 text-center">
-        <div class="text-sm font-semibold">${data.best_format || '-'}</div>
-        <div class="kpi-label">Beste Formaat</div>
+        <div class="kpi-value text-xl text-warning">${highConf.length}</div>
+        <div class="kpi-label">Hoog Vertrouwen</div>
       </div>
     </div>
 
+    <!-- Benchmark strip (als data beschikbaar) -->
+    ${benchmark.total_posts > 0 ? `
+    <div class="card p-4">
+      <div class="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Benchmark — ${ldata.total_posts_analyzed} posts geanalyseerd</div>
+      <div class="grid grid-cols-4 gap-4">
+        <div><div class="text-lg font-bold">${benchmark.avg_score || 0}</div><div class="text-xs text-muted">Gem. Score</div></div>
+        <div><div class="text-lg font-bold">${(benchmark.avg_views||0).toLocaleString()}</div><div class="text-xs text-muted">Gem. Views</div></div>
+        <div><div class="text-lg font-bold text-success">${benchmark.best_score || 0}</div><div class="text-xs text-muted">Best Score</div></div>
+        <div><div class="text-lg font-bold">${benchmark.total_posts || 0}</div><div class="text-xs text-muted">Totaal Posts</div></div>
+      </div>
+    </div>` : ''}
+
+    <!-- Learnings per categorie -->
+    ${Object.keys(byCategory).length > 0 ? `
+    <div class="space-y-3">
+      <h3 class="text-sm font-semibold text-gray-900">Geleerde Patronen per Categorie</h3>
+      ${Object.entries(byCategory).map(([cat, items]) => `
+        <div class="card p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-base">${_categoryIcon(cat)}</span>
+            <span class="text-sm font-semibold">${_categoryLabel(cat)}</span>
+            <span class="text-xs text-muted ml-auto">${items.length} les${items.length !== 1 ? 'sen' : ''}</span>
+          </div>
+          <div class="space-y-2">
+            ${items.map(l => `
+              <div class="flex items-start gap-3 py-2 border-b border-border/40 last:border-0">
+                <span class="mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${l.type === 'positive' ? 'bg-success' : l.type === 'negative' ? 'bg-danger' : 'bg-muted'}"></span>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm leading-snug">${escapeHtml(l.finding)}</div>
+                  ${l.action ? `<div class="text-xs text-muted mt-0.5">→ ${escapeHtml(l.action)}</div>` : ''}
+                </div>
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                  ${_confidenceBadge(l.confidence)}
+                  ${l.times_confirmed > 1 ? `<span class="text-[0.6rem] text-muted">×${l.times_confirmed}</span>` : ''}
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>`).join('')}
+    </div>` : `
+    <div class="card p-8 text-center text-muted">
+      <div class="text-3xl mb-3">🧠</div>
+      <p class="text-sm font-medium text-gray-700 mb-1">Nog geen patronen geleerd</p>
+      <p class="text-xs">Start campagnes en publiceer content — de AI leert automatisch van elke post die 24u+ live is.</p>
+    </div>`}
+
+    <!-- Brand Memory snippets uit insights API -->
+    ${idata ? `
     <div class="grid grid-cols-2 gap-4">
+      ${(idata.top_hooks||[]).length > 0 ? `
       <div class="card p-5">
-        <h3 class="text-sm font-semibold mb-3 text-muted uppercase tracking-wider">Best Presterende Hooks</h3>
-        ${data.top_hooks.length > 0 ? data.top_hooks.map(h => `
-          <div class="flex items-center gap-2 py-2 border-b border-border/40 last:border-0">
-            <span class="w-2 h-2 rounded-full bg-success flex-shrink-0"></span>
-            <span class="text-sm">${h}</span>
-          </div>`).join('') : '<p class="text-sm text-muted">Nog geen top hooks — start campagnes om data te verzamelen</p>'}
-      </div>
-
+        <h3 class="text-xs font-semibold text-muted uppercase tracking-wider mb-3">🎣 Bewezen Hooks</h3>
+        ${idata.top_hooks.slice(0,5).map(h => `
+          <div class="flex items-center gap-2 py-1.5 border-b border-border/40 last:border-0">
+            <span class="w-1.5 h-1.5 rounded-full bg-success flex-shrink-0"></span>
+            <span class="text-xs">${escapeHtml(h)}</span>
+          </div>`).join('')}
+      </div>` : ''}
+      ${(idata.avoided_topics||[]).length > 0 ? `
       <div class="card p-5">
-        <h3 class="text-sm font-semibold mb-3 text-muted uppercase tracking-wider">Vermijdingen</h3>
-        ${data.avoided_topics.length > 0 ? data.avoided_topics.map(t => `
-          <div class="flex items-center gap-2 py-2 border-b border-border/40 last:border-0">
-            <span class="w-2 h-2 rounded-full bg-danger flex-shrink-0"></span>
-            <span class="text-sm">${t}</span>
-          </div>`).join('') : '<p class="text-sm text-muted">Geen vermijdingen gedefinieerd</p>'}
-      </div>
-    </div>
+        <h3 class="text-xs font-semibold text-muted uppercase tracking-wider mb-3">⛔ Vermijdingen</h3>
+        ${idata.avoided_topics.slice(0,5).map(t => `
+          <div class="flex items-center gap-2 py-1.5 border-b border-border/40 last:border-0">
+            <span class="w-1.5 h-1.5 rounded-full bg-danger flex-shrink-0"></span>
+            <span class="text-xs">${escapeHtml(t)}</span>
+          </div>`).join('')}
+      </div>` : ''}
+    </div>` : ''}
 
-    <div class="grid grid-cols-3 gap-4">
-      <div class="card p-4">
-        <div class="text-xs text-muted uppercase tracking-wider mb-1">Tone of Voice</div>
-        <div class="text-sm font-medium">${data.tone_of_voice || 'Niet ingesteld'}</div>
+    <!-- Meta info -->
+    ${idata ? `
+    <div class="grid grid-cols-3 gap-3">
+      <div class="card p-3">
+        <div class="text-[0.65rem] text-muted uppercase tracking-wider mb-1">Tone of Voice</div>
+        <div class="text-xs font-medium">${idata.tone_of_voice || 'Niet ingesteld'}</div>
       </div>
-      <div class="card p-4">
-        <div class="text-xs text-muted uppercase tracking-wider mb-1">Optimale Posttijd</div>
-        <div class="text-sm font-medium">${data.optimal_post_time || 'Niet bepaald'}</div>
+      <div class="card p-3">
+        <div class="text-[0.65rem] text-muted uppercase tracking-wider mb-1">Optimale Posttijd</div>
+        <div class="text-xs font-medium">${idata.optimal_post_time || 'Niet bepaald'}</div>
       </div>
-      <div class="card p-4">
-        <div class="text-xs text-muted uppercase tracking-wider mb-1">Laatst Bijgewerkt</div>
-        <div class="text-sm font-medium">${data.last_updated || 'Nooit'}</div>
+      <div class="card p-3">
+        <div class="text-[0.65rem] text-muted uppercase tracking-wider mb-1">Beste Formaat</div>
+        <div class="text-xs font-medium">${idata.best_format || '-'}</div>
       </div>
-    </div>
-
-    <div class="card p-5">
-      <h3 class="text-sm font-semibold mb-3 text-muted uppercase tracking-wider">Geleerde Lessen (Tijdlijn)</h3>
-      <div class="space-y-2 max-h-80 overflow-y-auto">
-        ${data.insights.length > 0 ? [...data.insights].reverse().map(ins => `
-          <div class="flex items-start gap-3 py-2 border-b border-border/40 last:border-0">
-            <span class="text-[0.65rem] text-muted whitespace-nowrap mt-0.5">${ins.date || '?'}</span>
-            <span class="text-sm">${ins.insight || ''}</span>
-          </div>`).join('') : '<p class="text-sm text-muted">Nog geen geleerde lessen — de AI leert automatisch van campagne-resultaten</p>'}
-      </div>
-    </div>
+    </div>` : ''}
   `;
 }
 

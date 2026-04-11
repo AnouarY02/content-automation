@@ -575,6 +575,40 @@ def publish_campaign(
         raise HTTPException(status_code=500, detail=f"Publicatie mislukt: {str(e)}")
 
 
+@router.post("/{campaign_id}/schedule")
+def schedule_campaign(
+    campaign_id: str,
+    body: dict,
+    tenant_id: str = Query("default", description="Tenant identifier"),
+):
+    """
+    Plan een goedgekeurde campagne in op een specifiek tijdstip.
+    Body: { "scheduled_for": "2026-04-12T18:00:00" }
+    """
+    from datetime import datetime as _dt
+    _safe_id(campaign_id, "campaign_id")
+    repo = get_campaign_repo(tenant_id=tenant_id)
+    bundle = repo.get(campaign_id, tenant_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail=f"Campagne {campaign_id} niet gevonden")
+
+    scheduled_for_str = body.get("scheduled_for")
+    if not scheduled_for_str:
+        raise HTTPException(status_code=400, detail="scheduled_for is verplicht")
+    try:
+        scheduled_for = _dt.fromisoformat(scheduled_for_str.replace("Z", "+00:00"))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Ongeldige datetime format — gebruik ISO 8601")
+
+    if scheduled_for <= _dt.utcnow():
+        raise HTTPException(status_code=400, detail="scheduled_for moet in de toekomst zijn")
+
+    bundle.scheduled_for = scheduled_for
+    repo.save(bundle)
+    logger.info(f"[Campaigns] Campagne {campaign_id} ingepland op {scheduled_for.isoformat()}")
+    return {"status": "scheduled", "campaign_id": campaign_id, "scheduled_for": scheduled_for.isoformat()}
+
+
 @router.post("/{campaign_id}/regenerate-video")
 def regenerate_video(
     campaign_id: str,

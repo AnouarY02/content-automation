@@ -121,6 +121,15 @@ class VideoOrchestrator:
             return None
 
     @staticmethod
+    def _is_low_memory_env() -> bool:
+        """Detecteer Railway of andere low-memory omgevingen (512MB RAM)."""
+        return bool(
+            os.getenv("RAILWAY_ENVIRONMENT")
+            or os.getenv("RAILWAY_PROJECT_ID")
+            or os.getenv("RAILWAY_SERVICE_ID")
+        )
+
+    @staticmethod
     def _allow_degraded_video() -> bool:
         raw = os.getenv("ALLOW_DEGRADED_VIDEO", "").strip().lower()
         if raw:
@@ -181,24 +190,31 @@ class VideoOrchestrator:
         """Geef fallback providers na een gefaalde provider."""
         allow_degraded = self._allow_degraded_video()
 
+        low_mem = self._is_low_memory_env()
+
         if not allow_degraded:
             # Productie: alleen waardige fallbacks, geen gradient-slideshow
             if failed_provider == "did":
-                return ["openai_image"] if self._has_openai() else (["pro"] if self._has_pexels() else [])
+                return ["openai_image"] if self._has_openai() else ([] if low_mem else (["pro"] if self._has_pexels() else []))
             if failed_provider == "openai_image":
+                # Pro is te zwaar voor Railway 512MB — skip naar ffmpeg
+                if low_mem:
+                    return ["ffmpeg"]
                 return ["pro"] if self._has_pexels() else []
             return []
 
-        # Development: volledige fallback keten
+        # Development/low-mem: volledige fallback keten maar skip pro op Railway
         if failed_provider == "did":
             chain = []
             if self._has_openai():
                 chain.append("openai_image")
-            if self._has_pexels():
+            if self._has_pexels() and not low_mem:
                 chain.append("pro")
             chain.append("ffmpeg")
             return chain
         elif failed_provider == "openai_image":
+            if low_mem:
+                return ["ffmpeg"]  # pro OOM-killed op Railway 512MB
             return (["pro", "ffmpeg"] if self._has_pexels() else ["ffmpeg"])
         elif failed_provider == "pro":
             return ["ffmpeg"]

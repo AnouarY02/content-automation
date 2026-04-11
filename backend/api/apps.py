@@ -201,6 +201,53 @@ def analyze_app_url(app_id: str, req: AnalyzeURLRequest | None = None):
     return {"app": app, "analysis": result, "fields_updated": list(update_fields.keys())}
 
 
+@router.get("/{app_id}/learnings")
+def get_app_learnings(app_id: str):
+    """
+    Haal de volledige LearningStore op voor een app.
+    Bevat alle geleerde patronen met confidence-niveaus en categorieën.
+    """
+    from analytics.metrics_store import MetricsStore
+    from workflows.feedback_loop import get_learning_summary
+    ms = MetricsStore()
+    try:
+        store = ms.load_learning_store(app_id)
+        benchmark = ms.load_benchmark(app_id)
+        active = store.active_learnings()
+        summary = get_learning_summary(app_id)
+    except Exception:
+        return {"app_id": app_id, "learnings": [], "summary": {}, "benchmark": {}}
+
+    return {
+        "app_id": app_id,
+        "total_posts_analyzed": store.total_posts_analyzed,
+        "active_learnings_count": len(active),
+        "learnings": [
+            {
+                "id": l.id,
+                "category": l.category,
+                "type": l.type,
+                "finding": l.finding,
+                "action": l.action,
+                "confidence": l.confidence.value,
+                "times_confirmed": l.times_confirmed,
+                "sample_size": l.sample_size,
+                "created_at": l.created_at.isoformat() if hasattr(l.created_at, 'isoformat') else str(l.created_at),
+                "last_confirmed_at": l.last_confirmed_at.isoformat() if hasattr(l.last_confirmed_at, 'isoformat') else str(l.last_confirmed_at),
+                "evidence": l.evidence,
+            }
+            for l in sorted(active, key=lambda x: x.times_confirmed, reverse=True)
+        ],
+        "benchmark": {
+            "avg_score": round(benchmark.avg_composite_score, 1),
+            "avg_views": int(benchmark.avg_views),
+            "total_posts": benchmark.total_posts,
+            "best_score": round(benchmark.best_score, 1),
+        },
+        "summary": summary,
+    }
+
+
 @router.get("/{app_id}/insights")
 def get_app_insights(app_id: str):
     """

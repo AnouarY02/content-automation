@@ -18,6 +18,7 @@ from loguru import logger
 
 from agents.base_agent import BaseAgent
 from agents import brand_memory as bm
+from analytics.feedback_injector import load_agent_context
 
 ROOT = Path(__file__).parent.parent
 
@@ -145,7 +146,13 @@ class IdeaGeneratorAgent(BaseAgent):
         # Voeg diversiteits-blokken toe aan het einde van de prompt
         prompt += exclusion_str + brief_str + angle_str
 
-        system = self._build_system_prompt()
+        # Injecteer geleerde patronen uit eerdere campagne-performance
+        try:
+            feedback_ctx = load_agent_context(app.get("id", ""), "idea_generator")
+        except Exception:
+            feedback_ctx = ""
+
+        system = self._build_system_prompt(extra=feedback_ctx)
         raw = self._call_api(system, prompt)
 
         ideas = self._parse_json_response(raw, default=[])

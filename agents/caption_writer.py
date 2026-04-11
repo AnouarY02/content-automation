@@ -7,6 +7,7 @@ import json
 from loguru import logger
 
 from agents.base_agent import BaseAgent
+from analytics.feedback_injector import load_agent_context
 
 
 def _build_persona_context(memory: dict) -> str:
@@ -62,7 +63,13 @@ class CaptionWriterAgent(BaseAgent):
             },
         )
 
-        system = self._build_system_prompt()
+        # Injecteer caption-optimalisatie patronen uit eerdere performance-data
+        try:
+            feedback_ctx = load_agent_context(app.get("id", ""), "caption_writer")
+        except Exception:
+            feedback_ctx = ""
+
+        system = self._build_system_prompt(extra=feedback_ctx)
         raw = self._call_api(system, prompt)
         result = self._parse_json_response(raw, default={})
 

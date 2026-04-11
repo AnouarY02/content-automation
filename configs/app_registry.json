@@ -15,6 +15,22 @@
       "active": true,
       "brand_memory_file": "data/brand_memory/app_76fe2fdd.json",
       "created_at": "2026-03-11T11:38:46.693368"
+    },
+    {
+      "id": "app_b906968f",
+      "name": "GLP Coach",
+      "url": "https://glpcoach.nl",
+      "description": "GLP-1/Ozempic coaching app voor gewichtsverlies",
+      "target_audience": "",
+      "usp": "",
+      "niche": "health",
+      "active_channels": [
+        "tiktok"
+      ],
+      "active": true,
+      "brand_memory_file": "data/brand_memory/app_b906968f.json",
+      "created_at": "2026-04-11T10:59:43.823326",
+      "tenant_id": "default"
     }
   ]
 }
