@@ -1530,6 +1530,24 @@ function renderCostsChart(monthly, limit) {
 }
 
 // ═══════ INSIGHTS TAB ═════════════════════════════════════════════════
+async function triggerWeeklyAnalysis() {
+  const appId = document.getElementById('insights-app-filter').value;
+  if (!appId) { toast('Selecteer eerst een app', 'warning'); return; }
+  const btn = document.getElementById('btn-weekly-analysis');
+  btn.disabled = true;
+  btn.textContent = 'Analyseren...';
+  toast('Analyse gestart — dit duurt 10-30 seconden', 'info');
+  const res = await api(`/api/apps/${appId}/run-analysis`, { method: 'POST', _timeout: 60000 });
+  btn.disabled = false;
+  btn.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Analyse uitvoeren';
+  if (res) {
+    toast(`Analyse klaar — ${res.new_learnings || 0} nieuwe lessen`, 'success');
+    loadInsights();
+  } else {
+    toast('Analyse mislukt of geen data beschikbaar', 'warning');
+  }
+}
+
 function loadInsightsTab() {
   const sel = document.getElementById('insights-app-filter');
   sel.innerHTML = '<option value="">Selecteer app...</option>' +
@@ -2049,18 +2067,31 @@ async function renderCalendar() {
     html += '<div class="min-h-[70px] rounded p-1"></div>';
   }
 
+  // Also map scheduled_for dates
+  const scheduledByDate = {};
+  for (const c of camps) {
+    if (c.scheduled_for) {
+      const sDateStr = c.scheduled_for.slice(0,10);
+      if (!scheduledByDate[sDateStr]) scheduledByDate[sDateStr] = [];
+      scheduledByDate[sDateStr].push(c);
+    }
+  }
+
   // Day cells
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const isToday = dateStr === today;
+    const isPast = dateStr < today;
     const posts = byDate[dateStr] || [];
+    const scheduled = scheduledByDate[dateStr] || [];
     const publishedPosts = posts.filter(c => c.status === 'published');
     const pendingPosts = posts.filter(c => c.status === 'pending_approval');
 
-    html += `<div class="min-h-[70px] rounded p-1 border ${isToday ? 'border-accent bg-accent/5' : 'border-border hover:bg-gray-50'} cursor-default">
-      <div class="text-[0.65rem] font-semibold ${isToday ? 'text-accent' : 'text-gray-500'} mb-1">${d}</div>
-      ${publishedPosts.map(c => `<div class="text-[0.55rem] px-1 py-0.5 rounded mb-0.5 truncate font-medium text-white" style="background:${platformColor(c.platform)}" title="${escapeHtml(c.idea?.title||'')}">${platformIcon(c.platform)} ${escapeHtml((c.idea?.title||'Post').slice(0,12))}</div>`).join('')}
-      ${pendingPosts.map(c => `<div class="text-[0.55rem] px-1 py-0.5 rounded mb-0.5 truncate font-medium border border-warning text-warning" title="${escapeHtml(c.idea?.title||'')}">${escapeHtml((c.idea?.title||'Review').slice(0,12))}</div>`).join('')}
+    html += `<div class="min-h-[70px] rounded p-1 border ${isToday ? 'border-accent bg-accent/5' : isPast ? 'border-border/40 bg-gray-50/50' : 'border-border hover:bg-gray-50'} cursor-default">
+      <div class="text-[0.65rem] font-semibold ${isToday ? 'text-accent' : isPast ? 'text-gray-300' : 'text-gray-500'} mb-1">${d}</div>
+      ${publishedPosts.map(c => `<div class="text-[0.55rem] px-1 py-0.5 rounded mb-0.5 truncate font-medium text-white" style="background:${platformColor(c.platform)}" title="${escapeHtml(c.idea?.title||'')}">${platformIcon(c.platform)} ${escapeHtml((c.idea?.title||'Post').slice(0,10))}</div>`).join('')}
+      ${pendingPosts.map(c => `<div class="text-[0.55rem] px-1 py-0.5 rounded mb-0.5 truncate font-medium border border-warning text-warning bg-warning/5" title="${escapeHtml(c.idea?.title||'')}">${escapeHtml((c.idea?.title||'Review').slice(0,10))}</div>`).join('')}
+      ${scheduled.map(c => `<div class="text-[0.55rem] px-1 py-0.5 rounded mb-0.5 truncate font-medium border border-accent text-accent bg-accent/5" title="Ingepland: ${escapeHtml(c.idea?.title||'')} om ${c.scheduled_for?.slice(11,16)||''}">📅 ${escapeHtml((c.idea?.title||'Ingepland').slice(0,9))}</div>`).join('')}
     </div>`;
   }
 
@@ -2079,28 +2110,55 @@ function platformIcon(p) {
 
 async function loadCalendarPosts() {
   const camps = await api('/api/campaigns/') || [];
-  const sorted = [...camps]
-    .filter(c => c.status === 'published' || c.status === 'pending_approval' || c.status === 'generating')
-    .sort((a,b) => (b.created_at||'').localeCompare(a.created_at||''))
-    .slice(0,15);
+
+  // Scheduled posts (toekomstig)
+  const upcoming = [...camps]
+    .filter(c => c.scheduled_for && new Date(c.scheduled_for) > new Date())
+    .sort((a,b) => (a.scheduled_for||'').localeCompare(b.scheduled_for||''));
+
+  // Recente activiteit
+  const recent = [...camps]
+    .filter(c => c.status === 'published' || c.status === 'pending_approval')
+    .sort((a,b) => (b.published_at||b.created_at||'').localeCompare(a.published_at||a.created_at||''))
+    .slice(0,10);
 
   const platformBadges = { tiktok:'bg-gray-900 text-white', instagram:'bg-pink-500 text-white', facebook:'bg-blue-600 text-white', youtube:'bg-red-600 text-white' };
   const el = document.getElementById('calendar-posts-list');
 
-  if (!sorted.length) {
-    el.innerHTML = '<div class="text-xs text-gray-400 text-center py-4">Nog geen campagnes</div>';
-    return;
+  let html = '';
+
+  if (upcoming.length > 0) {
+    html += `<div class="text-[0.65rem] font-semibold text-muted uppercase tracking-wider mb-2">📅 Ingepland (${upcoming.length})</div>`;
+    html += upcoming.map(c => {
+      const title = (typeof c.idea === 'object' && c.idea?.title) ? c.idea.title : (c.display_name || 'Campagne');
+      const dt = new Date(c.scheduled_for);
+      const dtStr = dt.toLocaleDateString('nl-NL', {day:'numeric',month:'short'}) + ' ' + dt.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+      return `<div class="flex items-center gap-3 py-2 border-b border-border/60 last:border-0">
+        <span class="text-[0.6rem] font-bold px-1.5 py-0.5 rounded ${platformBadges[c.platform||'tiktok']||'bg-accent text-white'} flex-shrink-0">${(c.platform||'tiktok').toUpperCase().slice(0,2)}</span>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs font-medium truncate">${escapeHtml(title)}</div>
+          <div class="text-[0.65rem] text-accent font-medium">${dtStr}</div>
+        </div>
+        <span class="text-[0.6rem] bg-accent/10 text-accent px-1.5 py-0.5 rounded font-semibold">Ingepland</span>
+      </div>`;
+    }).join('');
+    if (recent.length > 0) html += '<div class="my-3 border-t border-border"></div>';
   }
 
-  el.innerHTML = sorted.map(c => {
-    const title = (typeof c.idea === 'object' && c.idea?.title) ? c.idea.title : (c.display_name || 'Campagne');
-    return `<div class="flex items-center gap-3 py-2 border-b border-border last:border-0">
-      <span class="text-[0.6rem] font-bold px-1.5 py-0.5 rounded ${platformBadges[c.platform||'tiktok']||'bg-gray-200'} flex-shrink-0">${(c.platform||'tiktok').toUpperCase().slice(0,2)}</span>
-      <div class="flex-1 min-w-0">
-        <div class="text-xs font-medium truncate">${escapeHtml(title)}</div>
-        <div class="text-[0.65rem] text-gray-400">${timeAgo(c.published_at || c.created_at)}</div>
-      </div>
-      <div>${statusBadge(c.status)}</div>
-    </div>`;
-  }).join('');
+  if (recent.length > 0) {
+    html += `<div class="text-[0.65rem] font-semibold text-muted uppercase tracking-wider mb-2">Recente activiteit</div>`;
+    html += recent.map(c => {
+      const title = (typeof c.idea === 'object' && c.idea?.title) ? c.idea.title : (c.display_name || 'Campagne');
+      return `<div class="flex items-center gap-3 py-2 border-b border-border/40 last:border-0">
+        <span class="text-[0.6rem] font-bold px-1.5 py-0.5 rounded ${platformBadges[c.platform||'tiktok']||'bg-gray-200'} flex-shrink-0">${(c.platform||'tiktok').toUpperCase().slice(0,2)}</span>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs font-medium truncate">${escapeHtml(title)}</div>
+          <div class="text-[0.65rem] text-gray-400">${timeAgo(c.published_at || c.created_at)}</div>
+        </div>
+        <div>${statusBadge(c.status)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  el.innerHTML = html || '<div class="text-xs text-gray-400 text-center py-4">Nog geen campagnes</div>';
 }

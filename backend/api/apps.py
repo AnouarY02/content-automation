@@ -248,6 +248,28 @@ def get_app_learnings(app_id: str):
     }
 
 
+@router.post("/{app_id}/run-analysis")
+def run_app_analysis(app_id: str):
+    """
+    Voer een handmatige wekelijkse analyse uit voor een app.
+    Analyseert alle beschikbare post-data en genereert/updatet learnings.
+    """
+    try:
+        from workflows.feedback_loop import run_weekly_analysis
+        result = run_weekly_analysis(app_id)
+        return {
+            "app_id": app_id,
+            "status": "completed",
+            "new_learnings": result.get("new_learnings", 0),
+            "posts_analyzed": result.get("posts_analyzed", 0),
+            "result": result,
+        }
+    except Exception as e:
+        from loguru import logger
+        logger.warning(f"[Apps] Analyse mislukt voor {app_id}: {e}")
+        return {"app_id": app_id, "status": "no_data", "new_learnings": 0, "message": str(e)}
+
+
 @router.get("/{app_id}/insights")
 def get_app_insights(app_id: str):
     """
