@@ -1278,6 +1278,22 @@ async function loadBriefSuggestions(appId) {
   }
 }
 
+const BRIEF_TEMPLATES = {
+  problem:  'Maak een video die een concreet probleem van de doelgroep blootlegt en laat zien hoe [product/dienst] dat oplost. Begin met het probleem, maak het urgent, dan de oplossing met bewijs.',
+  tutorial: 'Maak een stap-voor-stap tutorial die aantoont hoe [product/dienst] werkt. Wees concreet, visueel en eindig met een duidelijk resultaat dat de kijker wil bereiken.',
+  result:   'Maak een video met een concreet resultaat of bewijs. Gebruik cijfers, voor-na vergelijking, of getuigenis. Laat zien wat er bereikt is en hoe.',
+  myth:     'Ontkracht een veelgemaakte misvatting in de niche. Begin met de mythe die mensen geloven, leg uit waarom het fout is, en geef de correcte aanpak of inzicht.',
+  behind:   'Achter-de-schermen video: laat zien hoe [product/dienst/proces] echt werkt. Authentiek, informatief, vergroot vertrouwen en transparantie.',
+};
+
+function applyBriefTemplate(key) {
+  const ta = document.getElementById('campaign-custom-brief');
+  if (!ta || !BRIEF_TEMPLATES[key]) return;
+  ta.value = BRIEF_TEMPLATES[key];
+  ta.focus();
+  ta.setSelectionRange(0, 0);
+}
+
 function applySuggestion(idx) {
   const chips = document.getElementById('brief-suggestion-chips');
   const chip  = chips?.querySelectorAll('button')[idx];
@@ -1331,41 +1347,68 @@ async function generateIdeas() {
 function renderIdeaCards(ideas) {
   const container = document.getElementById('ideas-container');
   const goalColors = {
-    'awareness': 'text-blue-400 bg-blue-400/10 border-blue-400/20',
-    'consideration': 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20',
-    'conversie': 'text-green-400 bg-green-400/10 border-green-400/20',
+    'awareness':     'text-blue-600 bg-blue-50 border-blue-200',
+    'consideration': 'text-yellow-600 bg-yellow-50 border-yellow-200',
+    'conversie':     'text-green-600 bg-green-50 border-green-200',
+    'engagement':    'text-purple-600 bg-purple-50 border-purple-200',
   };
-  const perfColors = {
-    'high': 'text-green-400',
-    'medium': 'text-yellow-400',
-    'low': 'text-muted',
+  const perfMap = {
+    'high':   { color: '#16a34a', label: 'Hoog potentieel', bar: 90 },
+    'medium': { color: '#d97706', label: 'Gemiddeld',        bar: 60 },
+    'low':    { color: '#94a3b8', label: 'Standaard',        bar: 35 },
+  };
+  const cialdiniIcons = {
+    social_proof: '👥', scarcity: '⏰', authority: '🏆',
+    reciprocity: '🤝', commitment: '📌', unity: '🫂', liking: '❤️',
   };
 
-  container.innerHTML = ideas.map((idea, i) => `
-    <div class="idea-card group cursor-pointer bg-bg hover:bg-card border border-border hover:border-accent/40 rounded-lg p-3 transition-all duration-200"
+  container.innerHTML = ideas.map((idea, i) => {
+    const perf = perfMap[idea.estimated_performance] || perfMap.medium;
+    const cialdini = (idea.cialdini_triggers || []).slice(0, 3);
+    const hookLine = idea.hook_options?.[0] || idea.angle || '';
+    const psychMech = idea.psychological_mechanic || '';
+    const platformMech = idea.platform_specific_mechanic || '';
+
+    return `
+    <div class="idea-card group cursor-pointer border rounded-xl p-4 transition-all duration-200 hover:shadow-md"
+         style="border-color:#e2e8f0; background:white"
+         onmouseenter="this.style.borderColor='#7c3aed40'"
+         onmouseleave="this.style.borderColor='#e2e8f0'"
          onclick="selectIdea(${i})">
+
+      <!-- Header row -->
       <div class="flex items-start justify-between gap-2 mb-2">
-        <h4 class="font-semibold text-sm leading-tight">${idea.title || 'Naamloos'}</h4>
-        <span class="shrink-0 text-[0.6rem] font-medium px-1.5 py-0.5 rounded border ${goalColors[idea.goal] || 'text-muted bg-muted/10 border-muted/20'}">
-          ${idea.goal_label || idea.goal || ''}
+        <h4 class="font-semibold text-sm leading-snug text-gray-900">${escapeHtml(idea.title || 'Naamloos')}</h4>
+        <span class="shrink-0 text-[0.6rem] font-semibold px-1.5 py-0.5 rounded-full border ${goalColors[idea.goal] || 'text-gray-500 bg-gray-50 border-gray-200'}">
+          ${escapeHtml(idea.goal_label || idea.goal || '')}
         </span>
       </div>
-      <p class="text-xs text-muted mb-2 line-clamp-2">${idea.angle || idea.core_message || ''}</p>
-      <div class="flex items-center gap-3 text-[0.65rem] text-muted">
-        <span class="flex items-center gap-1">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 4V2m0 2a2 2 0 012 2v1a2 2 0 01-2 2 2 2 0 01-2-2V6a2 2 0 012-2zm0 10v2m0-2a2 2 0 00-2-2H4a2 2 0 00-2 2 2 2 0 002 2h1a2 2 0 002-2zm10-10V2m0 2a2 2 0 012 2v1a2 2 0 01-2 2 2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
-          ${idea.format_label || idea.content_format || ''}
-        </span>
-        ${idea.estimated_performance ? `<span class="${perfColors[idea.estimated_performance] || 'text-muted'}">Verwacht: ${idea.estimated_performance}</span>` : ''}
-      </div>
-      ${idea.hook_options && idea.hook_options.length > 0 ? `
-        <div class="mt-2 pt-2 border-t border-border/50">
-          <p class="text-[0.6rem] text-muted uppercase tracking-wider mb-1">Hook voorbeeld:</p>
-          <p class="text-xs italic text-gray-600">"${idea.hook_options[0]}"</p>
+
+      <!-- Core angle -->
+      <p class="text-xs text-muted mb-2 line-clamp-2">${escapeHtml(idea.angle || idea.core_message || '')}</p>
+
+      <!-- Hook line -->
+      ${hookLine ? `<div class="text-xs italic text-gray-600 mb-2 pl-2 border-l-2 border-accent/40 line-clamp-2">"${escapeHtml(hookLine)}"</div>` : ''}
+
+      <!-- Psychological + platform mechanics -->
+      ${psychMech ? `<div class="text-[0.65rem] text-purple-600 mb-1.5">🧠 ${escapeHtml(psychMech.substring(0, 70))}${psychMech.length > 70 ? '…' : ''}</div>` : ''}
+      ${platformMech ? `<div class="text-[0.65rem] text-blue-600 mb-2">📱 ${escapeHtml(platformMech.substring(0, 60))}${platformMech.length > 60 ? '…' : ''}</div>` : ''}
+
+      <!-- Bottom row: performance bar + format + cialdini -->
+      <div class="flex items-center justify-between gap-2 mt-2">
+        <div class="flex items-center gap-1.5 flex-1 min-w-0">
+          <div class="flex-1 h-1 rounded-full" style="background:#e2e8f0; max-width:60px">
+            <div style="width:${perf.bar}%;height:100%;border-radius:9999px;background:${perf.color}"></div>
+          </div>
+          <span class="text-[0.6rem] font-medium shrink-0" style="color:${perf.color}">${perf.label}</span>
         </div>
-      ` : ''}
-    </div>
-  `).join('');
+        <div class="flex items-center gap-1 shrink-0">
+          ${cialdini.map(c => `<span title="${c}" class="text-[0.75rem]">${cialdiniIcons[c] || '✓'}</span>`).join('')}
+          ${idea.content_format ? `<span class="text-[0.6rem] text-muted ml-1">${escapeHtml(idea.content_format)}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function selectIdea(index) {

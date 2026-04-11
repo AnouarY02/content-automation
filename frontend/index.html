@@ -904,6 +904,14 @@
             <label class="text-[0.65rem] text-muted uppercase tracking-wider block mb-1.5 font-semibold">
               Eigen opdracht <span class="normal-case text-[0.6rem] font-normal">(optioneel)</span>
             </label>
+            <!-- Brief templates -->
+            <div class="flex flex-wrap gap-1.5 mb-2">
+              <button type="button" onclick="applyBriefTemplate('problem')" class="text-[0.65rem] px-2 py-1 rounded-full border border-border text-muted hover:border-accent hover:text-accent transition-colors">Problem/Oplossing</button>
+              <button type="button" onclick="applyBriefTemplate('tutorial')" class="text-[0.65rem] px-2 py-1 rounded-full border border-border text-muted hover:border-accent hover:text-accent transition-colors">Tutorial</button>
+              <button type="button" onclick="applyBriefTemplate('result')" class="text-[0.65rem] px-2 py-1 rounded-full border border-border text-muted hover:border-accent hover:text-accent transition-colors">Resultaat/Bewijs</button>
+              <button type="button" onclick="applyBriefTemplate('myth')" class="text-[0.65rem] px-2 py-1 rounded-full border border-border text-muted hover:border-accent hover:text-accent transition-colors">Mythe ontkrachten</button>
+              <button type="button" onclick="applyBriefTemplate('behind')" class="text-[0.65rem] px-2 py-1 rounded-full border border-border text-muted hover:border-accent hover:text-accent transition-colors">Achter de schermen</button>
+            </div>
             <textarea
               id="campaign-custom-brief"
               rows="3"
