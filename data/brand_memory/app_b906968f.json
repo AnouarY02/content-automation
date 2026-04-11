@@ -3,13 +3,9 @@
   "app_name": "GLP Coach",
   "niche": "health",
   "url": "https://glpcoach.nl",
-
   "positionering": "Niet een dieet-app. Een gedragsveranderings-platform voor mensen die klaar zijn met methodes en klaar zijn voor echte begeleiding — met of zonder GLP-1 als startpunt. De enige Nederlandse lifestyle-app die de GLP-1 trend omarmt zonder medicijnen te verkopen, en expliciet richt op herval-preventie en lifestyle-opbouw die medicatie niet kan bieden.",
-
   "tone_of_voice": "Eerlijk, warm, zonder sugarcoating. Geen 'je kunt het!' — wel 'we begrijpen precies waarom het steeds mislukt, en het ligt niet aan jou.' Direct maar nooit neerbuigend. Wetenschappelijk onderbouwd in gewone mensentaal. Spreektaal, korte zinnen, geen reclametaal.",
-
   "target_audience": "30-60 jaar, overgewicht, hebben alles al geprobeerd: crashdiëten, keto, WW, shakes, bootcamps. Zijn klaar met methodes. Hebben een mislukkings-identiteit opgebouwd ('het werkt niet voor mij'). Voelen schaamte maar praten er niet over. Herkennen: 's avonds eten als het enige rustmoment van de dag. Zoeken iemand die hun innerlijk gesprek begrijpt — niet hun calorieën telt.",
-
   "psychografisch_taalgebruik": {
     "gebruik_deze_zinnen": [
       "Ik heb alles geprobeerd",
@@ -24,7 +20,9 @@
       "Mijn lichaam wil dit blijkbaar"
     ],
     "vermijd_altijd": [
-      "Gewoon", "simpelweg", "makkelijk",
+      "Gewoon",
+      "simpelweg",
+      "makkelijk",
       "beste versie van jezelf",
       "Calorieën tellen",
       "Vóór/na-foto-framing als clickbait",
@@ -32,11 +30,8 @@
       "Garanties over gewichtsverlies"
     ]
   },
-
   "usp": "Persoonlijke leefstijlcoaching: voeding, beweging en mindset gecombineerd voor blijvend resultaat. Geen dieet. Geen quick fix. Begeleiding voor mensen die de cyclus willen doorbreken.",
-
   "markt_gap": "De GLP-1 sandwich-zone: niemand begeleidt de brug tussen medicatiegebruik en echte leefstijlverandering. GLP-1 is de kickstart — wij zijn het echte werk. Prijszone €49-79/maand is open: boven generieke apps (Noom/WW), ruim onder klinische trajecten (200+).",
-
   "creator_persona": {
     "naam": "Nadia",
     "leeftijd": 38,
@@ -57,7 +52,6 @@
       "Serieus?"
     ]
   },
-
   "bewezen_hooks": [
     "Je hebt het al honderd keer geprobeerd. Hier is waarom het NIET aan jou ligt.",
     "Wat niemand je vertelt als je stopt met GLP-1.",
@@ -70,7 +64,6 @@
     "Crashdiëten werken — totdat ze dat niet meer doen.",
     "50 kilo kwijt en toch blij? Nee. Hier is het echte verhaal."
   ],
-
   "high_resonance_topics": [
     "Emotioneel eten herkennen zonder schaamte",
     "Wat er biologisch gebeurt als je een dieet stopt (normalisering van herval)",
@@ -81,11 +74,8 @@
     "Concrete mini-gewoontes die wél vol te houden zijn",
     "De set-point theorie: waarom je lichaam terugvalt (biologisch, niet persoonlijk falen)"
   ],
-
   "visual_style": "Clean, echt, geen stockfotos. Witte achtergrond, groene accenten. Echte mensen in echte situaties — keuken, bank, sportschool. Geen glossy transformatiefoto's.",
-
   "best_cta": "Gratis intake via link in bio",
-
   "avoided_topics": [
     "Specifieke medicijnnamen of doseringen",
     "Medische claims of diagnoses",
@@ -94,13 +84,11 @@
     "Body shaming — ook subtiel",
     "Perfectie-framing"
   ],
-
   "content_formats": {
     "best_performing": "problem-solution",
     "secondary": "education",
     "experimental": "testimonial"
   },
-
   "marktdata": {
     "nl_overgewicht_volwassenen_pct": 50.6,
     "obesitas_pct": 15.6,
@@ -111,9 +99,13 @@
     "gli_vergoed_basispakket": true,
     "prijszone_open": "49-79 euro/maand"
   },
-
   "performance_history": [],
-  "learned_insights": [],
+  "learned_insights": [
+    {
+      "date": "2026-04-11",
+      "insight": "Pipeline fout: Video productie timeout (>9 min) — probeer opnieuw of gebruik een kortere video"
+    }
+  ],
   "last_updated": "2026-04-11",
   "description": "Leefstijl coaching app voor duurzaam gewichtsverlies. Positionering: de brug tussen GLP-1 gebruik en echte blijvende leefstijlverandering."
 }
