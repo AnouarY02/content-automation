@@ -301,6 +301,46 @@ def get_timeline(app_id: str, days: int = 30):
     return timeline
 
 
+@router.post("/{app_id}/posts/{campaign_id}/performance")
+def update_post_performance(app_id: str, campaign_id: str, body: dict):
+    """
+    Voer handmatig platform performance data in voor een gepubliceerde post.
+    Gebruikt wanneer data niet automatisch binnenkomt via de TikTok API.
+
+    Body: {
+      "views": 12500, "likes": 843, "comments": 47, "shares": 156,
+      "reach": 9800, "avg_watch_time_sec": 18, "post_id": "optional-tiktok-id"
+    }
+    """
+    from pathlib import Path as _Path
+    import json as _json
+
+    raw_dir = _ANALYTICS_DIR / "raw" / app_id
+    raw_dir.mkdir(parents=True, exist_ok=True)
+
+    record = {
+        "campaign_id": campaign_id,
+        "app_id": app_id,
+        "post_id": body.get("post_id", campaign_id),
+        "views": body.get("views", 0),
+        "likes": body.get("likes", 0),
+        "comments": body.get("comments", 0),
+        "shares": body.get("shares", 0),
+        "reach": body.get("reach", 0),
+        "avg_watch_time_sec": body.get("avg_watch_time_sec", 0),
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "source": "manual",
+    }
+
+    out_path = raw_dir / f"{campaign_id}.json"
+    out_path.write_text(
+        __import__('json').dumps(record, ensure_ascii=False, indent=2),
+        encoding="utf-8"
+    )
+
+    return {"status": "saved", "campaign_id": campaign_id, "record": record}
+
+
 def _calc_engagement(analytics: dict) -> float:
     """Bereken engagement rate: (likes + comments + shares) / views * 100."""
     views = analytics.get("views", 0) or 0

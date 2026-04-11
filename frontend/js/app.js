@@ -791,8 +791,27 @@ async function showCampaignDetail(id) {
       <div><span class="text-xs text-muted">Platform</span><br><span class="text-sm">${data.platform || '-'}</span></div>
       <div><span class="text-xs text-muted">Kosten</span><br><span class="text-sm font-semibold">${formatEUR(data.total_cost_usd)}</span></div>
     </div>
-    ${data.idea && data.idea.title ? `<div class="mb-3"><h4 class="text-xs text-muted uppercase tracking-wider mb-1">Idee</h4><div class="bg-bg p-3 rounded-lg text-sm"><strong>${data.idea.title}</strong><p class="text-muted mt-1">${data.idea.hook || data.idea.description || ''}</p></div></div>` : ''}
-    ${data.script && data.script.scenes ? `<div class="mb-3"><h4 class="text-xs text-muted uppercase tracking-wider mb-1">Script (${data.script.scenes.length} scenes)</h4><div class="bg-bg p-3 rounded-lg text-xs text-muted max-h-40 overflow-y-auto">${data.script.scenes.map((s,i) => `<div class="mb-2"><span class="text-accent">Scene ${i+1}:</span> ${s.voiceover || s.description || JSON.stringify(s)}</div>`).join('')}</div></div>` : ''}
+    ${data.idea && data.idea.title ? `<div class="mb-3"><h4 class="text-xs text-muted uppercase tracking-wider mb-1">Idee</h4><div class="bg-bg p-3 rounded-lg text-sm"><strong>${escapeHtml(data.idea.title)}</strong><p class="text-muted mt-1">${escapeHtml(data.idea.hook || data.idea.description || '')}</p></div></div>` : ''}
+    ${data.script && data.script.scenes ? `<div class="mb-3" id="script-section-${data.id}">
+      <div class="flex items-center justify-between mb-1">
+        <h4 class="text-xs text-muted uppercase tracking-wider">Script (${data.script.scenes.length} scenes)</h4>
+        ${['pending_approval','approved','draft'].includes(data.status) ? `<button onclick="toggleScriptEdit('${data.id}')" id="script-edit-btn-${data.id}" class="btn btn-outline btn-sm text-xs">Bewerk</button>` : ''}
+      </div>
+      <div id="script-view-${data.id}" class="bg-bg p-3 rounded-lg text-xs text-muted max-h-52 overflow-y-auto space-y-2">
+        ${data.script.scenes.map((s,i) => `<div class="border-b border-border/40 pb-1.5 last:border-0"><span class="text-accent font-medium">Scene ${i+1}${s.hook ? ' ('+s.hook+')' : ''}:</span><p class="mt-0.5">${escapeHtml(s.voiceover || s.description || '')}</p>${s.visual ? `<p class="text-[0.6rem] text-muted/70 mt-0.5">Visueel: ${escapeHtml(s.visual)}</p>` : ''}</div>`).join('')}
+      </div>
+      <div id="script-edit-${data.id}" class="hidden space-y-2 mt-2">
+        ${data.script.scenes.map((s,i) => `<div class="border border-border/60 rounded-lg p-2">
+          <div class="text-[0.65rem] text-accent font-medium mb-1">Scene ${i+1}${s.hook ? ' · '+s.hook : ''}</div>
+          <textarea data-scene-idx="${i}" data-scene-field="voiceover" rows="2" class="w-full text-xs resize-none border-0 bg-bg p-1 rounded focus:outline-none focus:ring-1 focus:ring-accent/30">${escapeHtml(s.voiceover || '')}</textarea>
+          ${s.visual !== undefined ? `<input data-scene-idx="${i}" data-scene-field="visual" type="text" placeholder="Visuele instructie..." value="${escapeHtml(s.visual || '')}" class="w-full text-[0.65rem] mt-1 border-0 bg-bg/50 rounded px-1 py-0.5 text-muted focus:outline-none">` : ''}
+        </div>`).join('')}
+        <div class="flex gap-2 pt-1">
+          <button onclick="saveScript('${data.id}', ${JSON.stringify(data.script.scenes).replace(/"/g,'&quot;')})" class="btn btn-primary btn-sm text-xs">Opslaan</button>
+          <button onclick="toggleScriptEdit('${data.id}')" class="btn btn-outline btn-sm text-xs">Annuleren</button>
+        </div>
+      </div>
+    </div>` : ''}
     ${data.viral_score ? `<div class="mb-3"><h4 class="text-xs text-muted uppercase tracking-wider mb-1">Viral Algorithm Score</h4>
       <div class="bg-bg p-4 rounded-lg">
         <div class="flex items-center gap-3 mb-3">
@@ -812,7 +831,25 @@ async function showCampaignDetail(id) {
         ${data.viral_score.weaknesses && data.viral_score.weaknesses.length ? `<div class="mb-2"><span class="text-xs text-warning font-medium">Verbeterpunten:</span><ul class="text-xs text-muted mt-1">${data.viral_score.weaknesses.map(w => `<li>- ${w}</li>`).join('')}</ul></div>` : ''}
         ${data.viral_score.algorithm_tips && data.viral_score.algorithm_tips.length ? `<div><span class="text-xs text-accent font-medium">Algoritme tips:</span><ul class="text-xs text-muted mt-1">${data.viral_score.algorithm_tips.map(t => `<li>${t}</li>`).join('')}</ul></div>` : ''}
       </div></div>` : ''}
-    ${data.caption ? `<div class="mb-3"><h4 class="text-xs text-muted uppercase tracking-wider mb-1">Caption</h4><div class="bg-bg p-3 rounded-lg text-sm">${data.caption.caption || ''}<br><span class="text-accent text-xs">${(data.caption.hashtags||[]).join(' ')}</span></div></div>` : ''}
+    ${data.caption ? `<div class="mb-3" id="caption-section-${data.id}">
+      <div class="flex items-center justify-between mb-1">
+        <h4 class="text-xs text-muted uppercase tracking-wider">Caption</h4>
+        ${['pending_approval','approved','draft'].includes(data.status) ? `<button onclick="toggleCaptionEdit('${data.id}')" id="caption-edit-btn-${data.id}" class="btn btn-outline btn-sm text-xs">Bewerk</button>` : ''}
+      </div>
+      <div id="caption-view-${data.id}" class="bg-bg p-3 rounded-lg text-sm">
+        <p class="whitespace-pre-wrap">${escapeHtml(data.caption.caption || '')}</p>
+        <div class="mt-2 flex flex-wrap gap-1">${(data.caption.hashtags||[]).map(h => `<span class="text-accent text-xs">#${h}</span>`).join(' ')}</div>
+      </div>
+      <div id="caption-edit-${data.id}" class="hidden mt-2 space-y-2">
+        <textarea id="caption-text-${data.id}" rows="4" class="w-full text-xs border border-border rounded-lg p-2 bg-bg resize-none focus:outline-none focus:border-accent">${escapeHtml(data.caption.caption || '')}</textarea>
+        <input id="caption-tags-${data.id}" type="text" placeholder="hashtag1, hashtag2, hashtag3" value="${(data.caption.hashtags||[]).join(', ')}" class="w-full text-xs border border-border rounded-lg p-2 bg-bg focus:outline-none focus:border-accent">
+        <p class="text-[0.6rem] text-muted">Hashtags: komma-gescheiden, zonder #</p>
+        <div class="flex gap-2">
+          <button onclick="saveCaption('${data.id}')" class="btn btn-primary btn-sm text-xs">Opslaan</button>
+          <button onclick="toggleCaptionEdit('${data.id}')" class="btn btn-outline btn-sm text-xs">Annuleren</button>
+        </div>
+      </div>
+    </div>` : ''}
     ${data.video_path ? `<div class="mb-3"><h4 class="text-xs text-muted uppercase tracking-wider mb-1">Video</h4>
       <div class="bg-bg rounded-lg overflow-hidden">
         <video controls preload="metadata" class="w-full bg-black mx-auto" style="max-height:480px; aspect-ratio:9/16; object-fit:contain;"
@@ -961,6 +998,130 @@ async function rejectCampaign(campaignId) {
 }
 
 function closeCampaignDetail() { document.getElementById('campaign-detail').classList.add('hidden'); }
+
+// ── Script & Caption editing ──────────────────────────────────────────
+
+function toggleScriptEdit(campaignId) {
+  const view = document.getElementById(`script-view-${campaignId}`);
+  const edit = document.getElementById(`script-edit-${campaignId}`);
+  const btn  = document.getElementById(`script-edit-btn-${campaignId}`);
+  if (!view || !edit) return;
+  const isEditing = !edit.classList.contains('hidden');
+  view.classList.toggle('hidden', !isEditing);
+  edit.classList.toggle('hidden', isEditing);
+  if (btn) btn.textContent = isEditing ? 'Bewerk' : 'Annuleren';
+}
+
+async function saveScript(campaignId, _originalScenes) {
+  const edit = document.getElementById(`script-edit-${campaignId}`);
+  if (!edit) return;
+
+  // Collect edited scene data
+  const textareas = edit.querySelectorAll('textarea[data-scene-idx]');
+  const inputs    = edit.querySelectorAll('input[data-scene-idx]');
+  const scenes    = [];
+
+  textareas.forEach(ta => {
+    const idx = parseInt(ta.getAttribute('data-scene-idx'));
+    if (!scenes[idx]) scenes[idx] = { ..._originalScenes[idx] };
+    scenes[idx].voiceover = ta.value;
+  });
+  inputs.forEach(inp => {
+    const idx = parseInt(inp.getAttribute('data-scene-idx'));
+    if (!scenes[idx]) scenes[idx] = { ..._originalScenes[idx] };
+    scenes[idx].visual = inp.value;
+  });
+
+  const cleaned = scenes.filter(Boolean);
+  const result = await api(`/api/campaigns/${campaignId}/script`, {
+    method: 'PATCH',
+    body: JSON.stringify({ scenes: cleaned }),
+  });
+  if (result) {
+    toast('Script opgeslagen', 'success');
+    showCampaignDetail(campaignId);
+  }
+}
+
+function toggleCaptionEdit(campaignId) {
+  const view = document.getElementById(`caption-view-${campaignId}`);
+  const edit = document.getElementById(`caption-edit-${campaignId}`);
+  const btn  = document.getElementById(`caption-edit-btn-${campaignId}`);
+  if (!view || !edit) return;
+  const isEditing = !edit.classList.contains('hidden');
+  view.classList.toggle('hidden', !isEditing);
+  edit.classList.toggle('hidden', isEditing);
+  if (btn) btn.textContent = isEditing ? 'Bewerk' : 'Annuleren';
+}
+
+async function saveCaption(campaignId) {
+  const captionText = document.getElementById(`caption-text-${campaignId}`)?.value || '';
+  const tagsRaw     = document.getElementById(`caption-tags-${campaignId}`)?.value || '';
+  const hashtags    = tagsRaw.split(',').map(t => t.trim().replace(/^#/, '')).filter(Boolean);
+
+  const result = await api(`/api/campaigns/${campaignId}/caption`, {
+    method: 'PATCH',
+    body: JSON.stringify({ caption: captionText, hashtags }),
+  });
+  if (result) {
+    toast('Caption opgeslagen', 'success');
+    showCampaignDetail(campaignId);
+  }
+}
+
+// ── Performance data entry ────────────────────────────────────────────
+
+function showPerformanceEntry(campaignId, appId) {
+  const panel = document.getElementById('post-detail-panel');
+  const content = document.getElementById('post-detail-content');
+  const titleEl = document.getElementById('post-detail-title');
+
+  if (!panel || !content) return;
+
+  if (titleEl) titleEl.textContent = 'Performance Invoeren';
+  content.innerHTML = `
+    <p class="text-xs text-muted mb-4">Voer handmatig de TikTok/platform statistieken in voor deze post. Deze data voeden de leeranalyse.</p>
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      ${[
+        { id:'perf-views',    label:'Views',              placeholder:'12500' },
+        { id:'perf-likes',    label:'Likes',              placeholder:'843'   },
+        { id:'perf-comments', label:'Comments',           placeholder:'47'    },
+        { id:'perf-shares',   label:'Shares',             placeholder:'156'   },
+        { id:'perf-reach',    label:'Bereik',             placeholder:'9800'  },
+        { id:'perf-watch',    label:'Gem. kijktijd (sec)',placeholder:'18'    },
+      ].map(f => `<div><label class="text-[0.65rem] text-muted font-medium block mb-1">${f.label}</label><input id="${f.id}" type="number" min="0" placeholder="${f.placeholder}" class="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-bg focus:outline-none focus:border-accent"></div>`).join('')}
+    </div>
+    <input id="perf-postid" type="text" placeholder="TikTok post ID (optioneel)" class="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-bg mb-3 focus:outline-none focus:border-accent">
+    <div class="flex gap-2">
+      <button onclick="submitPerformanceData('${campaignId}','${appId}')" class="btn btn-primary btn-sm flex-1 text-xs">Opslaan</button>
+      <button onclick="closePanel('post-detail-panel')" class="btn btn-outline btn-sm text-xs">Annuleren</button>
+    </div>`;
+
+  panel.classList.remove('hidden');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function submitPerformanceData(campaignId, appId) {
+  const g = id => parseInt(document.getElementById(id)?.value || '0') || 0;
+  const body = {
+    views:             g('perf-views'),
+    likes:             g('perf-likes'),
+    comments:          g('perf-comments'),
+    shares:            g('perf-shares'),
+    reach:             g('perf-reach'),
+    avg_watch_time_sec: g('perf-watch'),
+    post_id:           document.getElementById('perf-postid')?.value || undefined,
+  };
+  const res = await api(`/api/analytics/${appId}/posts/${campaignId}/performance`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  if (res) {
+    toast('Performance data opgeslagen', 'success');
+    closePanel('post-detail-panel');
+    loadAnalytics();
+  }
+}
 
 async function batchApproveAll() {
   const pending = allCampaigns.filter(c => c.status === 'pending_approval');
@@ -2406,10 +2567,16 @@ function showPostDetail(campaignId) {
     html += `<div class="text-xs text-muted text-center py-4 mb-4">Nog geen platform performance data beschikbaar</div>`;
   }
 
+  // Use currentApp — analytics tab is always filtered to a single app
+  const appIdForPost = currentApp || '';
+
   html += `
-    <div class="flex justify-between items-center pt-3 border-t border-border text-xs text-muted">
+    <div class="flex justify-between items-center pt-3 border-t border-border text-xs text-muted gap-2 flex-wrap">
       <span>Campagne: <code class="text-accent">${campaignId}</code></span>
-      <button onclick="showCampaignDetail('${campaignId}'); switchTab('campaigns')" class="btn btn-outline btn-sm">Naar campagne →</button>
+      <div class="flex gap-2">
+        <button onclick="showPerformanceEntry('${campaignId}','${appIdForPost}')" class="btn btn-outline btn-sm text-xs">+ Performance invoeren</button>
+        <button onclick="showCampaignDetail('${campaignId}'); switchTab('campaigns')" class="btn btn-outline btn-sm">Campagne →</button>
+      </div>
     </div>`;
 
   const titleEl = document.getElementById('post-detail-title');

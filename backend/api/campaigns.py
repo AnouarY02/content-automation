@@ -609,6 +609,66 @@ def schedule_campaign(
     return {"status": "scheduled", "campaign_id": campaign_id, "scheduled_for": scheduled_for.isoformat()}
 
 
+@router.patch("/{campaign_id}/script")
+def update_script(
+    campaign_id: str,
+    body: dict,
+    tenant_id: str = Query("default", description="Tenant identifier"),
+):
+    """
+    Werk het script van een campagne bij.
+    Body: { "scenes": [...] } — array van scene-objecten met voiceover/visual/duration_sec.
+    Alleen toegestaan voor campagnes met status pending_approval of approved.
+    """
+    _safe_id(campaign_id, "campaign_id")
+    repo = get_campaign_repo(tenant_id=tenant_id)
+    bundle = repo.get(campaign_id, tenant_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail=f"Campagne {campaign_id} niet gevonden")
+
+    allowed_statuses = {"pending_approval", "approved", "draft"}
+    if bundle.status not in allowed_statuses:
+        raise HTTPException(status_code=409, detail=f"Script kan niet gewijzigd worden voor status '{bundle.status}'")
+
+    scenes = body.get("scenes")
+    if not scenes or not isinstance(scenes, list):
+        raise HTTPException(status_code=400, detail="'scenes' array is verplicht")
+
+    bundle.script = {**bundle.script, "scenes": scenes}
+    repo.save(bundle)
+    logger.info(f"[Campaigns] Script bijgewerkt voor {campaign_id} ({len(scenes)} scenes)")
+    return {"status": "updated", "campaign_id": campaign_id, "scene_count": len(scenes)}
+
+
+@router.patch("/{campaign_id}/caption")
+def update_caption(
+    campaign_id: str,
+    body: dict,
+    tenant_id: str = Query("default", description="Tenant identifier"),
+):
+    """
+    Werk de caption van een campagne bij.
+    Body: { "caption": "...", "hashtags": [...] }
+    """
+    _safe_id(campaign_id, "campaign_id")
+    repo = get_campaign_repo(tenant_id=tenant_id)
+    bundle = repo.get(campaign_id, tenant_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail=f"Campagne {campaign_id} niet gevonden")
+
+    allowed_statuses = {"pending_approval", "approved", "draft"}
+    if bundle.status not in allowed_statuses:
+        raise HTTPException(status_code=409, detail=f"Caption kan niet gewijzigd worden voor status '{bundle.status}'")
+
+    if "caption" in body:
+        bundle.caption = {**bundle.caption, "caption": body["caption"]}
+    if "hashtags" in body:
+        bundle.caption = {**bundle.caption, "hashtags": body["hashtags"]}
+    repo.save(bundle)
+    logger.info(f"[Campaigns] Caption bijgewerkt voor {campaign_id}")
+    return {"status": "updated", "campaign_id": campaign_id}
+
+
 @router.post("/{campaign_id}/regenerate-video")
 def regenerate_video(
     campaign_id: str,
