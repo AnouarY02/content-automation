@@ -265,91 +265,116 @@ class OpenAIImageProvider:
             logger.warning(f"[OpenAIImage] Scene {index + 1} mislukt: {e}")
             return self._create_fallback_image(scene, image_dir, index)
 
+    # App-specifieke visuele beschrijvingen per feature (GLP Coach)
+    _APP_UI_SCENES = {
+        "solution": (
+            "A Dutch woman in her late 30s holding a modern smartphone in portrait mode. "
+            "The phone screen clearly shows a clean health tracking app interface: "
+            "a white dashboard with a progress ring showing weight loss streak, "
+            "a green injection tracker with the label 'Volgende injectie' and a checkmark, "
+            "and a simple chart of weight over time. The UI looks minimal and medical-friendly, "
+            "like a premium health app. Warm kitchen or living room background, soft natural light. "
+            "She looks relieved and calm. Ultra-realistic, shallow depth of field, phone screen legible."
+        ),
+        "cta": (
+            "Close-up of hands holding a smartphone showing a clean app onboarding screen "
+            "with a green 'Start gratis' button and simple health metrics icons "
+            "(injection syringe icon, weight scale icon, water drop icon). "
+            "Background is softly blurred cozy home interior. "
+            "Ultra-realistic product photography style, warm lighting."
+        ),
+    }
+
     def _build_image_prompt(
         self, scene: dict, memory: dict, index: int, total_scenes: int
     ) -> str:
-        """Bouw een cinematic DALL-E prompt voor TikTok/Reels content."""
+        """Bouw een originele, app-specifieke image prompt voor TikTok/Reels content."""
         _vs_raw = memory.get("visual_style", {}) if memory else {}
         if isinstance(_vs_raw, dict):
-            visual_style = _vs_raw
             color_scheme = _vs_raw.get("color_scheme", "")
         elif isinstance(_vs_raw, str) and _vs_raw.strip():
-            visual_style = {}
-            color_scheme = _vs_raw  # Gebruik de volledige string als color_scheme hint
+            color_scheme = _vs_raw
         else:
-            visual_style = {}
             color_scheme = ""
+
         app_name = memory.get("app_name", "") if memory else ""
         niche = memory.get("niche", "") if memory else ""
+        is_health = niche and any(k in niche.lower() for k in ["health", "wellness", "glp", "weight", "lifestyle", "coach"])
 
         scene_type = scene.get("type", "body")
         visual_desc = scene.get("visual_description", "")
         voiceover = scene.get("voiceover", "")
 
-        # Cinematic stijl basis
+        # Voor solution/cta in health niche: gebruik app UI mockup
+        if is_health and scene_type in self._APP_UI_SCENES and not visual_desc:
+            base = self._APP_UI_SCENES[scene_type]
+            return (
+                f"Ultra-realistic cinematic photography, vertical 9:16 portrait format. "
+                f"Professional color grading. NO text overlays or watermarks on the image itself. "
+                f"{base} "
+                f"Photorealistic, not illustrated. Shot on iPhone style."
+            )
+
+        # Hook/problem: originele lifestyle scenes specifiek voor GLP Coach doelgroep
+        if is_health and scene_type in ("hook", "problem") and not visual_desc:
+            hook_scenes = [
+                # Avondmoment — emotioneel eten
+                "A Dutch woman in her late 30s sitting on a couch at night, dim warm lamp light, "
+                "staring at a snack she's holding with a conflicted expression. "
+                "She looks tired and a bit defeated. Cozy but slightly chaotic living room. "
+                "Ultra-realistic, cinematic vertical shot, authentic documentary feel.",
+                # Weegschaal moment
+                "A woman's bare feet standing on a white digital scale in a bathroom, "
+                "soft morning light from a frosted window. The shot frames her feet and the scale from above. "
+                "Clean minimalist bathroom. Tense, vulnerable atmosphere. Ultra-realistic photography.",
+                # Keuken, gezond eten poging
+                "A Dutch woman in her 40s in a bright kitchen, looking at a salad she prepared "
+                "with a mix of pride and doubt — like wondering if it'll actually work this time. "
+                "Morning light. Authentic, non-staged feel. Shallow depth of field.",
+            ]
+            # Kies op basis van scene index voor consistentie
+            chosen = hook_scenes[index % len(hook_scenes)]
+            return (
+                "Ultra-realistic cinematic photography, vertical 9:16 portrait format. "
+                "Professional color grading. NO watermarks or logos. "
+                f"{chosen}"
+            )
+
+        # Standaard: gebruik visual_description uit script of voiceover als context
         parts = [
             "Ultra-realistic cinematic photography, vertical 9:16 portrait format.",
             "Professional color grading, shallow depth of field.",
-            "NO text, NO watermarks, NO logos, NO UI elements in the image.",
+            "NO text, NO watermarks, NO logos in the image.",
         ]
 
-        # Scene-specifieke visuele stijl
         if scene_type == "hook":
-            parts.append(
-                "Bold, eye-catching composition. Close-up or dramatic angle. "
-                "High contrast, vibrant colors. First frame that stops scrolling."
-            )
+            parts.append("Bold, eye-catching composition. Close-up or dramatic angle. High contrast.")
         elif scene_type == "problem":
-            parts.append(
-                "Moody, relatable atmosphere. Shows frustration or challenge. "
-                "Slightly desaturated, real-life feel."
-            )
+            parts.append("Moody, relatable atmosphere. Slightly desaturated, authentic real-life feel.")
         elif scene_type == "solution":
-            parts.append(
-                "Bright, optimistic, uplifting composition. "
-                "Clean, aspirational aesthetic. Warm natural lighting."
-            )
+            parts.append("Bright, optimistic. Warm natural lighting. Clean aesthetic.")
         elif scene_type == "cta":
-            parts.append(
-                "Dynamic, action-oriented. Energetic composition. "
-                "Bright with strong focal point."
-            )
+            parts.append("Dynamic, action-oriented. Energetic with strong focal point.")
         else:
-            parts.append("Natural, authentic feel. Lifestyle photography style.")
+            parts.append("Natural, authentic lifestyle photography.")
 
-        # Inhoud van de scene
         if visual_desc:
             parts.append(f"Subject: {visual_desc}")
         elif voiceover:
-            # Extraheer visueel relevante informatie uit voiceover
-            short = voiceover[:180]
-            parts.append(f"Visualize this concept: {short}")
+            parts.append(f"Visualize: {voiceover[:180]}")
 
-        # Niche context
-        if niche:
-            parts.append(f"Industry context: {niche}.")
+        if is_health:
+            parts.append(
+                "Warm natural lifestyle aesthetic. Soft earthy tones, warm whites and greens. "
+                "Cozy Dutch home setting. Authentic non-staged feel."
+            )
+        elif color_scheme:
+            parts.append(f"Color palette: {color_scheme}.")
+        else:
+            parts.append("Dark premium aesthetic, cinematic teal and orange color grade.")
 
-        # App/brand context
         if app_name:
             parts.append(f"For {app_name} brand content.")
-
-        # Kleurstijl op basis van niche
-        if color_scheme:
-            parts.append(f"Color palette: {color_scheme}.")
-        elif niche and any(k in niche.lower() for k in ["health", "wellness", "glp", "weight", "lifestyle", "coach"]):
-            parts.append(
-                "Warm, natural lifestyle aesthetic. Soft earthy tones, warm whites and greens. "
-                "Cozy home setting. Authentic, non-staged feel. Dutch lifestyle photography."
-            )
-        else:
-            parts.append(
-                "Dark premium aesthetic with accent lighting. "
-                "Cinematic teal and orange color grade."
-            )
-
-        # Consistentie over scenes
-        if total_scenes > 1:
-            parts.append("Consistent visual style throughout the series.")
 
         return " ".join(parts)
 
