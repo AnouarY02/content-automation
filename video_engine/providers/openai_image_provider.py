@@ -218,28 +218,38 @@ class OpenAIImageProvider:
 
             # Probeer gpt-image-1 (hogere kwaliteit); fallback naar dall-e-3
             img_model = os.getenv("IMAGE_MODEL", "gpt-image-1")
-            use_b64 = img_model == "gpt-image-1"
-            response = client.images.generate(
-                model=img_model,
-                prompt=prompt,
-                n=1,
-                size="1024x1792",
-                **( {"quality": "medium"} if img_model == "gpt-image-1" else {"quality": "hd"} ),
-                **({"response_format": "b64_json"} if use_b64 else {}),
-            )
+            is_gpt_image = img_model == "gpt-image-1"
+            # gpt-image-1 ondersteunt: 1024x1024, 1024x1536, 1536x1024
+            # 1024x1536 = portretformaat (~2:3), dichtst bij 9:16 voor vertical video
+            img_size = "1024x1536" if is_gpt_image else "1024x1792"
+            api_kwargs: dict = {
+                "model": img_model,
+                "prompt": prompt,
+                "n": 1,
+                "size": img_size,
+            }
+            if is_gpt_image:
+                api_kwargs["quality"] = "medium"
+                # gpt-image-1 geeft b64_json terug zonder response_format parameter
+            else:
+                api_kwargs["quality"] = "hd"
+                api_kwargs["response_format"] = "b64_json"
+
+            response = client.images.generate(**api_kwargs)
 
             raw_path = image_dir / f"scene_{index:02d}_raw.png"
-            if use_b64 and hasattr(response.data[0], "b64_json") and response.data[0].b64_json:
+            img_data = response.data[0]
+            # gpt-image-1 geeft b64_json terug; dall-e-3 ook (via response_format)
+            if hasattr(img_data, "b64_json") and img_data.b64_json:
                 import base64
-                raw_path.write_bytes(base64.b64decode(response.data[0].b64_json))
-            elif hasattr(response.data[0], "url") and response.data[0].url:
+                raw_path.write_bytes(base64.b64decode(img_data.b64_json))
+            elif hasattr(img_data, "url") and img_data.url:
                 import httpx
-                r = httpx.get(response.data[0].url, timeout=45, follow_redirects=True)
+                r = httpx.get(img_data.url, timeout=45, follow_redirects=True)
                 r.raise_for_status()
                 raw_path.write_bytes(r.content)
-            elif hasattr(response.data[0], "b64_json") and response.data[0].b64_json:
-                import base64
-                raw_path.write_bytes(base64.b64decode(response.data[0].b64_json))
+            else:
+                raise RuntimeError(f"Geen afbeeldingsdata in response voor scene {index}")
 
             # Pre-resize naar 1200x2133 (pan-canvas) zodat FFmpeg geen zware scale doet
             ffmpeg = _resolve_ffmpeg()
@@ -480,28 +490,21 @@ class OpenAIImageProvider:
             # Input is al -loop 1 -t duration — geen extra trim nodig (trim+xfade geeft leeg resultaat)
             filters.append(f"[{i}:v]{vf}[v{i}]")
 
-        # Crossfade keten
+        # Crossfade keten via overlay fade (werkt zonder xfade filter)
+        # Elke clip krijgt fade-in en fade-out, daarna concat
+        for i in range(n):
+            d = durations[i] if i < len(durations) else 5
+            total_d = d + crossfade + 0.1
+            fade_in = f"fade=t=in:st=0:d={crossfade}"
+            fade_out = f"fade=t=out:st={max(0, d - crossfade):.2f}:d={crossfade}"
+            filters.append(f"[v{i}]{fade_in},{fade_out}[vf{i}]")
+
         if n == 1:
-            # Geen trim — input heeft al -t duration; trim+setpts geeft lege output
-            filters.append(f"[v0]setpts=PTS-STARTPTS[vblend]")
+            filters.append(f"[vf0]setpts=PTS-STARTPTS[vblend]")
         else:
-            prev = "v0"
-            offset = durations[0] - crossfade
-            for i in range(1, n):
-                out = f"cf{i}" if i < n - 1 else "vblend"
-                # Varieer transities per scene-type
-                transition = "fade"
-                if scenes[i].get("type") == "hook":
-                    transition = "slideleft"
-                elif scenes[i].get("type") == "cta":
-                    transition = "slideup"
-                filters.append(
-                    f"[{prev}][v{i}]xfade=transition={transition}:duration={crossfade}"
-                    f":offset={max(0, offset):.2f}[{out}]"
-                )
-                prev = out
-                if i < n - 1:
-                    offset += durations[i] - crossfade
+            # Concat alle gefade clips aaneengesloten
+            concat_inputs = "".join(f"[vf{i}]" for i in range(n))
+            filters.append(f"{concat_inputs}concat=n={n}:v=1:a=0[vblend]")
 
         # Tekst overlays — slide-in animatie
         current_t = 0.0
@@ -601,7 +604,7 @@ class OpenAIImageProvider:
             )
             # duration=longest: muziek vult de volledige video, -t total_duration kapt af
             filters.append(
-                "[voice][music_bg]amix=inputs=2:duration=longest:normalize=0[outa]"
+                "[voice][music_bg]amix=inputs=2:duration=longest[outa]"
             )
             audio_map = ["-map", "[outa]"]
         elif has_voice:

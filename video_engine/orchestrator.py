@@ -163,8 +163,8 @@ class VideoOrchestrator:
 
         Prioriteit:
         1. D-ID: talking_head type + DID_API_KEY → beste avatar-kwaliteit
-        2. OpenAI Image: OpenAI key beschikbaar → DALL-E per scene, meest coherent
-        3. Pro (Pexels): alleen Pexels/ElevenLabs, geen OpenAI → stock footage
+        2. Pro (Pexels): stock footage ziet er realistischer uit dan AI-beelden voor UGC
+        3. OpenAI Image: fallback als geen Pexels key
         4. FFmpeg: gratis fallback (gradient + tekst)
         """
         if os.getenv("FAST_VIDEO_MODE", "").lower() == "true":
@@ -176,13 +176,13 @@ class VideoOrchestrator:
         if has_did and video_type == "talking_head" and not did_skip:
             return "did"
 
-        # 2. OpenAI Image: contextspecifieke AI-beelden, meest coherente output
-        if self._has_openai():
-            return "openai_image"
-
-        # 3. Pro (Pexels stock footage)
+        # 2. Pro (Pexels stock footage) — echte UGC-beelden zijn authentieker dan AI
         if self._has_pexels():
             return "pro"
+
+        # 3. OpenAI Image als fallback zonder Pexels
+        if self._has_openai():
+            return "openai_image"
 
         return "ffmpeg"
 

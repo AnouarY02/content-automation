@@ -1713,12 +1713,12 @@ class ProVideoProvider:
         min_expected_dur = max(0.5, len(text) * 0.008)
 
         # Gebruik custom voice settings van dashboard, of geoptimaliseerde defaults
-        # Stability 0.65 = consistenter zonder robotisch te klinken
-        # Similarity 0.88 = natuurlijker, minder over-cloning artifacts
-        # Style 0.20 = conversationeel ipv "geacteerd" — key voor realisme
-        base_stability = self._custom_voice_settings.get("stability", 0.65) if self._custom_voice_settings else 0.65
-        base_similarity = self._custom_voice_settings.get("similarity_boost", 0.88) if self._custom_voice_settings else 0.88
-        base_style = self._custom_voice_settings.get("style", 0.20) if self._custom_voice_settings else 0.20
+        # Stability 0.45 = meer natuurlijke variatie in toon en ritme, minder "voorleesstem"
+        # Similarity 0.85 = goed evenwicht tussen stem-identiteit en vloeiendheid
+        # Style 0.40 = expressief, conversationeel — klinkt als een echt gesprek
+        base_stability = self._custom_voice_settings.get("stability", 0.45) if self._custom_voice_settings else 0.45
+        base_similarity = self._custom_voice_settings.get("similarity_boost", 0.85) if self._custom_voice_settings else 0.85
+        base_style = self._custom_voice_settings.get("style", 0.40) if self._custom_voice_settings else 0.40
 
         # Probeer max 2 keer: eerste keer normaal, tweede met hogere stability
         for attempt in range(2):
@@ -4586,7 +4586,7 @@ OUTPUT: Return ONLY 3 queries, one per line. No numbering, no explanation."""
                 "-an", str(bg_path),
             ]
 
-        result = subprocess.run(cmd_bg, capture_output=True, timeout=30)
+        result = subprocess.run(cmd_bg, capture_output=True, timeout=120)
         if not bg_path.exists():
             return None
 

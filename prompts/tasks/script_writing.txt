@@ -539,7 +539,26 @@ VERPLICHTE TAALREGELS:
    - GEEN Engelse woorden tenzij ze ingeburgerd zijn (app, hack, vibe = OK)
    - GEEN onbestaande woorden of verkeerde samenstellingen
 
-2. TTS-VRIENDELIJK SCHRIJVEN — zodat de spraak vloeiend klinkt
+2. SCHRIJF GESPROKEN TAAL — NOOIT GESCHREVEN TEKST DIE VOORGELEZEN WORDT
+   ElevenLabs detecteert of tekst geschreven of gesproken klinkt. Schrijf als een WhatsApp-voicemail.
+
+   GESCHREVEN TAAL (klinkt als robot die voorleest):
+   "Vijftig procent van de GLP-1 gebruikers komt na een jaar terug op het oude gewicht."
+   → Correct Nederlands, logische zinsbouw, formeel = klinkt als een artikel
+
+   GESPROKEN TAAL (klinkt als echt gesprek):
+   "Vijftig procent. Weet je wat dat betekent? Dat is de helft van alle mensen die dit doet,
+    gewoon... terug naar af. En niemand die je dat van tevoren vertelt."
+   → Korte klappen, herhaling, directe vraag, emotionele kleur = klinkt als een mens
+
+   CONCRETE REGELS:
+   - Gebruik DIRECTE AANSPRAKING midden in de zin: "en weet je", "snap je", "let op"
+   - Wissel KORTE en LANGERE zinnen af: kort klap → langere uitleg → korte klap
+   - Gebruik INFORMEEL MAAR CORRECT: "gewoon", "echt", "zeg maar", "weet je wel"
+   - NOOIT twee lange zinnen achter elkaar zonder een korte onderbreking ertussen
+   - Schrijf PER ADEMTEUG: elke komma = één adem, elke punt = één stop (max 1 per scene)
+
+   TTS-VRIENDELIJK SCHRIJVEN — zodat de spraak vloeiend klinkt
    - NOOIT "..." in de voiceover — lange AI-achtige stilte
    - NOOIT "—" in de hook (scene 1) — klinkt als robot
    - MAXIMAAL 2x "—" in het HELE SCRIPT, alleen voor zelf-correctie midden in een zin
@@ -765,25 +784,38 @@ Als video_type = "talking_head":
 
   VISUELE SAMENHANG — HEEL BELANGRIJK:
   De 4 scenes moeten aanvoelen als ÉÉN VERHAAL, niet als 4 losse clips.
+
+  VISUAL NARRATIVE CONTINUÏTEIT (VERPLICHT):
+  Kies VOOR je begint met schrijven een VISUELE PROTAGONIST + SETTING ARC:
+    Persoontype: bijv. "Dutch woman 35" door het hele script
+    Setting arc: bijv. kitchen → bathroom → living room (zelfde thuis-omgeving)
+    Emotionele arc: gefrustreerd → overwhelmed → opgelucht → energiek
+
+  De visual_description van ELKE SCENE bouwt voort op de vorige:
+    Scene 1 (hook): persoon in situatie A, gevoel X
+    Scene 2 (problem): ZELFDE PERSOON, dieper in probleem, gevoel Y (donkerder)
+    Scene 3 (solution): ZELFDE PERSOON, moment van wending
+    Scene 4 (cta): ZELFDE PERSOON, ander gevoel, subtiele terugkoppeling naar scene 1
+
+  SLECHT — 4 losse clips die niks met elkaar te maken hebben:
+    Hook: "woman frustrated scale bathroom"
+    Problem: "person eating unhealthy food couch"
+    Solution: "hands holding smartphone app"
+    CTA: "woman running park morning"
+    → Kijker ziet 4 willekeurige beelden, geen verhaal
+
+  GOED — één doorgaand visueel verhaal:
+    Hook: "woman frustrated bathroom mirror morning"
+    Problem: "same woman sitting kitchen table overwhelmed"
+    Solution: "woman holding phone relieved kitchen"
+    CTA: "woman smiling phone same kitchen confident"
+    → Zelfde persoon, zelfde thuis, emotionele progressie zichtbaar
+
   REGELS:
-  - Kies EEN persoontype voor het hele script (bijv. "young woman" of "man office")
+  - Kies EEN persoontype voor het hele script (bijv. "woman 35" of "man")
   - ELKE query bevat dit persoontype + een actie die past bij de scene-emotie
-  - Houd de SETTING consistent (bijv. allemaal office, of allemaal healthcare)
+  - Houd de SETTING consistent (bijv. allemaal home interior)
   - Schrijf in het ENGELS, 3-5 woorden
-
-  GOED VOORBEELD (simpel, vindbaar op stock sites):
-  - Hook: "woman frustrated desk office"
-  - Problem: "woman stressed paperwork documents"
-  - Solution: "woman smiling phone happy"
-  - CTA: "woman tapping phone excited"
-  → Simpele woorden, zelfde type persoon, GEEN "talking to camera" of "nurse"
-
-  SLECHT VOORBEELD (te specifiek, vindt niks op stock sites):
-  - "young nurse frustrated talking to camera" ← BESTAAT NIET
-  - "healthcare worker typing at desk late night" ← TE SPECIFIEK
-  - "man stressed laptop night" ← ANDER persoon dan andere scenes
-
-  REGELS:
   - MAX 4 woorden per query
   - NOOIT "talking to camera", "looking at camera", "nurse", "healthcare"
   - WEL: "woman", "man", "person" + emotie + setting
