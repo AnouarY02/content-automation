@@ -72,13 +72,42 @@ class IdeaGeneratorAgent(BaseAgent):
         """
         template = self._load_prompt("tasks/idea_generation.txt")
 
-        app_context = (
-            f"Naam: {app.get('name', '?')}\n"
-            f"Beschrijving: {app.get('description', '?')}\n"
-            f"Target audience: {app.get('target_audience', '?')}\n"
-            f"USP: {app.get('usp', '?')}\n"
-            f"Niche: {app.get('niche', '?')}"
-        )
+        niche = app.get("niche", "")
+        is_health = niche and any(k in niche.lower() for k in ["health", "wellness", "glp", "weight", "lifestyle", "coach"])
+        market_data = memory.get("marktdata", {})
+        psycho = memory.get("psychografisch_taalgebruik", {})
+
+        app_context_parts = [
+            f"Naam: {app.get('name', '?')}",
+            f"Beschrijving: {app.get('description', '?')}",
+            f"Target audience: {app.get('target_audience', '?')}",
+            f"USP: {app.get('usp', '?')}",
+            f"Niche: {niche}",
+        ]
+
+        if is_health:
+            # Domein-specifieke verliesaversie voorbeelden (NIET uur/week)
+            app_context_parts.append(
+                "\nDOMEIN METRICS voor verliesaversie framing (gebruik UITSLUITEND dit, GEEN uur/week tijdsbesparing):"
+            )
+            if market_data:
+                for k, v in list(market_data.items())[:6]:
+                    app_context_parts.append(f"  - {k}: {v}")
+            app_context_parts.append(
+                "\nVERLIESAVERSIE VOORBEELDEN voor health content:"
+                "\n  GOED: '50% van GLP-1 gebruikers valt terug na stoppen — ben jij ook die 50%?'"
+                "\n  GOED: 'Je hebt al €2.000 uitgegeven aan diëten die niet werkten'"
+                "\n  GOED: 'Elk jaar dat je wacht kost je gemiddeld 3kg meer creep'"
+                "\n  FOUT: 'Je verliest 520 uur per jaar aan...' ← NOOIT voor health content"
+                "\n  FOUT: 'Bespaar 10 uur per week' ← dit is een productivity-app frame, niet health"
+            )
+            if psycho.get("gebruik_deze_zinnen"):
+                app_context_parts.append(
+                    "\nHERKENBARE ZINNEN voor de doelgroep (verwerk in hook/idee):\n"
+                    + "\n".join(f"  - \"{z}\"" for z in psycho["gebruik_deze_zinnen"][:6])
+                )
+
+        app_context = "\n".join(app_context_parts)
 
         perf_str = "Geen recente data beschikbaar."
         if recent_performance:

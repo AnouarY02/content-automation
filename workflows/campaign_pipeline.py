@@ -495,10 +495,10 @@ def run_pipeline(
 
             # Wacht op video (langzamer, ~60-180s) — timeout voorkomt eindeloos hangen
             try:
-                video_path, video_cost, video_error = video_future.result(timeout=540)
+                video_path, video_cost, video_error = video_future.result(timeout=720)
             except FuturesTimeout:
                 video_future.cancel()
-                raise RuntimeError("Video productie timeout (>9 min) — probeer opnieuw of gebruik een kortere video")
+                raise RuntimeError("Video productie timeout (>12 min) — probeer opnieuw of gebruik een kortere video")
             if not video_path:
                 raise RuntimeError(
                     f"Video productie mislukt: {video_error or 'geen videobestand aangemaakt'}"

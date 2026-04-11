@@ -224,7 +224,7 @@ class OpenAIImageProvider:
                 prompt=prompt,
                 n=1,
                 size="1024x1792",
-                **( {"quality": "high"} if img_model == "gpt-image-1" else {"quality": "standard"} ),
+                **( {"quality": "medium"} if img_model == "gpt-image-1" else {"quality": "hd"} ),
                 **({"response_format": "b64_json"} if use_b64 else {}),
             )
 
