@@ -424,7 +424,19 @@ VOICEOVER — SPREEK ALS EEN MENS (SCORE ≥90 VEREIST)
 ═══════════════════════════════════════════════════
 
 Je schrijft GEEN script. Je schrijft hoe een ECHT PERSOON praat.
-Iemand van 22 in hun kamer die een TikTok maakt voor hun telefoon.
+Iemand die dit 's avonds opneemt op haar telefoon, zonder make-up, een beetje moe,
+die dit ECHT heeft meegemaakt en het nu deelt. Niet voor een merk, maar voor zichzelf.
+
+DE RAUWE-EMOTIE TEST (MEEST KRITIEKE KWALITEITSCHECK):
+Lees de probleemscene terug. Voelt het als:
+  A) "Een script dat probeert realistisch te klinken" → HERSCHRIJF
+  B) "Een echte herinnering die iemand deelt en waarvan je denkt: god dat ken ik" → GOED
+
+Het verschil is SPECIFICITEIT. Niet "ik was gefrustreerd" maar:
+  SLECHT: "Ik was zo gefrustreerd. Het lukte maar niet."
+  GOED: "Ik stond op dinsdag om half twaalf in de keuken, ik had net drie crackers gegeten en
+         ik dacht: dit is het, dit is alles wat ik kan. En toch bleef ik gewoon staan kijken."
+
 De authenticiteit van je voiceover bepaalt of mensen je vertrouwen of wegklikken.
 
 VERPLICHTE STIJLREGELS:
@@ -801,6 +813,12 @@ automatisch, met reminders, en ik dacht, oh, dit is echt iets anders."
 VERPLICHT: De solution-scene MOET een SPECIFIEK MOMENT VAN TWIJFEL bevatten.
 Niet "ik was sceptisch" (te generiek) maar EEN CONCRETE GEDACHTE die die persoon had.
 Plus een CONCREET productmoment: wat zag/deed de persona letterlijk in de app?
+
+VERPLICHT: NOEM DE APP/PRODUCT MET NAAM in scene 3.
+Niet "een app" / "een nieuwe aanpak" / "een methode" — dit klinkt vague en ongeloofwaardig.
+Gebruik de app-naam uit APP CONTEXT (bijv. "GLP Coach", "Dossiertijd").
+GOED: "Ik opende GLP Coach en het eerste wat ik zag was mijn injectieschema, automatisch, met reminders."
+FOUT: "Ik ontdekte een nieuwe aanpak die voor mij werkte." ← NOOIT — klinkt als een vague infomercial
 
 Als video_type = "screen_demo" of "mixed":
   Schrijf ALTIJD IN HET ENGELS. Realistisch en specifiek.

@@ -306,6 +306,37 @@ CURATED_VIDEOS = {
             6962433,   # Vrouw tappend op telefoon, lachend
         ],
     },
+    # Wellness/GLP Coach: gewichtsverlies, leefstijl, gezondheidsreis
+    "wellness": {
+        "hook": [
+            6547802,   # Vrouw staat op weegschaal, close-up voeten
+            6654154,   # Vrouw kijkt gefrustreerd naar spiegel, lichaam
+            8136784,   # Vrouw close-up emotioneel/huilend
+            6951584,   # Vrouw 's nachts wakker, denkt na in bed
+            8431888,   # Vrouw emotioneel, gefrustreerd met zichzelf
+        ],
+        "problem": [
+            7273680,   # Vrouw moe en gefrustreerd, staand
+            5981349,   # Vrouw emotioneel gefrustreerd
+            6940834,   # Vrouw 's nachts in bed, piekerend
+            8431551,   # Vrouw upset, kijkt in spiegel
+            5899345,   # Vrouw frustratie met eten/dieet
+        ],
+        "solution": [
+            7423634,   # Vrouw lacht naar telefoon, gezondheidsapp
+            6608789,   # Vrouw kijkt naar app op telefoon, tracking
+            7986205,   # Vrouw blij met telefoon, opgelucht
+            6601617,   # Vrouw blij na gewichtsverlies resultaat
+            5726623,   # Vrouw gewichtsverlies progressie, glimlachend
+        ],
+        "cta": [
+            6608789,   # Vrouw kijkt naar app, tevreden
+            7550768,   # Vrouw lacht naar telefoon, selfie-stijl
+            4546853,   # Vrouw toont telefoonscherm
+            7802055,   # Vrouw checkt gewicht, positief
+            7986205,   # Vrouw blij met telefoon resultaat
+        ],
+    },
 }
 
 
@@ -358,6 +389,36 @@ NICHE_SEARCH_TERMS = {
             "young woman tapping phone excited smile",
             "woman using phone happy smiling",
             "woman showing phone screen satisfied",
+        ],
+    },
+    # Wellness: gewichtsverlies, leefstijl, GLP-1 coaching
+    "wellness": {
+        "hook": [
+            "woman frustrated bathroom scale weight",
+            "woman upset mirror body image",
+            "woman emotional crying night bed",
+            "woman frustrated diet food kitchen",
+            "woman tired insomnia night awake",
+        ],
+        "problem": [
+            "woman sad frustrated standing alone",
+            "woman emotional upset frustrated",
+            "woman night awake bed thinking",
+            "woman unhappy looking mirror",
+            "woman diet frustration food",
+        ],
+        "solution": [
+            "woman happy phone health app",
+            "woman smiling phone app tracking",
+            "woman relieved looking phone",
+            "woman happy weight loss progress",
+            "woman healthy morning routine phone",
+        ],
+        "cta": [
+            "woman showing phone screen happy",
+            "woman tapping phone smiling",
+            "woman selfie phone happy fitness",
+            "woman phone app health smiling",
         ],
     },
     "tech": {
