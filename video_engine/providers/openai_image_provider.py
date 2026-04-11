@@ -216,19 +216,25 @@ class OpenAIImageProvider:
             client = openai.OpenAI(api_key=api_key, timeout=60.0)
             logger.info(f"[OpenAIImage] Genereer scene {index + 1}/{total_scenes}: {prompt[:80]}...")
 
+            # Probeer gpt-image-1 (hogere kwaliteit); fallback naar dall-e-3
+            img_model = os.getenv("IMAGE_MODEL", "gpt-image-1")
+            use_b64 = img_model == "gpt-image-1"
             response = client.images.generate(
-                model="dall-e-3",
+                model=img_model,
                 prompt=prompt,
                 n=1,
                 size="1024x1792",
-                quality="standard",
+                **( {"quality": "high"} if img_model == "gpt-image-1" else {"quality": "standard"} ),
+                **({"response_format": "b64_json"} if use_b64 else {}),
             )
 
-            image_url = response.data[0].url
             raw_path = image_dir / f"scene_{index:02d}_raw.png"
-            if image_url:
+            if use_b64 and hasattr(response.data[0], "b64_json") and response.data[0].b64_json:
+                import base64
+                raw_path.write_bytes(base64.b64decode(response.data[0].b64_json))
+            elif hasattr(response.data[0], "url") and response.data[0].url:
                 import httpx
-                r = httpx.get(image_url, timeout=45, follow_redirects=True)
+                r = httpx.get(response.data[0].url, timeout=45, follow_redirects=True)
                 r.raise_for_status()
                 raw_path.write_bytes(r.content)
             elif hasattr(response.data[0], "b64_json") and response.data[0].b64_json:
@@ -263,12 +269,18 @@ class OpenAIImageProvider:
         self, scene: dict, memory: dict, index: int, total_scenes: int
     ) -> str:
         """Bouw een cinematic DALL-E prompt voor TikTok/Reels content."""
-        visual_style = memory.get("visual_style", {}) if memory else {}
-        if not isinstance(visual_style, dict):
+        _vs_raw = memory.get("visual_style", {}) if memory else {}
+        if isinstance(_vs_raw, dict):
+            visual_style = _vs_raw
+            color_scheme = _vs_raw.get("color_scheme", "")
+        elif isinstance(_vs_raw, str) and _vs_raw.strip():
             visual_style = {}
+            color_scheme = _vs_raw  # Gebruik de volledige string als color_scheme hint
+        else:
+            visual_style = {}
+            color_scheme = ""
         app_name = memory.get("app_name", "") if memory else ""
         niche = memory.get("niche", "") if memory else ""
-        color_scheme = visual_style.get("color_scheme", "")
 
         scene_type = scene.get("type", "body")
         visual_desc = scene.get("visual_description", "")
@@ -321,11 +333,15 @@ class OpenAIImageProvider:
         if app_name:
             parts.append(f"For {app_name} brand content.")
 
-        # Kleurstijl
+        # Kleurstijl op basis van niche
         if color_scheme:
             parts.append(f"Color palette: {color_scheme}.")
+        elif niche and any(k in niche.lower() for k in ["health", "wellness", "glp", "weight", "lifestyle", "coach"]):
+            parts.append(
+                "Warm, natural lifestyle aesthetic. Soft earthy tones, warm whites and greens. "
+                "Cozy home setting. Authentic, non-staged feel. Dutch lifestyle photography."
+            )
         else:
-            # Standaard dark/premium TikTok stijl
             parts.append(
                 "Dark premium aesthetic with accent lighting. "
                 "Cinematic teal and orange color grade."

@@ -18,9 +18,9 @@
     },
     "script_writing": {
       "provider": "openai",
-      "model": "gpt-4o-mini",
+      "model": "gpt-4o",
       "max_tokens": 8000,
-      "temperature": 0.92,
+      "temperature": 0.88,
       "response_format": "json_object",
       "use_cache": false
     },

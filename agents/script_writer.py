@@ -49,14 +49,19 @@ class ScriptWriterAgent(BaseAgent):
         # Bouw creator persona context
         persona = memory.get("creator_persona", {})
         if persona:
-            persona_context = (
-                f"Naam: {persona.get('naam', '?')}, {persona.get('leeftijd', '?')} jaar, {persona.get('woonplaats', '?')}\n"
-                f"Achtergrond: {persona.get('achtergrond', '')}\n"
-                f"Persoonlijkheid: {persona.get('persoonlijkheid', '')}\n"
-                f"Spreekstijl: {persona.get('spreekstijl', '')}\n"
-                f"Content aanpak: {persona.get('content_aanpak', '')}\n"
-                f"Vermijdt: {persona.get('vermijdt', '')}"
-            )
+            persona_parts = [
+                f"Naam: {persona.get('naam', '?')}, {persona.get('leeftijd', '?')} jaar, {persona.get('woonplaats', '')}".rstrip(", "),
+                f"Achtergrond: {persona.get('achtergrond', '')}",
+                f"Persoonlijkheid: {persona.get('persoonlijkheid', '')}",
+                f"Spreekstijl: {persona.get('spreekstijl', '')}",
+                f"Content aanpak: {persona.get('content_aanpak', '')}",
+                f"Signature stijl: {persona.get('signature_stijl', '')}",
+                f"Vermijdt: {persona.get('vermijdt', '')}",
+            ]
+            verboden = persona.get("verboden_zinnen", [])
+            if verboden:
+                persona_parts.append(f"VERBODEN ZINNEN (nooit gebruiken in script): {', '.join(verboden)}")
+            persona_context = "\n".join(p for p in persona_parts if p.strip().split(": ", 1)[-1])
         else:
             # Fallback: anonieme persona zodat het script altijd in eerste persoon klinkt
             niche = memory.get("niche", app.get("niche", ""))
@@ -78,8 +83,21 @@ class ScriptWriterAgent(BaseAgent):
         if idea.get("comment_trigger"):
             viral_context += f"\nCOMMENT TRIGGER HINT: {idea['comment_trigger']}"
 
+        # Bouw domein-specifieke metriek-gids op basis van niche
+        niche = app.get("niche", memory.get("niche", ""))
+        market_data = memory.get("marktdata", {})
+        domain_metrics_hint = ""
+        if niche or market_data:
+            domain_metrics_hint = "\nDOMEIN-SPECIFIEKE METRICS (gebruik ALLEEN deze, NIET time-saving admin-metrics):\n"
+            if market_data:
+                for key, val in list(market_data.items())[:6]:
+                    domain_metrics_hint += f"- {key}: {val}\n"
+            elif niche:
+                domain_metrics_hint += f"- Niche: {niche} — gebruik passende metrics (kg, %, weken, relapsrate, etc.)\n"
+            domain_metrics_hint += "VERBOD: Gebruik NOOIT 'uur per week', 'admin-tijd', 'werkdagen' of andere tijdbesparings-metrics tenzij het idee daar expliciet over gaat.\n"
+
         full_extra = ""
-        if extra_instruction or viral_context:
+        if extra_instruction or viral_context or domain_metrics_hint:
             full_extra = "═══════════════════════════════════════════════════\n"
             full_extra += "EXTRA INSTRUCTIES — VOLG DEZE EXACT\n"
             full_extra += "═══════════════════════════════════════════════════\n"
@@ -87,16 +105,45 @@ class ScriptWriterAgent(BaseAgent):
                 full_extra += extra_instruction + "\n"
             if viral_context:
                 full_extra += viral_context + "\n"
+            if domain_metrics_hint:
+                full_extra += domain_metrics_hint + "\n"
+
+        # Bouw psychografische context uit brand memory
+        psycho = memory.get("psychografisch_taalgebruik", {})
+        bewezen_hooks = memory.get("bewezen_hooks", [])
+        high_resonance = memory.get("high_resonance_topics", [])
+
+        app_context_parts = [
+            f"Naam: {app.get('name', '?')}",
+            f"USP: {app.get('usp', '?')}",
+            f"Target audience: {app.get('target_audience', '?')}",
+        ]
+        if psycho.get("gebruik_deze_zinnen"):
+            app_context_parts.append(
+                "\nPSYCHOGRAFISCHE TAAL — GEBRUIK DEZE ZINNEN (klinken als de doelgroep):\n"
+                + "\n".join(f"- \"{z}\"" for z in psycho["gebruik_deze_zinnen"])
+            )
+        if psycho.get("vermijd_altijd"):
+            app_context_parts.append(
+                "\nVERMIJD ALTIJD (klinkt niet als doelgroep):\n"
+                + ", ".join(f"\"{z}\"" for z in psycho["vermijd_altijd"])
+            )
+        if bewezen_hooks:
+            app_context_parts.append(
+                "\nBEWEZEN HOOKS (getest op deze doelgroep — gebruik als inspiratie):\n"
+                + "\n".join(f"- {h}" for h in bewezen_hooks[:6])
+            )
+        if high_resonance:
+            app_context_parts.append(
+                "\nHOGE RESONANTIE ONDERWERPEN:\n"
+                + "\n".join(f"- {t}" for t in high_resonance)
+            )
 
         prompt = self._fill_template(
             template,
             {
                 "campaign_idea": str(idea),
-                "app_context": (
-                    f"Naam: {app.get('name', '?')}\n"
-                    f"USP: {app.get('usp', '?')}\n"
-                    f"Target audience: {app.get('target_audience', '?')}"
-                ),
+                "app_context": "\n".join(app_context_parts),
                 "brand_voice": brand_voice,
                 "persona_context": persona_context,
                 "platform": platform.upper(),
@@ -164,14 +211,19 @@ class ScriptWriterAgent(BaseAgent):
 
         persona = memory.get("creator_persona", {})
         if persona:
-            persona_context = (
-                f"Naam: {persona.get('naam', '?')}, {persona.get('leeftijd', '?')} jaar, {persona.get('woonplaats', '?')}\n"
-                f"Achtergrond: {persona.get('achtergrond', '')}\n"
-                f"Persoonlijkheid: {persona.get('persoonlijkheid', '')}\n"
-                f"Spreekstijl: {persona.get('spreekstijl', '')}\n"
-                f"Content aanpak: {persona.get('content_aanpak', '')}\n"
-                f"Vermijdt: {persona.get('vermijdt', '')}"
-            )
+            _p2 = [
+                f"Naam: {persona.get('naam', '?')}, {persona.get('leeftijd', '?')} jaar, {persona.get('woonplaats', '')}".rstrip(", "),
+                f"Achtergrond: {persona.get('achtergrond', '')}",
+                f"Persoonlijkheid: {persona.get('persoonlijkheid', '')}",
+                f"Spreekstijl: {persona.get('spreekstijl', '')}",
+                f"Content aanpak: {persona.get('content_aanpak', '')}",
+                f"Signature stijl: {persona.get('signature_stijl', '')}",
+                f"Vermijdt: {persona.get('vermijdt', '')}",
+            ]
+            _v2 = persona.get("verboden_zinnen", [])
+            if _v2:
+                _p2.append(f"VERBODEN ZINNEN: {', '.join(_v2)}")
+            persona_context = "\n".join(p for p in _p2 if p.strip().split(": ", 1)[-1])
         else:
             niche = memory.get("niche", app.get("niche", ""))
             persona_context = (
@@ -183,15 +235,36 @@ class ScriptWriterAgent(BaseAgent):
                 + "\nVermijdt: reclametaal, opsommingen, perfecte zinnen."
             )
 
+        # Psychografische context voor variant generatie
+        _psycho = memory.get("psychografisch_taalgebruik", {})
+        _bewezen_hooks = memory.get("bewezen_hooks", [])
+        _high_resonance = memory.get("high_resonance_topics", [])
+        _app_ctx_parts = [
+            f"Naam: {app.get('name', '?')}",
+            f"USP: {app.get('usp', '?')}",
+            f"Target audience: {app.get('target_audience', '?')}",
+        ]
+        if _psycho.get("gebruik_deze_zinnen"):
+            _app_ctx_parts.append(
+                "\nPSYCHOGRAFISCHE TAAL:\n"
+                + "\n".join(f"- \"{z}\"" for z in _psycho["gebruik_deze_zinnen"])
+            )
+        if _bewezen_hooks:
+            _app_ctx_parts.append(
+                "\nBEWEZEN HOOKS:\n"
+                + "\n".join(f"- {h}" for h in _bewezen_hooks[:6])
+            )
+        if _high_resonance:
+            _app_ctx_parts.append(
+                "\nHOGE RESONANTIE ONDERWERPEN:\n"
+                + "\n".join(f"- {t}" for t in _high_resonance)
+            )
+
         base_prompt = self._fill_template(
             base_template,
             {
                 "campaign_idea": str(idea),
-                "app_context": (
-                    f"Naam: {app.get('name', '?')}\n"
-                    f"USP: {app.get('usp', '?')}\n"
-                    f"Target audience: {app.get('target_audience', '?')}"
-                ),
+                "app_context": "\n".join(_app_ctx_parts),
                 "brand_voice": brand_voice,
                 "persona_context": persona_context,
                 "platform": platform.upper(),
