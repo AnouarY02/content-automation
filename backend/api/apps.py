@@ -314,11 +314,21 @@ def get_app_content(app_id: str):
     content_items = []
     for b in bundles:
         idea_title = b.idea.get("title", "") if b.idea else ""
-        idea_hook = b.idea.get("hook", "") if b.idea else ""
+        # hook_options is een lijst; fallback naar hook veld
+        hook_options = b.idea.get("hook_options", []) if b.idea else []
+        idea_hook = (hook_options[0] if hook_options else b.idea.get("hook", "")) if b.idea else ""
         script_scenes = b.script.get("scenes", []) if b.script else []
-        caption_text = b.caption.get("caption", "") if b.caption else ""
-        raw_hashtags = b.caption.get("hashtags", []) if b.caption else []
-        hashtags = list(raw_hashtags) if isinstance(raw_hashtags, (list, tuple)) else []
+        # caption zit genest in caption_options lijst
+        caption_options = b.caption.get("caption_options", []) if b.caption else []
+        caption_text = caption_options[0].get("caption", "") if caption_options else (b.caption.get("caption", "") if b.caption else "")
+        raw_hashtags = b.caption.get("hashtags", {}) if b.caption else {}
+        if isinstance(raw_hashtags, dict):
+            # Hashtags als dict met primary/secondary/etc
+            hashtags = raw_hashtags.get("primary", [])[:5]
+        elif isinstance(raw_hashtags, (list, tuple)):
+            hashtags = list(raw_hashtags)[:5]
+        else:
+            hashtags = []
 
         content_items.append({
             "campaign_id": b.id,
@@ -331,7 +341,9 @@ def get_app_content(app_id: str):
             "caption_preview": caption_text[:150],
             "hashtags": hashtags[:5],
             "video_path": b.video_path,
+            "thumbnail_path": b.thumbnail_path,
             "has_video": b.video_path is not None,
+            "post_type": getattr(b, "post_type", "video"),
             "experiment_id": b.experiment_id,
             "total_cost_usd": b.total_cost_usd,
             "created_at": str(b.created_at),
