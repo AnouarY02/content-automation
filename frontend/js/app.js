@@ -364,6 +364,32 @@ async function loadOverview() {
   } else {
     alertEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#10003;</div><div class="empty-state-text text-success">Geen actieve alerts</div></div>';
   }
+
+  // AI Insights summary — load top learning for current app
+  const insightEl = document.getElementById('overview-insight-content');
+  if (insightEl && currentApp) {
+    try {
+      const learnings = await api(`/api/apps/${currentApp}/learnings`);
+      const top = (learnings?.learnings || [])[0];
+      if (top) {
+        const confColor = top.confidence === 'high' ? '#16a34a' : top.confidence === 'medium' ? '#d97706' : '#94a3b8';
+        insightEl.innerHTML = `
+          <p class="text-xs font-medium text-gray-800 mb-1">${escapeHtml(top.finding)}</p>
+          <p class="text-[0.65rem] text-muted mb-1.5">${escapeHtml(top.action || '')}</p>
+          <div class="flex items-center gap-2 text-[0.6rem]">
+            <span class="font-semibold" style="color:${confColor}">${top.confidence}</span>
+            <span class="text-muted">· ${top.times_confirmed || 0}× bevestigd</span>
+            <span class="text-muted">· ${top.category || ''}</span>
+          </div>`;
+      } else {
+        insightEl.innerHTML = '<p class="text-xs text-muted">Nog geen learnings — publiceer content om te starten.</p>';
+      }
+    } catch (_) {
+      insightEl.innerHTML = '<p class="text-xs text-muted">Learnings laden mislukt.</p>';
+    }
+  } else if (insightEl) {
+    insightEl.innerHTML = '<p class="text-xs text-muted">Selecteer een app om leerinzichten te zien.</p>';
+  }
 }
 
 // ═══════ APPS TAB ════════════════════════════════════════════════════
