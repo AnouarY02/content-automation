@@ -887,7 +887,7 @@
         <div class="space-y-4">
           <div>
             <label class="text-[0.65rem] text-muted uppercase tracking-wider block mb-1.5 font-semibold">App *</label>
-            <select id="campaign-app" required class="w-full">
+            <select id="campaign-app" required class="w-full" onchange="loadBriefSuggestions(this.value)">
               <option value="">Selecteer app...</option>
             </select>
           </div>
@@ -895,8 +895,9 @@
             <label class="text-[0.65rem] text-muted uppercase tracking-wider block mb-1.5 font-semibold">Platform</label>
             <select id="campaign-platform" class="w-full">
               <option value="tiktok">TikTok</option>
-              <option value="instagram">Instagram</option>
-              <option value="youtube">YouTube</option>
+              <option value="instagram">Instagram Reels</option>
+              <option value="facebook">Facebook Reels</option>
+              <option value="youtube">YouTube Shorts</option>
             </select>
           </div>
           <div>
@@ -910,6 +911,11 @@
               class="w-full text-xs rounded-lg border border-border bg-bg px-3 py-2 text-gray-800 placeholder-muted resize-none focus:outline-none focus:border-accent transition-colors"
             ></textarea>
             <p class="text-[0.58rem] text-muted mt-1">Laat leeg voor volledig AI-gegenereerde ideeën. Vul in om de AI te sturen naar jouw onderwerp.</p>
+            <!-- Smart suggestions from learnings -->
+            <div id="brief-suggestions" class="hidden mt-2">
+              <p class="text-[0.6rem] text-muted mb-1.5 font-medium">Suggesties op basis van wat goed werkt:</p>
+              <div id="brief-suggestion-chips" class="flex flex-wrap gap-1.5"></div>
+            </div>
           </div>
 
           <div class="flex justify-end gap-2 pt-2">

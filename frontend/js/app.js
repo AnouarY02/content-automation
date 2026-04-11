@@ -1049,8 +1049,85 @@ function closeStartCampaignModal() {
   document.getElementById('campaign-step-2').classList.add('hidden');
   document.getElementById('campaign-step-3').classList.add('hidden');
   document.getElementById('campaign-loading').classList.add('hidden');
+  document.getElementById('brief-suggestions')?.classList.add('hidden');
   _generatedIdeas = [];
   _chosenIdea = null;
+}
+
+async function loadBriefSuggestions(appId) {
+  const box   = document.getElementById('brief-suggestions');
+  const chips = document.getElementById('brief-suggestion-chips');
+  if (!box || !chips || !appId) { box?.classList.add('hidden'); return; }
+
+  box.classList.add('hidden');
+  chips.innerHTML = '';
+
+  try {
+    const data = await api(`/api/apps/${appId}/learnings`);
+    const learnings = data?.learnings || [];
+    const memory    = await api(`/api/apps/${appId}/insights`);
+
+    // Build suggestion chips from high/medium confidence learnings
+    const suggestions = [];
+
+    // From learnings: top 3 by confidence + times_confirmed
+    const topLearnings = learnings
+      .filter(l => l.confidence === 'high' || l.confidence === 'medium')
+      .sort((a, b) => (b.times_confirmed || 0) - (a.times_confirmed || 0))
+      .slice(0, 3);
+
+    topLearnings.forEach(l => {
+      if (l.action) suggestions.push({ label: l.action.substring(0, 55), full: l.action, badge: l.confidence });
+    });
+
+    // From brand memory: top hooks
+    const topHooks = memory?.top_hooks || [];
+    if (topHooks.length) {
+      const hook = topHooks[0];
+      const hookText = typeof hook === 'string' ? hook : hook.hook || hook.text || '';
+      if (hookText) suggestions.push({ label: `Hook: "${hookText.substring(0,45)}"`, full: hookText, badge: 'memory' });
+    }
+
+    // Best format suggestion
+    if (memory?.best_format) {
+      suggestions.push({ label: `Format: ${memory.best_format}`, full: `Gebruik het ${memory.best_format} format dat het beste presteert`, badge: 'format' });
+    }
+
+    if (!suggestions.length) { return; }
+
+    const badgeColors = {
+      high:   { bg: '#f0fdf4', border: '#bbf7d0', text: '#16a34a' },
+      medium: { bg: '#fffbeb', border: '#fde68a', text: '#d97706' },
+      memory: { bg: '#f5f3ff', border: '#ddd6fe', text: '#7c3aed' },
+      format: { bg: '#eff6ff', border: '#bfdbfe', text: '#2563eb' },
+    };
+
+    chips.innerHTML = suggestions.map((s, i) => {
+      const c = badgeColors[s.badge] || badgeColors.medium;
+      return `<button type="button" onclick="applySuggestion(${i})" data-full="${escapeHtml(s.full)}"
+        class="text-[0.65rem] px-2.5 py-1 rounded-full border cursor-pointer hover:opacity-80 transition-opacity text-left"
+        style="background:${c.bg}; border-color:${c.border}; color:${c.text}">
+        ${escapeHtml(s.label)}${s.label.length >= 55 ? '…' : ''}
+      </button>`;
+    }).join('');
+
+    box.classList.remove('hidden');
+  } catch (_) {
+    // Silent fail — suggestions are non-critical
+  }
+}
+
+function applySuggestion(idx) {
+  const chips = document.getElementById('brief-suggestion-chips');
+  const chip  = chips?.querySelectorAll('button')[idx];
+  if (!chip) return;
+  const full = chip.getAttribute('data-full');
+  const ta   = document.getElementById('campaign-custom-brief');
+  if (!ta || !full) return;
+  ta.value = ta.value ? ta.value + '\n\n' + full : full;
+  ta.focus();
+  chip.style.opacity = '0.4';
+  chip.disabled = true;
 }
 
 async function generateIdeas() {
