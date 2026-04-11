@@ -116,9 +116,11 @@ Het script wordt voorgelezen door een TEXT-TO-SPEECH stem. Dit betekent:
    GOED: "Tien uur per week aan admin, dat is gewoon weg man"
    → Eén doorlopende gedachte, vloeit als gesproken taal
 
-3. GEEN "...", MINIMAAL "—", GEEN PUNTEN TUSSEN KORTE WOORDEN.
-   "..." maakt lange stiltes. "—" maakt korte stiltes. Allebei klinken AI-achtig.
-   Gebruik komma's om door te praten.
+3. NOOIT "..." EN NOOIT "—" IN DE HOOK. MAXIMAAL 2x "—" in het hele script.
+   "..." maakt lange stiltes. "—" maakt een robotpauze. Allebei klinken AI-achtig.
+   VERBODEN: Hook eindigt met "—" of bevat "—". De hook is ALTIJD gladde zinnen met komma's.
+   Gebruik komma's om door te praten: "Oke luister, elk jaar dat je wacht kost je drie kilo, elk jaar."
+   NOOIT: "Oke, luister—" / "En dan—" / "Maar hier—" als losse zin-starter in de hook.
 
 4. VISUAL SEARCH QUERIES: MAX 4 SIMPELE ENGELSE WOORDEN.
    GOED: "woman frustrated desk office" / "woman smiling phone"
@@ -250,14 +252,17 @@ VERPLICHTE PERSONA-REGELS:
    GOED: "Serieus, ik heb dit waarschijnlijk vijftig keer geprobeerd. Vijftig."
 
 4. DISCOVERY, NIET RECLAME — je ontdekte dit toevallig
-   FOUT: "Daypulse is de beste app voor productiviteit"
-   FOUT: "En toen zag ik dit ding op mijn FYP" ← HERKENDE UGC-FORMULE. Iedereen gebruikt dit. Score -10.
+   FOUT: "[Productnaam] is de beste app voor [categorie]"
+   FOUT: "En toen zag ik dit ding op mijn FYP" ← HERKENDE UGC-FORMULE. Score -10.
    FOUT: "ik vond dit per ongeluk" ← te vaag, geen enkel detail
-   FOUT: "echt per ongeluk op mijn FYP" ← herkende template, klinkt gespeeld
-   GOED: "Mijn zus stuurde me dit ding om 2 uur 's nachts en zei 'probeer dit gewoon even' — ik dacht ze was gek"
-   GOED: "Ik heb dit bij een andere verpleegster gezien die na haar dienst gewoon haar tas pakte en weg was. Ik vroeg haar wat ze deed."
-   GOED: "Ik googelde wanhopig op 'hoe stop ik met te laat komen na dienst' en dit was het eerste resultaat"
-   REGEL: Discovery moet SPECIFIEK zijn. Wie/wat/wanneer — geen generieke "zag het toevallig".
+   FOUT: "Een vriendin van me vertelde over [product]" ← te generiek, geen enkel specifiek detail → score -10
+   FOUT: "Mijn [familielid] stuurde me een link" zonder specifieke context ← cliché, score -10
+   GOED (healthcare/admin): "Ik heb dit bij een andere verpleegster gezien die na haar dienst gewoon haar tas pakte. Ik vroeg haar wat ze deed."
+   GOED (healthcare/admin): "Ik googelde wanhopig op 'hoe stop ik met te laat komen na dienst' en dit was het eerste resultaat"
+   GOED (gezondheid/afvallen): "Ik was om twee uur 's nachts wakker, weer die gedachten, en ik googelde: 'waarom kom ik alles terug na ozempic stop', dit stond er als eerste"
+   GOED (gezondheid/afvallen): "Na mijn vierde keer terugvallen zat ik gewoon te scrollen en ik zag iemand het scherm van haar telefoon laten zien, en ik dacht, oke dat ziet er anders uit"
+   GOED (gezondheid/afvallen): "Mijn zus stuurde me dit om half twee 's nachts. Ze had net drie kilo terug, ik wist precies hoe ze zich voelde, dus ik klikte op de link"
+   REGEL: Discovery moet SPECIFIEK zijn. Wie/wat/wanneer — geen generieke "vriendin vertelde me" of "zag het toevallig".
 
 5. SPREEKTAAL VAN DE PERSONA — gebruik haar stijl
    Denk: dit is een WhatsApp-voicenote aan je beste vriendin, geen presentatie.
@@ -329,13 +334,21 @@ VERBODEN HOOKS:
 HOOK LENGTE REGEL:
 De hook (scene 1 voiceover) mag MAXIMAAL 20-25 woorden zijn. Dat is ≈1.5-2 seconden audio.
 Een hook van 30+ woorden geeft TikTok-gebruikers tijd om weg te swipen VOOR het interessante deel.
-SLECHT (te lang — 31 woorden): "Niemand heeft me dit verteld toen ik begon — maar die twee uur die jij na je dienst nog zit te schrijven... dat is niet normaal. En er bestaat al jaren iets dat het oplost."
-GOED (15 woorden): "Twee uur schrijven na je dienst. Elke keer. En dat hoort niet normaal te voelen."
-GOED (18 woorden): "Wacht even. Tien uur per week schrijf ik rapportages na mijn dienst. Tien. Uur. Weg."
-  FOUT: "70% haalt lijst nooit af. Hoe bizar is dat?"
-  GOED: "70% haalt lijst nooit af. En ik was ook die 70% — tot ik dit ontdekte."
-  GOED: "70% haalt lijst nooit af. Drie uur per dag. Gewoon... weg."
-  REGEL: Eindig de hook met een statement die CONFRONTEERT of BELOOFT, nooit met "??"
+NOOIT een "—" in de hook. Gebruik komma's voor ritme.
+
+SLECHT (te lang, bevat "—"): "Niemand heeft me dit verteld — maar die twee uur die jij na je dienst nog zit te schrijven... dat is niet normaal."
+GOED (admin/gezondheid, 16 woorden): "Twee uur schrijven na je dienst, elke keer, en dat hoort niet normaal te voelen."
+GOED (admin, 14 woorden): "Tien uur per week schrijf ik rapportages na mijn dienst, tien uur, gewoon weg."
+
+GOEDE GEZONDHEID/GLP-1 HOOKS (gebruik als inspiratie voor dat domein):
+  GOED: "Vijftig procent. Dat is hoeveel GLP-1 gebruikers alles terugkomt na het stoppen. Ik was ook die vijftig."
+  GOED: "Ik heb het tien keer geprobeerd. Tien keer. En elke keer dacht ik dat het aan mij lag."
+  GOED: "Je gaat het stoppen. Misschien niet nu, maar na twaalf weken. Dat is wat de data zegt."
+  GOED: "Drie kilo per jaar, elk jaar dat je wacht. Ik wachtte drie jaar, dus reken maar mee."
+
+  FOUT: "70% haalt lijst nooit af. Hoe bizar is dat?" ← hook eindigt met vraag
+  GOED: "70% haalt lijst nooit af. En ik was ook die 70%, tot ik dit ontdekte."
+  REGEL: Eindig de hook met een STATEMENT die CONFRONTEERT of BELOOFT, nooit met een vraagteken.
 
 ═══════════════════════════════════════════════════
 OPEN LOOP STRUCTUUR — WATCH TIME MAXIMALISEREN (SCORE ≥85 VEREIST)
@@ -515,11 +528,13 @@ VERPLICHTE TAALREGELS:
    - GEEN onbestaande woorden of verkeerde samenstellingen
 
 2. TTS-VRIENDELIJK SCHRIJVEN — zodat de spraak vloeiend klinkt
-   - VERMIJD "..." (ellipsis) — dit veroorzaakt lange AI-achtige stiltes in TTS
-   - Gebruik komma's voor korte adempauzes, NIET "..." of "—"
-   - MAXIMAAL 1x "..." per heel script (alleen bij echt dramatisch moment)
-   - Em-dash "—" MAXIMAAL 2x per script (voor zelf-correctie)
-   - Schrijf getallen als WOORDEN als ze in een zin staan ("tien uur" niet "10 uur")
+   - NOOIT "..." in de voiceover — lange AI-achtige stilte
+   - NOOIT "—" in de hook (scene 1) — klinkt als robot
+   - MAXIMAAL 2x "—" in het HELE SCRIPT, alleen voor zelf-correctie midden in een zin
+   - Gebruik komma's voor ritme, GEEN punten tussen korte woorden
+   - Schrijf getallen ALTIJD als WOORDEN in de voiceover:
+     "drie kilo" niet "3 kilo" | "vijftig procent" niet "50%" | "tien uur" niet "10 uur"
+     "honderd zesenveertig keer" niet "146x" | "tweeëntwintig kilo" niet "22 kg"
    - Schrijf getallen als CIJFERS in on-screen text ("10 uur" in tekst op scherm)
    - GEEN ALL CAPS in voiceover (TTS leest dit raar voor). Emphasis via herhaling.
    - VERMIJD lange samengestelde woorden (TTS struikelt hierover)
@@ -702,9 +717,13 @@ VALIDATIE (verplicht — doe dit voordat je output geeft):
 VERPLICHT IN JE OUTPUT:
 - Vul "loop_technique" in met welke techniek(en) je gebruikt
 - De ALLERLAATSTE ZIN van scene 4 voiceover MOET een echo-vraag zijn die in 1-3 woorden te beantwoorden is:
-  FORMULE: "Hoeveel [KEY GETAL/FRASE] ben jij [werkwoord]? Type het ↓"
-  VOORBEELD GOED: Hook = "Tien uur. Na elke dienst." → Allerlaatste zin: "Hoeveel uur ben jij na elke dienst kwijt? Type het ↓"
-    ← "tien uur" + "na elke dienst" echoot ✓, antwoord is 1 getal ✓
+  FORMULE A (getal-echo): "Hoeveel [KEY GETAL/FRASE] ben jij [werkwoord]? Type het ↓"
+  FORMULE B (percentage-echo): "Ben jij ook die [percentage]? Ja of nee ↓"
+  FORMULE C (teller-echo): "Hoe vaak heb jij het al geprobeerd? Type het getal ↓"
+
+  VOORBEELD GOED (admin): Hook = "Tien uur. Na elke dienst." → Allerlaatste: "Hoeveel uur ben jij na elke dienst kwijt? Type het ↓"
+  VOORBEELD GOED (gezondheid, % hook): Hook = "Vijftig procent. Dat is hoeveel GLP-1 gebruikers alles terugkrijgt." → Allerlaatste: "Ben jij ook die vijftig procent? Ja of nee ↓"
+  VOORBEELD GOED (gezondheid, pogingen hook): Hook = "Tien keer. Zo vaak heb ik het geprobeerd." → Allerlaatste: "Hoe vaak heb jij het al geprobeerd? Type het getal ↓"
   VOORBEELD FOUT: Hook = "Tien uur. Na elke dienst." → Allerlaatste zin: "dan hoort dat niet normaal te voelen." ← FOUT, tagline!
   VOORBEELD FOUT: Hook = "Tien uur. Na elke dienst." → Allerlaatste zin: "dan is dit voor jou." ← FOUT, tagline!
   VERBODEN ALLERLAATSTE ZINNEN:
@@ -766,14 +785,22 @@ SLECHT (klinkt als reclame):
 "En ik ontdekte Daypulse. Het is bizar simpel. Je zet je doel in, het plant voor je."
 → Geen twijfel, geen authenticiteit, direct in de pitch.
 
-GOED (klinkt als iemand die dit echt meemaakte):
-"Mijn zus stuurde me een link. En ik dacht — oke, weer zo'n productiviteits-ding. Vast niet voor mij,
-want ik heb al tien van die apps op mijn telefoon staan. Maar ik had niks te verliezen, toch?
-En dan — echt — na één dag dacht ik: dit is anders."
-→ SPECIFIEKE twijfel ("vast niet voor mij want...") maakt het geloofwaardig.
+GOED (productiviteits-app):
+"En ik dacht, oke, weer zo'n productiviteits-ding, vast niet voor mij want ik heb al tien
+van die apps op mijn telefoon staan, maar ik had niks te verliezen toch?
+En na één dag dacht ik, dit is echt anders."
+→ SPECIFIEKE twijfel ("vast niet voor mij want ik heb al tien apps") maakt het geloofwaardig.
+
+GOED (gezondheids-app, GLP-1 context):
+"Ik dacht eerlijk gezegd, weer een app die belooft dat het dit keer anders gaat zijn.
+Want dat had ik al zo vaak gehoord, van mijn diëtiste, van m'n huisarts, van mezelf.
+Maar ik probeerde het toch, en het eerste wat ik zag was mijn injectionschema, gewoon
+automatisch, met reminders, en ik dacht, oh, dit is echt iets anders."
+→ SPECIFIEKE twijfel ("zo vaak gehoord, van diëtiste, van huisarts, van mezelf") + concreet productmoment.
 
 VERPLICHT: De solution-scene MOET een SPECIFIEK MOMENT VAN TWIJFEL bevatten.
 Niet "ik was sceptisch" (te generiek) maar EEN CONCRETE GEDACHTE die die persoon had.
+Plus een CONCREET productmoment: wat zag/deed de persona letterlijk in de app?
 
 Als video_type = "screen_demo" of "mixed":
   Schrijf ALTIJD IN HET ENGELS. Realistisch en specifiek.
@@ -890,7 +917,7 @@ OUTPUT FORMAT — ALLEEN JSON
       "duration_sec": 3,
       "voiceover": "PATTERN INTERRUPT + CURIOSITY GAP in spreektaal. Maximaal 2 zinnen. NOOIT starten met vraagzin.",
       "on_screen_text": "Max 4 woorden — shocking of herkenbaar",
-      "visual_description": "IN HET ENGELS — realistisch, relateerbaar",
+      "visual_description": "Describe in English: realistic scene matching the voiceover emotion, e.g. 'Dutch woman late 30s looking frustrated at bathroom scale, morning light'",
       "visual_search_query": "MAX 4 woorden bijv: 'woman frustrated desk office'",
       "bridge_to_next": "OPEN LOOP FORMAAT (VERPLICHT 2 CONCRETE DETAILS): 'Er is 1 [specifiek wat] dat ik [concreet resultaat in getal] bereik — maar laat me je eerst dit laten zien.' VOORBEELDEN: 'Er is 1 app die me van 10 uur naar 30 minuten bracht — maar eerst dit.' / 'Ik deed 3 dingen in exact 7 minuten en het werkt elke keer — kijk.'",
       "notes": "Productie-instructies"
@@ -901,7 +928,7 @@ OUTPUT FORMAT — ALLEEN JSON
       "duration_sec": 8,
       "voiceover": "Herkenbaar probleem met CONCREET GETAL of FEIT. Emotioneel laden.",
       "on_screen_text": "Het getal/feit",
-      "visual_description": "IN HET ENGELS — donkere/chaotische sfeer",
+      "visual_description": "Describe in English: darker/frustrated mood scene, e.g. 'Dutch woman sitting on couch at night, looking defeated, dim lighting'",
       "visual_search_query": "MAX 4 woorden bijv: 'woman stressed paperwork documents'",
       "bridge_to_next": "Overgang naar solution: 'en toen ontdekte ik...' of 'maar hier komt het...'",
       "notes": "..."
@@ -912,7 +939,7 @@ OUTPUT FORMAT — ALLEEN JSON
       "duration_sec": 20,
       "voiceover": "Onthulling van de open loop. Concrete waarde. Save-waardig detail.",
       "on_screen_text": "Het resultaat (voor→na)",
-      "visual_description": "IN HET ENGELS — lichte/positieve sfeer, echte app-interface of concreet productmoment zichtbaar op scherm",
+      "visual_description": "Describe in English: bright/hopeful scene with app interface visible, e.g. 'Dutch woman in her 30s smiling at phone showing health tracking app dashboard, natural light kitchen'",
       "visual_search_query": "MAX 4 woorden bijv: 'woman smiling phone happy'",
       "bridge_to_next": "Naar CTA: 'en het beste deel is...'",
       "notes": "Als video_type screen_demo of mixed is: toon hier de echte producthandeling of het echte resultaat in de app, niet alleen generieke stock."
@@ -923,7 +950,7 @@ OUTPUT FORMAT — ALLEEN JSON
       "duration_sec": 5,
       "voiceover": "STRUCTUUR (in deze volgorde): (1) Link in bio tip als spreektaal. (2) Stuur naar [HYPERSPECIFIEK TYPE PERSOON]. (3) ALLERLAATSTE ZIN EXACT FORMAAT: 'Hoeveel [KEY GETAL/FRASE UIT SCENE 1] [werkwoord] jij ook? Type het getal ↓' — NOOIT een tagline als slotzin.",
       "on_screen_text": "MAX 3 WOORDEN bijv: 'type het getal' of 'link in bio'",
-      "visual_description": "IN HET ENGELS — zelfde setting als scene 1 (visual loop)",
+      "visual_description": "Describe in English: same setting as scene 1 for visual loop, e.g. 'Dutch woman late 30s now smiling at phone, same bathroom setting as opening scene'",
       "visual_search_query": "MAX 4 woorden bijv: 'woman tapping phone excited'",
       "bridge_to_next": "",
       "notes": "VERBOD: slotzin mag NOOIT zijn: 'dan hoort dit niet normaal te voelen' / 'dan is dit voor jou' / 'probeer het zelf'. Slotzin MOET eindigen op '? Type het getal ↓' of '? Ja of nee ↓'"

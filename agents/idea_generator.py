@@ -86,24 +86,24 @@ class IdeaGeneratorAgent(BaseAgent):
         ]
 
         if is_health:
-            # Domein-specifieke verliesaversie voorbeelden (NIET uur/week)
             app_context_parts.append(
-                "\nDOMEIN METRICS voor verliesaversie framing (gebruik UITSLUITEND dit, GEEN uur/week tijdsbesparing):"
+                "\nCONCRETE STATISTIEKEN (gebruik deze als shocking facts in hooks):"
             )
             if market_data:
                 for k, v in list(market_data.items())[:6]:
                     app_context_parts.append(f"  - {k}: {v}")
             app_context_parts.append(
-                "\nVERLIESAVERSIE VOORBEELDEN voor health content:"
-                "\n  GOED: '50% van GLP-1 gebruikers valt terug na stoppen — ben jij ook die 50%?'"
-                "\n  GOED: 'Je hebt al €2.000 uitgegeven aan diëten die niet werkten'"
-                "\n  GOED: 'Elk jaar dat je wacht kost je gemiddeld 3kg meer creep'"
-                "\n  FOUT: 'Je verliest 520 uur per jaar aan...' ← NOOIT voor health content"
-                "\n  FOUT: 'Bespaar 10 uur per week' ← dit is een productivity-app frame, niet health"
+                "\nHOOK-VOORBEELDEN die werken voor deze doelgroep (even concreet en specifiek als de beste TikTok hooks):"
+                "\n  → '50% van GLP-1 gebruikers is binnen een jaar alles kwijt. Ben jij die 50%?'"
+                "\n  → 'Je hebt het al 10 keer geprobeerd. Hier is WAAROM het niet aan jou lag.'"
+                "\n  → 'Je eet niet te veel. Je eet op de verkeerde momenten.'"
+                "\n  → 'Dieet werkt — voor 6 weken. Dit is wat daarna gebeurt.'"
+                "\n  → 'Ik heb 22 kilo verloren en het eerste jaar was het makkelijkst.'"
+                "\n  Gebruik GETALLEN en SPECIFIEKE situaties. Vaag = scroll away."
             )
             if psycho.get("gebruik_deze_zinnen"):
                 app_context_parts.append(
-                    "\nHERKENBARE ZINNEN voor de doelgroep (verwerk in hook/idee):\n"
+                    "\nZINNEN die de doelgroep letterlijk denkt (verwerk in hook of eerste scene):\n"
                     + "\n".join(f"  - \"{z}\"" for z in psycho["gebruik_deze_zinnen"][:6])
                 )
 

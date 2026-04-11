@@ -87,24 +87,17 @@ class ScriptWriterAgent(BaseAgent):
         niche = app.get("niche", memory.get("niche", ""))
         market_data = memory.get("marktdata", {})
         domain_metrics_hint = ""
-        if niche or market_data:
-            domain_metrics_hint = "\nDOMEIN-SPECIFIEKE METRICS (gebruik ALLEEN deze, NIET time-saving admin-metrics):\n"
-            if market_data:
-                for key, val in list(market_data.items())[:6]:
-                    domain_metrics_hint += f"- {key}: {val}\n"
-            elif niche:
-                domain_metrics_hint += f"- Niche: {niche} — gebruik passende metrics (kg, %, weken, relapsrate, etc.)\n"
-            domain_metrics_hint += (
-                "VERBOD: Gebruik NOOIT 'uur per week', 'admin-tijd', 'werkdagen' of andere tijdbesparings-metrics "
-                "tenzij het idee daar expliciet over gaat.\n"
-                "CTA ECHO VOOR HEALTH/WELLNESS: Het KEY GETAL in de CTA echo MOET het juiste domein-getal zijn. "
-                "VOORBEELDEN:\n"
-                "  FOUT: 'Ik verloor 50 uur per week — hoeveel verlies jij?' ← uur/week is VERBODEN voor health\n"
-                "  GOED: 'Ik was ook die 50% die terugvalt — ben jij dat ook? Ja of nee ↓'\n"
-                "  GOED: 'Van 83 kilo naar 61 — hoeveel wil jij afvallen? Type het getal ↓'\n"
-                "  GOED: 'Hoeveel keer heb jij al opnieuw geprobeerd te beginnen? Type het getal ↓'\n"
-                "De slotzin van scene 4 MOET de juiste metriek voor jouw domein bevatten.\n"
-            )
+        if market_data:
+            domain_metrics_hint = "\nCONCRETE STATISTIEKEN voor dit domein (gebruik minstens 1 in het script):\n"
+            for key, val in list(market_data.items())[:5]:
+                domain_metrics_hint += f"  - {key}: {val}\n"
+            if niche and any(k in niche.lower() for k in ["health", "wellness", "glp", "weight", "lifestyle", "coach"]):
+                domain_metrics_hint += (
+                    "CTA SLOTZIN — gebruik ALTIJD een gezondheidsmetriek (kg, %, aantal pogingen), NOOIT 'uur per week':\n"
+                    "  → 'Hoeveel keer heb jij het al geprobeerd? Type het getal ↓'\n"
+                    "  → 'Ben jij ook die 50%? Ja of nee ↓'\n"
+                    "  → 'Hoeveel kilo wil jij nog kwijt? Type het getal ↓'\n"
+                )
 
         full_extra = ""
         if extra_instruction or viral_context or domain_metrics_hint:
