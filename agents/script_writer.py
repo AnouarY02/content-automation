@@ -94,7 +94,17 @@ class ScriptWriterAgent(BaseAgent):
                     domain_metrics_hint += f"- {key}: {val}\n"
             elif niche:
                 domain_metrics_hint += f"- Niche: {niche} — gebruik passende metrics (kg, %, weken, relapsrate, etc.)\n"
-            domain_metrics_hint += "VERBOD: Gebruik NOOIT 'uur per week', 'admin-tijd', 'werkdagen' of andere tijdbesparings-metrics tenzij het idee daar expliciet over gaat.\n"
+            domain_metrics_hint += (
+                "VERBOD: Gebruik NOOIT 'uur per week', 'admin-tijd', 'werkdagen' of andere tijdbesparings-metrics "
+                "tenzij het idee daar expliciet over gaat.\n"
+                "CTA ECHO VOOR HEALTH/WELLNESS: Het KEY GETAL in de CTA echo MOET het juiste domein-getal zijn. "
+                "VOORBEELDEN:\n"
+                "  FOUT: 'Ik verloor 50 uur per week — hoeveel verlies jij?' ← uur/week is VERBODEN voor health\n"
+                "  GOED: 'Ik was ook die 50% die terugvalt — ben jij dat ook? Ja of nee ↓'\n"
+                "  GOED: 'Van 83 kilo naar 61 — hoeveel wil jij afvallen? Type het getal ↓'\n"
+                "  GOED: 'Hoeveel keer heb jij al opnieuw geprobeerd te beginnen? Type het getal ↓'\n"
+                "De slotzin van scene 4 MOET de juiste metriek voor jouw domein bevatten.\n"
+            )
 
         full_extra = ""
         if extra_instruction or viral_context or domain_metrics_hint:
