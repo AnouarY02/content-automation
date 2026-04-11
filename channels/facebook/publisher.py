@@ -132,8 +132,10 @@ class FacebookPublisher:
             hashtags.get("secondary", []) +
             hashtags.get("niche", [])
         )
-        full = f"{caption_text}\n\n{' '.join(all_tags)}" if all_tags else caption_text
-        return full[:63206]
+        # Trunceer caption_text EERST, dan hashtags toevoegen (zodat totaal limiet niet overschreden wordt)
+        max_caption = 63206 - len(" ".join(all_tags)) - 2 if all_tags else 63206
+        full = f"{caption_text[:max_caption]}\n\n{' '.join(all_tags)}" if all_tags else caption_text[:63206]
+        return full
 
     def _resolve_media(self, bundle) -> tuple[str | None, str | None]:
         """

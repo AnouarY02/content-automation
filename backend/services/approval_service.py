@@ -26,6 +26,7 @@ from workflows.campaign_pipeline import load_bundle, save_bundle
 from channels.tiktok.publisher import TikTokPublisher
 from channels.instagram.publisher import InstagramPublisher
 from channels.facebook.publisher import FacebookPublisher
+from channels.youtube.publisher import YouTubePublisher
 
 
 def get_pending_campaigns() -> list[CampaignBundle]:
@@ -108,6 +109,9 @@ def _publish_now(bundle: CampaignBundle) -> CampaignBundle:
         elif platform == "facebook":
             publisher = FacebookPublisher()
             platform_label = "Facebook"
+        elif platform == "youtube":
+            publisher = YouTubePublisher()
+            platform_label = "YouTube"
         else:
             publisher = TikTokPublisher()
             platform_label = "TikTok"

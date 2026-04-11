@@ -150,14 +150,13 @@ class InstagramPublisher:
         Zoekt in: bundle.idea, bundle.caption, bundle.video_path, bundle.thumbnail_path
         Geeft (url, media_type) terug — media_type is "IMAGE" of "REELS"
         """
-        # Zoek video URL (Reels)
-        video_url = (
-            bundle.idea.get("video_url")
-            or bundle.caption.get("video_url")
-            if isinstance(bundle.idea, dict) and isinstance(bundle.caption, dict)
-            else None
-        )
-        if not video_url and bundle.video_path and bundle.video_path.startswith("http"):
+        # Zoek video URL (Reels) — expliciete type checks voor veilige .get() aanroepen
+        video_url = None
+        if isinstance(bundle.idea, dict):
+            video_url = bundle.idea.get("video_url")
+        if not video_url and isinstance(bundle.caption, dict):
+            video_url = bundle.caption.get("video_url")
+        if not video_url and isinstance(bundle.video_path, str) and bundle.video_path.startswith("http"):
             video_url = bundle.video_path
 
         if video_url:
@@ -196,20 +195,28 @@ class InstagramPublisher:
             params["video_url"] = media_url
             params["share_to_feed"] = "true"
         else:
+            params["media_type"] = "IMAGE"
             params["image_url"] = media_url
 
-        with httpx.Client(timeout=30) as client:
-            response = client.post(
-                f"{_GRAPH_BASE}/{self.ig_user_id}/media",
-                params=params,
-            )
-
-        if response.status_code != 200:
-            err = response.json().get("error", {})
-            raise RuntimeError(
-                f"[Instagram] Container aanmaken mislukt ({response.status_code}): "
-                f"{err.get('message', response.text[:300])}"
-            )
+        last_err = None
+        for attempt in range(3):
+            try:
+                with httpx.Client(timeout=30) as client:
+                    response = client.post(
+                        f"{_GRAPH_BASE}/{self.ig_user_id}/media",
+                        params=params,
+                    )
+                if response.status_code == 200:
+                    break
+                err = response.json().get("error", {})
+                last_err = f"[Instagram] Container aanmaken mislukt ({response.status_code}): {err.get('message', response.text[:300])}"
+                logger.warning(f"{last_err} (poging {attempt + 1}/3)")
+            except httpx.TransportError as e:
+                last_err = f"[Instagram] Netwerkfout bij container aanmaken: {e}"
+                logger.warning(f"{last_err} (poging {attempt + 1}/3)")
+            import time; time.sleep(2 ** attempt)
+        else:
+            raise RuntimeError(last_err or "[Instagram] Container aanmaken mislukt na 3 pogingen")
 
         data = response.json()
         creation_id = data.get("id")

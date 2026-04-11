@@ -95,6 +95,19 @@
         Leerinzichten
       </button>
 
+      <button onclick="switchTab('analytics')" data-tab="analytics" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3">
+        <svg class="w-4 h-4 flex-shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Analytics
+      </button>
+      <button onclick="switchTab('kanalen')" data-tab="kanalen" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3">
+        <svg class="w-4 h-4 flex-shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/></svg>
+        Kanalen
+      </button>
+      <button onclick="switchTab('kalender')" data-tab="kalender" class="nav-btn w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3">
+        <svg class="w-4 h-4 flex-shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        Kalender
+      </button>
+
       <div class="mt-4 mb-2 px-1">
         <div class="text-[0.6rem] font-bold text-gray-400 uppercase tracking-widest">Video</div>
       </div>
@@ -576,6 +589,174 @@
           <div id="generate-result" class="hidden card p-5 space-y-2 border-2 border-green-200 bg-green-50">
             <h4 class="text-sm font-semibold text-green-700">Video klaar!</h4>
             <p id="result-path" class="text-xs text-green-600 font-mono"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: ANALYTICS -->
+      <section id="tab-analytics" class="tab-content hidden space-y-5 fade-in">
+        <div class="flex items-center justify-between mb-1">
+          <div>
+            <h3 class="text-base font-semibold text-gray-900">Analytics — Alle Platforms</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Gecombineerde data: TikTok, Instagram, Facebook, YouTube</p>
+          </div>
+          <button onclick="loadAnalytics()" class="btn btn-outline btn-sm">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Vernieuwen
+          </button>
+        </div>
+
+        <!-- KPI Overview -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="analytics-kpis">
+          <div class="card p-4"><div class="text-xs text-gray-400 mb-1">Totaal Campagnes</div><div id="an-total" class="text-2xl font-bold">—</div></div>
+          <div class="card p-4"><div class="text-xs text-gray-400 mb-1">Gepubliceerd</div><div id="an-published" class="text-2xl font-bold text-success">—</div></div>
+          <div class="card p-4"><div class="text-xs text-gray-400 mb-1">Gem. Viral Score</div><div id="an-viral" class="text-2xl font-bold text-accent">—</div></div>
+          <div class="card p-4"><div class="text-xs text-gray-400 mb-1">Totaal Kosten</div><div id="an-cost" class="text-2xl font-bold">—</div></div>
+        </div>
+
+        <!-- Platform Breakdown -->
+        <div class="card p-5">
+          <h4 class="text-sm font-semibold mb-4">Per Platform</h4>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="platform-breakdown">
+            <!-- Filled by JS -->
+          </div>
+        </div>
+
+        <!-- Recent Posts -->
+        <div class="card p-5">
+          <h4 class="text-sm font-semibold mb-4">Gepubliceerde Posts</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead><tr class="text-gray-400 border-b border-border">
+                <th class="text-left pb-2 font-medium">Titel</th>
+                <th class="text-left pb-2 font-medium">Platform</th>
+                <th class="text-left pb-2 font-medium">Gepubliceerd</th>
+                <th class="text-right pb-2 font-medium">Viral Score</th>
+                <th class="text-right pb-2 font-medium">Views</th>
+                <th class="text-right pb-2 font-medium">Engagement</th>
+                <th class="text-right pb-2 font-medium">Kosten</th>
+              </tr></thead>
+              <tbody id="analytics-posts-table">
+                <tr><td colspan="7" class="text-center py-8 text-gray-400">Laden…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: KANALEN -->
+      <section id="tab-kanalen" class="tab-content hidden space-y-5 fade-in">
+        <div class="mb-1">
+          <h3 class="text-base font-semibold text-gray-900">Kanalen & Verbindingen</h3>
+          <p class="text-xs text-gray-400 mt-0.5">Status van alle gekoppelde social media platforms</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="channels-grid">
+          <!-- TikTok -->
+          <div class="card p-5">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-9 h-9 rounded-lg bg-black flex items-center justify-center text-white font-bold text-sm">TT</div>
+              <div><div class="text-sm font-semibold">TikTok</div><div class="text-xs text-gray-400">Video platform</div></div>
+            </div>
+            <div id="channel-tiktok-status" class="text-xs text-gray-400">Status laden…</div>
+            <div class="mt-3 pt-3 border-t border-border text-xs text-gray-400">
+              <div>Token: <span id="channel-tiktok-token" class="text-gray-600">—</span></div>
+            </div>
+          </div>
+          <!-- Instagram -->
+          <div class="card p-5">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm">IG</div>
+              <div><div class="text-sm font-semibold">Instagram</div><div class="text-xs text-gray-400">Foto & Reels</div></div>
+            </div>
+            <div id="channel-ig-status" class="text-xs text-gray-400">Status laden…</div>
+            <div class="mt-3 pt-3 border-t border-border text-xs text-gray-400">
+              <div>Token: <span id="channel-ig-token" class="text-gray-600">—</span></div>
+            </div>
+          </div>
+          <!-- Facebook -->
+          <div class="card p-5">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">FB</div>
+              <div><div class="text-sm font-semibold">Facebook</div><div class="text-xs text-gray-400">Page Posts</div></div>
+            </div>
+            <div id="channel-fb-status" class="text-xs text-gray-400">Status laden…</div>
+            <div class="mt-3 pt-3 border-t border-border text-xs text-gray-400">
+              <div>Pagina: <span id="channel-fb-page" class="text-gray-600">—</span></div>
+              <div>Token: <span id="channel-fb-token" class="text-gray-600">—</span></div>
+            </div>
+          </div>
+          <!-- YouTube -->
+          <div class="card p-5">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-9 h-9 rounded-lg bg-red-600 flex items-center justify-center text-white font-bold text-sm">YT</div>
+              <div><div class="text-sm font-semibold">YouTube</div><div class="text-xs text-gray-400">Video uploads</div></div>
+            </div>
+            <div id="channel-yt-status" class="text-xs text-gray-400">Status laden…</div>
+            <div class="mt-3 pt-3 border-t border-border text-xs text-gray-400">
+              <div>Token: <span id="channel-yt-token" class="text-gray-600">—</span></div>
+              <div class="mt-2">
+                <button onclick="setupYouTube()" class="btn btn-outline btn-sm w-full text-xs">Koppelen via OAuth</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Per platform stats -->
+        <div class="card p-5">
+          <h4 class="text-sm font-semibold mb-4">Platform Statistieken</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead><tr class="text-gray-400 border-b border-border">
+                <th class="text-left pb-2 font-medium">Platform</th>
+                <th class="text-right pb-2 font-medium">Totaal</th>
+                <th class="text-right pb-2 font-medium">Gepubliceerd</th>
+                <th class="text-right pb-2 font-medium">In Review</th>
+                <th class="text-right pb-2 font-medium">Kosten</th>
+                <th class="text-right pb-2 font-medium">Gem. Viral</th>
+              </tr></thead>
+              <tbody id="platform-stats-table">
+                <tr><td colspan="6" class="text-center py-6 text-gray-400">Laden…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: KALENDER -->
+      <section id="tab-kalender" class="tab-content hidden space-y-5 fade-in">
+        <div class="flex items-center justify-between mb-1">
+          <div>
+            <h3 class="text-base font-semibold text-gray-900">Content Kalender</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Geplande en gepubliceerde content per dag</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="calendarPrev()" class="btn btn-outline btn-sm">← Vorige</button>
+            <span id="calendar-month-label" class="btn btn-outline btn-sm cursor-default">—</span>
+            <button onclick="calendarNext()" class="btn btn-outline btn-sm">Volgende →</button>
+          </div>
+        </div>
+
+        <div class="card p-5">
+          <div class="grid grid-cols-7 gap-1 mb-2">
+            <div class="text-xs text-center text-gray-400 font-medium py-1">Ma</div>
+            <div class="text-xs text-center text-gray-400 font-medium py-1">Di</div>
+            <div class="text-xs text-center text-gray-400 font-medium py-1">Wo</div>
+            <div class="text-xs text-center text-gray-400 font-medium py-1">Do</div>
+            <div class="text-xs text-center text-gray-400 font-medium py-1">Vr</div>
+            <div class="text-xs text-center text-gray-400 font-medium py-1">Za</div>
+            <div class="text-xs text-center text-gray-400 font-medium py-1">Zo</div>
+          </div>
+          <div id="calendar-grid" class="grid grid-cols-7 gap-1">
+            <!-- Filled by JS -->
+          </div>
+        </div>
+
+        <!-- Upcoming posts list -->
+        <div class="card p-5">
+          <h4 class="text-sm font-semibold mb-4">Aankomende & Recente Posts</h4>
+          <div id="calendar-posts-list" class="space-y-2">
+            <div class="text-xs text-gray-400 text-center py-4">Laden…</div>
           </div>
         </div>
       </section>

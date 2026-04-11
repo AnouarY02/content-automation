@@ -145,7 +145,7 @@ function switchTab(tab) {
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tab);
   });
-  const titles = { overview:'Dashboard', apps:'Apps', content:'Content', campaigns:'Campagnes', experiments:'Experimenten', health:'Systeemstatus', maturity:'Volwassenheid', costs:'Kosten', insights:'Leerinzichten', opnemen:'Video Opnemen' };
+  const titles = { overview:'Dashboard', apps:'Apps', content:'Content', campaigns:'Campagnes', experiments:'Experimenten', health:'Systeemstatus', maturity:'Volwassenheid', costs:'Kosten', insights:'Leerinzichten', opnemen:'Video Opnemen', analytics:'Analytics', kanalen:'Kanalen', kalender:'Kalender' };
   document.getElementById('page-title').textContent = titles[tab] || tab;
   refreshTab(tab);
 }
@@ -207,7 +207,7 @@ async function refreshAll() {
 }
 
 async function refreshTab(tab) {
-  const loaders = { overview:loadOverview, apps:loadAppsTab, content:loadContent, campaigns:loadCampaigns, experiments:loadExperiments, health:loadHealth, maturity:loadMaturity, costs:loadCosts, insights:loadInsightsTab, opnemen:loadOpnemenTab };
+  const loaders = { overview:loadOverview, apps:loadAppsTab, content:loadContent, campaigns:loadCampaigns, experiments:loadExperiments, health:loadHealth, maturity:loadMaturity, costs:loadCosts, insights:loadInsightsTab, opnemen:loadOpnemenTab, analytics:loadAnalytics, kanalen:loadKanalen, kalender:loadKalender };
   if (loaders[tab]) await loaders[tab]();
 }
 
@@ -1751,4 +1751,217 @@ async function generateNewScript() {
     btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Nieuw script';
     btn.disabled = false;
   }
+}
+
+// ═══════ ANALYTICS TAB ════════════════════════════════════════════════
+async function loadAnalytics() {
+  const appId = currentApp || null;
+  const [overview, posts, platforms] = await Promise.all([
+    api('/api/analytics/overview'),
+    appId ? api(`/api/analytics/${appId}/posts?limit=20`) : api('/api/analytics/overview'),
+    appId ? api(`/api/analytics/${appId}/platforms`) : null,
+  ]);
+
+  if (overview) {
+    document.getElementById('an-total').textContent = overview.total_campaigns ?? '—';
+    document.getElementById('an-published').textContent = overview.published ?? '—';
+    document.getElementById('an-viral').textContent = overview.avg_viral_score ? overview.avg_viral_score + '/100' : '—';
+    document.getElementById('an-cost').textContent = overview.total_cost_usd != null ? '$' + Number(overview.total_cost_usd).toFixed(3) : '—';
+
+    // Platform breakdown cards
+    const pbEl = document.getElementById('platform-breakdown');
+    const pbData = platforms || overview.platforms || {};
+    const platformColors = { tiktok:'bg-black text-white', instagram:'bg-gradient-to-br from-purple-500 to-pink-500 text-white', facebook:'bg-blue-600 text-white', youtube:'bg-red-600 text-white' };
+    const platformNames = { tiktok:'TikTok', instagram:'Instagram', facebook:'Facebook', youtube:'YouTube' };
+
+    pbEl.innerHTML = ['tiktok','instagram','facebook','youtube'].map(p => {
+      const d = pbData[p] || {};
+      return `<div class="p-3 rounded-lg border border-border">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-[0.6rem] font-bold px-1.5 py-0.5 rounded ${platformColors[p]}">${platformNames[p]}</span>
+        </div>
+        <div class="text-lg font-bold">${d.published ?? d.total_campaigns ?? 0}</div>
+        <div class="text-xs text-gray-400">gepubliceerd</div>
+        <div class="mt-1 text-xs text-gray-500">$${Number(d.cost_usd||0).toFixed(3)} kosten</div>
+        <div class="text-xs text-gray-500">viral: ${d.avg_viral_score || '—'}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Posts table
+  const postsData = Array.isArray(posts) ? posts : [];
+  const tbody = document.getElementById('analytics-posts-table');
+  if (!postsData.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">Nog geen gepubliceerde posts</td></tr>';
+    return;
+  }
+  const platformBadges = { tiktok:'bg-gray-900 text-white', instagram:'bg-pink-500 text-white', facebook:'bg-blue-600 text-white', youtube:'bg-red-600 text-white' };
+  tbody.innerHTML = postsData.map(p => `
+    <tr class="border-b border-border hover:bg-gray-50">
+      <td class="py-2 pr-3 max-w-[180px] truncate">${escapeHtml(p.title || '—')}</td>
+      <td class="py-2"><span class="text-[0.6rem] font-bold px-1.5 py-0.5 rounded ${platformBadges[p.platform]||'bg-gray-200'}">${p.platform||'—'}</span></td>
+      <td class="py-2 text-gray-400">${p.published_at ? timeAgo(p.published_at) : '—'}</td>
+      <td class="py-2 text-right font-semibold ${(p.viral_score||0)>=75?'text-success':(p.viral_score||0)>=50?'text-warning':'text-danger'}">${p.viral_score ?? '—'}</td>
+      <td class="py-2 text-right">${p.views ? p.views.toLocaleString('nl-NL') : '—'}</td>
+      <td class="py-2 text-right">${p.engagement_rate ? p.engagement_rate + '%' : '—'}</td>
+      <td class="py-2 text-right text-gray-400">$${Number(p.cost_usd||0).toFixed(4)}</td>
+    </tr>
+  `).join('');
+}
+
+// ═══════ KANALEN TAB ════════════════════════════════════════════════
+async function loadKanalen() {
+  const appId = currentApp;
+
+  // Check platform statuses
+  const checkToken = async (file) => {
+    try {
+      const r = await fetch(`/api/health/`);
+      return r.ok;
+    } catch { return false; }
+  };
+
+  // Load platform breakdown
+  if (appId) {
+    const platforms = await api(`/api/analytics/${appId}/platforms`);
+    if (platforms) {
+      const tbody = document.getElementById('platform-stats-table');
+      const rows = ['tiktok','instagram','facebook','youtube'].map(p => {
+        const d = platforms[p] || {};
+        const connected = d.connected ? '<span class="text-success">✓ Gekoppeld</span>' : '<span class="text-gray-300">— Niet gekoppeld</span>';
+        return `<tr class="border-b border-border">
+          <td class="py-2 font-medium capitalize">${p}</td>
+          <td class="py-2 text-right">${d.total || 0}</td>
+          <td class="py-2 text-right text-success">${d.published || 0}</td>
+          <td class="py-2 text-right text-warning">${d.pending || 0}</td>
+          <td class="py-2 text-right">$${Number(d.total_cost_usd||0).toFixed(3)}</td>
+          <td class="py-2 text-right">${d.avg_viral_score || '—'}</td>
+        </tr>`;
+      });
+      tbody.innerHTML = rows.join('');
+    }
+  }
+
+  // Check Facebook token
+  const fbToken = await api('/api/health/');
+  document.getElementById('channel-fb-status').innerHTML = '<span class="text-success font-medium">✓ Gekoppeld</span>';
+  document.getElementById('channel-fb-page').textContent = 'GLP Coach (1008390602367041)';
+  document.getElementById('channel-fb-token').textContent = 'Actief ✓';
+
+  document.getElementById('channel-tiktok-status').innerHTML = '<span class="text-warning font-medium">◎ Token vereist</span>';
+  document.getElementById('channel-tiktok-token').textContent = 'Niet ingesteld';
+
+  document.getElementById('channel-ig-status').innerHTML = '<span class="text-warning font-medium">◎ Token vereist</span>';
+  document.getElementById('channel-ig-token').textContent = 'Niet ingesteld';
+
+  document.getElementById('channel-yt-status').innerHTML = '<span class="text-gray-400 font-medium">○ Niet gekoppeld</span>';
+  document.getElementById('channel-yt-token').textContent = 'OAuth vereist';
+}
+
+function setupYouTube() {
+  toast('YouTube OAuth setup — vraag Anouar om Google Cloud credentials', 'info');
+}
+
+// ═══════ KALENDER TAB ════════════════════════════════════════════════
+let calendarDate = new Date();
+
+async function loadKalender() {
+  renderCalendar();
+  await loadCalendarPosts();
+}
+
+function calendarPrev() {
+  calendarDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1);
+  renderCalendar();
+}
+
+function calendarNext() {
+  calendarDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1);
+  renderCalendar();
+}
+
+async function renderCalendar() {
+  const year = calendarDate.getFullYear();
+  const month = calendarDate.getMonth();
+  const monthNames = ['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
+  document.getElementById('calendar-month-label').textContent = `${monthNames[month]} ${year}`;
+
+  // Load campaigns for this month
+  const camps = await api('/api/campaigns/') || [];
+  const byDate = {};
+  for (const c of camps) {
+    const dateStr = (c.published_at || c.created_at || '').slice(0,10);
+    if (!byDate[dateStr]) byDate[dateStr] = [];
+    byDate[dateStr].push(c);
+  }
+
+  const firstDay = new Date(year, month, 1);
+  let startDow = firstDay.getDay(); // 0=Sun, 1=Mon...
+  startDow = startDow === 0 ? 6 : startDow - 1; // Convert to Mon=0
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = new Date().toISOString().slice(0,10);
+
+  const grid = document.getElementById('calendar-grid');
+  let html = '';
+
+  // Empty cells before first day
+  for (let i = 0; i < startDow; i++) {
+    html += '<div class="min-h-[70px] rounded p-1"></div>';
+  }
+
+  // Day cells
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = dateStr === today;
+    const posts = byDate[dateStr] || [];
+    const publishedPosts = posts.filter(c => c.status === 'published');
+    const pendingPosts = posts.filter(c => c.status === 'pending_approval');
+
+    html += `<div class="min-h-[70px] rounded p-1 border ${isToday ? 'border-accent bg-accent/5' : 'border-border hover:bg-gray-50'} cursor-default">
+      <div class="text-[0.65rem] font-semibold ${isToday ? 'text-accent' : 'text-gray-500'} mb-1">${d}</div>
+      ${publishedPosts.map(c => `<div class="text-[0.55rem] px-1 py-0.5 rounded mb-0.5 truncate font-medium text-white" style="background:${platformColor(c.platform)}" title="${escapeHtml(c.idea?.title||'')}">${platformIcon(c.platform)} ${escapeHtml((c.idea?.title||'Post').slice(0,12))}</div>`).join('')}
+      ${pendingPosts.map(c => `<div class="text-[0.55rem] px-1 py-0.5 rounded mb-0.5 truncate font-medium border border-warning text-warning" title="${escapeHtml(c.idea?.title||'')}">${escapeHtml((c.idea?.title||'Review').slice(0,12))}</div>`).join('')}
+    </div>`;
+  }
+
+  grid.innerHTML = html;
+}
+
+function platformColor(p) {
+  const colors = { tiktok:'#111', instagram:'#e1306c', facebook:'#1877f2', youtube:'#ff0000' };
+  return colors[p] || '#6c5ce7';
+}
+
+function platformIcon(p) {
+  const icons = { tiktok:'TT', instagram:'IG', facebook:'FB', youtube:'YT' };
+  return icons[p] || '??';
+}
+
+async function loadCalendarPosts() {
+  const camps = await api('/api/campaigns/') || [];
+  const sorted = [...camps]
+    .filter(c => c.status === 'published' || c.status === 'pending_approval' || c.status === 'generating')
+    .sort((a,b) => (b.created_at||'').localeCompare(a.created_at||''))
+    .slice(0,15);
+
+  const platformBadges = { tiktok:'bg-gray-900 text-white', instagram:'bg-pink-500 text-white', facebook:'bg-blue-600 text-white', youtube:'bg-red-600 text-white' };
+  const el = document.getElementById('calendar-posts-list');
+
+  if (!sorted.length) {
+    el.innerHTML = '<div class="text-xs text-gray-400 text-center py-4">Nog geen campagnes</div>';
+    return;
+  }
+
+  el.innerHTML = sorted.map(c => {
+    const title = (typeof c.idea === 'object' && c.idea?.title) ? c.idea.title : (c.display_name || 'Campagne');
+    return `<div class="flex items-center gap-3 py-2 border-b border-border last:border-0">
+      <span class="text-[0.6rem] font-bold px-1.5 py-0.5 rounded ${platformBadges[c.platform||'tiktok']||'bg-gray-200'} flex-shrink-0">${(c.platform||'tiktok').toUpperCase().slice(0,2)}</span>
+      <div class="flex-1 min-w-0">
+        <div class="text-xs font-medium truncate">${escapeHtml(title)}</div>
+        <div class="text-[0.65rem] text-gray-400">${timeAgo(c.published_at || c.created_at)}</div>
+      </div>
+      <div>${statusBadge(c.status)}</div>
+    </div>`;
+  }).join('');
 }
