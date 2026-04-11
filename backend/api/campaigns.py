@@ -18,7 +18,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from backend.models.campaign import CampaignBundle, CampaignStatus  # noqa: F401 — ook gebruikt in run()
 from backend.repository.factory import get_campaign_repo
-from workflows.campaign_pipeline import run_pipeline, load_app
+from workflows.campaign_pipeline import run_pipeline, run_post_pipeline, load_app
 from video_engine.providers.pro_video_provider import ProVideoProvider
 
 from agents.idea_generator import IdeaGeneratorAgent
@@ -107,6 +107,7 @@ class GenerateIdeasRequest(BaseModel):
 class StartCampaignRequest(BaseModel):
     app_id: str
     platform: str = "tiktok"
+    post_type: str = "video"   # "text" | "photo" | "video"
     idea_index: int = 0
     tenant_id: str = "default"
     voice: str = "roos"       # ElevenLabs default — native NL vrouwelijk
@@ -144,6 +145,8 @@ class CampaignResponse(BaseModel):
     approved_at: str | None = None
     has_video: bool = False
     display_name: str | None = None
+    post_type: str = "video"
+    thumbnail_path: str | None = None
 
 
 def _to_response(bundle: CampaignBundle) -> CampaignResponse:
@@ -170,6 +173,8 @@ def _to_response(bundle: CampaignBundle) -> CampaignResponse:
         approved_at=str(bundle.approved_at) if bundle.approved_at else None,
         has_video=bool(bundle.video_path),
         display_name=getattr(bundle, 'display_name', None),
+        post_type=getattr(bundle, 'post_type', 'video'),
+        thumbnail_path=bundle.thumbnail_path,
     )
 
 
@@ -325,6 +330,7 @@ def start_campaign(req: StartCampaignRequest, background_tasks: BackgroundTasks)
         app_id=req.app_id,
         tenant_id=req.tenant_id,
         platform=req.platform,
+        post_type=req.post_type,
         status=CampaignStatus.GENERATING,
         display_name=f"Campagne {existing_count + 1} — {app_name}",
     )
@@ -344,23 +350,34 @@ def start_campaign(req: StartCampaignRequest, background_tasks: BackgroundTasks)
 
     def run():
         try:
-            run_pipeline(
-                app_id=req.app_id,
-                platform=req.platform,
-                idea_index=req.idea_index,
-                tenant_id=req.tenant_id,
-                voice=req.voice,
-                tts_speed=req.tts_speed,
-                voice_settings={
-                    "stability": req.voice_stability,
-                    "similarity_boost": req.voice_similarity,
-                    "style": req.voice_style,
-                },
-                on_progress=on_progress,
-                chosen_idea=req.chosen_idea,
-                campaign_id=campaign_id,
-                custom_brief=req.custom_brief,
-            )
+            if req.post_type in ("text", "photo"):
+                run_post_pipeline(
+                    app_id=req.app_id,
+                    platform=req.platform,
+                    post_type=req.post_type,
+                    tenant_id=req.tenant_id,
+                    on_progress=on_progress,
+                    campaign_id=campaign_id,
+                    custom_brief=req.custom_brief,
+                )
+            else:
+                run_pipeline(
+                    app_id=req.app_id,
+                    platform=req.platform,
+                    idea_index=req.idea_index,
+                    tenant_id=req.tenant_id,
+                    voice=req.voice,
+                    tts_speed=req.tts_speed,
+                    voice_settings={
+                        "stability": req.voice_stability,
+                        "similarity_boost": req.voice_similarity,
+                        "style": req.voice_style,
+                    },
+                    on_progress=on_progress,
+                    chosen_idea=req.chosen_idea,
+                    campaign_id=campaign_id,
+                    custom_brief=req.custom_brief,
+                )
             on_progress("__DONE__")
         except Exception as e:
             tb = traceback.format_exc()

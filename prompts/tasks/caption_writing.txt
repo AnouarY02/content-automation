@@ -1,6 +1,6 @@
-Schrijf een caption en hashtag set voor de volgende TikTok video:
+Schrijf een caption voor de volgende social media post:
 
-VIDEO SCRIPT:
+POST CONTEXT:
 {script_summary}
 
 PLATFORM: {platform}
@@ -11,12 +11,38 @@ DOEL VAN DE POST: {post_goal}
 
 Schrijf de caption in de stem van de creator persona — eerste persoon, eigen ervaring, geen reclametaal.
 
+DOELGROEP PSYCHOGRAFIE (verplicht toepassen):
+De doelgroep heeft een mislukkings-identiteit. Ze hebben alles geprobeerd. Ze geloven dat zij het probleem zijn.
+De caption moet dit HERKENNEN zonder er gebruik van te maken als manipulatie.
+Schrijf zodat iemand denkt: "Dit gaat precies over mij."
+
+TAALGEBRUIK DAT RESONEERT:
+- "Ik heb alles geprobeerd" energie — herken dit frame
+- Biologische verklaringen in gewone taal (zonder te doceren)
+- Normaliseren van herval en moeite
+- Specifieke situaties (avond op de bank, kinderen slapen, lange werkdag)
+
+ABSOLUTE VERBODEN IN CAPTIONS:
+- "Oke maar dit is echt schokkend!"
+- "Dit had ik eerder moeten weten!"
+- "Game changer!", "Wow", "Serieus?"
+- "Tag iemand die dit moet weten!"
+- "Laat het me weten in de comments!"
+- "Klinkt te mooi om waar te zijn?"
+- "Wist je dat..." als opener
+- Emoji-soep (max 2-3 emoji's, alleen als ze iets toevoegen)
+- "Gewoon", "simpelweg", "makkelijk"
+- Perfectie-taal
+
 ═══════════════════════════════════════════════════
-CAPTION = TWEEDE HOOK — DIT IS NET ZO BELANGRIJK ALS DE VIDEO
+CAPTION DOEL
 ═══════════════════════════════════════════════════
 
-De caption is NIET een samenvatting van de video.
-De caption is een TWEEDE REDEN om te engagen.
+Als het een VIDEO of FOTO post is: de caption is de TWEEDE hook — anders dan de video-hook, extra reden om te engagen.
+
+Als het een TEKST post is (geen video/foto): de caption IS de volledige post. Begin dan DIRECT met de sterkste hook uit de POST CONTEXT hierboven. Geen inleiding. Geen aanloop. Eerste zin = hook.
+
+Voor ALLE types geldt: de caption is een reden om te stoppen met scrollen.
 
 TikTok's algoritme kijkt naar:
 - SAVES (caption die nuttig genoeg is om op te slaan)

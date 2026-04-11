@@ -603,6 +603,8 @@ def run_post_pipeline(
     post_type: str = "video",
     tenant_id: str = "default",
     on_progress: Callable[[str], None] | None = None,
+    campaign_id: str | None = None,
+    custom_brief: str | None = None,
 ) -> CampaignBundle:
     """
     Lichtgewicht pipeline voor tekst-, foto- en videoposts.
@@ -618,7 +620,8 @@ def run_post_pipeline(
         CampaignBundle met status PENDING_APPROVAL en post_type gezet
     """
     if post_type == "video":
-        bundle = run_pipeline(app_id=app_id, platform=platform, tenant_id=tenant_id, on_progress=on_progress)
+        bundle = run_pipeline(app_id=app_id, platform=platform, tenant_id=tenant_id,
+                              on_progress=on_progress, campaign_id=campaign_id, custom_brief=custom_brief)
         bundle.post_type = "video"
         save_bundle(bundle, tenant_id=tenant_id)
         return bundle
@@ -635,6 +638,8 @@ def run_post_pipeline(
         post_type=post_type,
         status=CampaignStatus.GENERATING,
     )
+    if campaign_id:
+        bundle.id = campaign_id
 
     total_cost = 0.0
     guardrails = CostGuardrails(tenant_id=tenant_id)
@@ -707,9 +712,22 @@ def run_post_pipeline(
                     n=1,
                 )
                 image_url = image_resp.data[0].url
-                bundle.thumbnail_path = image_url
-                # Voeg image_url ook toe aan idea zodat Facebook publisher het vindt
-                bundle.idea = {**chosen_idea, "image_url": image_url}
+                # Download afbeelding lokaal zodat de URL niet verloopt
+                try:
+                    import requests as _requests
+                    from utils.runtime_paths import get_generated_assets_dir, ensure_dir
+                    img_dir = ensure_dir(get_generated_assets_dir() / "images")
+                    img_path = img_dir / f"{bundle.id}.png"
+                    img_data = _requests.get(image_url, timeout=30)
+                    img_data.raise_for_status()
+                    img_path.write_bytes(img_data.content)
+                    local_url = f"/assets/images/{bundle.id}.png"
+                    bundle.thumbnail_path = local_url
+                    bundle.idea = {**chosen_idea, "image_url": local_url}
+                except Exception as dl_err:
+                    logger.warning(f"[Pipeline] Afbeelding downloaden mislukt, gebruik tijdelijke URL: {dl_err}")
+                    bundle.thumbnail_path = image_url
+                    bundle.idea = {**chosen_idea, "image_url": image_url}
                 # DALL-E 3 standaard kosten: ~$0.04 per afbeelding
                 total_cost += 0.04
                 guardrails.record_cost(0.04, "DALL-E-3", bundle.id)
@@ -720,8 +738,20 @@ def run_post_pipeline(
         # Stap 3: Caption schrijven
         progress("Stap 3/3: Caption schrijven...")
         caption_agent = CaptionWriterAgent()
+        # Geef het idee mee als script context zodat de caption concreet aansluit op de hook
+        idea_as_script = {
+            "title": chosen_idea.get("title", ""),
+            "hook": chosen_idea.get("hook_options", [chosen_idea.get("hook", "")])[0] if chosen_idea.get("hook_options") else chosen_idea.get("hook", ""),
+            "angle": chosen_idea.get("angle", ""),
+            "psychological_mechanic": chosen_idea.get("psychological_mechanic", ""),
+            "emotional_arc": chosen_idea.get("emotional_arc", ""),
+            "shocking_fact": chosen_idea.get("shocking_fact", ""),
+            "share_reason": chosen_idea.get("share_reason", ""),
+            "comment_trigger": chosen_idea.get("comment_trigger", ""),
+            "core_message": chosen_idea.get("core_message", ""),
+        }
         caption = caption_agent.run(
-            script={},
+            script=idea_as_script,
             app=app,
             memory=memory,
             platform=platform,

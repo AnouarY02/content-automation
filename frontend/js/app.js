@@ -3,9 +3,7 @@
 // ══════════════════════════════════════════════════════════════════════
 
 // ── State ────────────────────────────────────────────────────────────
-const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? ''  // Lokale dev — zelfde server
-  : 'https://content-automation-production-1812.up.railway.app';  // Productie — Railway backend
+const API = '';  // Altijd relatieve URL — frontend en backend draaien op dezelfde server
 let currentTab = 'overview';
 let currentApp = '';
 let allApps = [];
@@ -21,8 +19,8 @@ const REFRESH_INTERVAL = 30000;
 
 // ── Init ─────────────────────────────────────────────────────────────
 async function initApp() {
+  await loadApps();   // Apps eerst laden zodat allApps.length correct is in loadOverview
   switchTab('overview');
-  await loadApps();
   await refreshAll();
   startAutoRefresh();
 }
@@ -626,19 +624,24 @@ function renderContent() {
     grid.className = 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4';
     grid.innerHTML = allContent.map((c, idx) => `
       <div class="card content-card p-4 cursor-pointer" onclick="showContentDetail(${idx})">
+        ${c.thumbnail_path ? `<img src="${c.thumbnail_path}" alt="thumbnail" class="w-full h-36 object-cover rounded-lg mb-3" onerror="this.style.display='none'">` : ''}
         <div class="flex justify-between items-start mb-2">
           ${statusBadge(c.status)}
-          <span class="text-[0.65rem] text-muted">${timeAgo(c.created_at)}</span>
+          <div class="flex items-center gap-1">
+            <span class="text-[0.6rem] px-1.5 py-0.5 rounded bg-bg text-muted capitalize">${c.post_type || 'video'}</span>
+            <span class="text-[0.65rem] text-muted">${timeAgo(c.created_at)}</span>
+          </div>
         </div>
         <h4 class="font-semibold text-sm mb-1 truncate">${escapeHtml(c.idea_title || 'Naamloos idee')}</h4>
         ${c.idea_hook ? `<p class="text-xs text-muted mb-2 line-clamp-2">${escapeHtml(c.idea_hook)}</p>` : ''}
 
         <div class="space-y-2 mt-3">
+          ${c.post_type === 'video' && c.script_scene_count ? `
           <div class="flex items-center gap-2 text-xs">
             <svg class="w-3.5 h-3.5 text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-            <span class="text-muted">${c.script_scene_count || 0} scenes</span>
+            <span class="text-muted">${c.script_scene_count} scenes</span>
             ${c.script_preview ? `<span class="text-muted truncate flex-1">${escapeHtml(truncate(c.script_preview, 40))}</span>` : ''}
-          </div>
+          </div>` : ''}
           <div class="flex items-center gap-2 text-xs">
             <svg class="w-3.5 h-3.5 text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
             <span class="text-muted truncate">${escapeHtml(c.caption_preview || 'Geen caption')}</span>
@@ -665,7 +668,7 @@ function renderContent() {
           <span class="text-xs text-muted">${c.script_scene_count} scenes | ${c.caption_preview ? escapeHtml(truncate(c.caption_preview, 60)) : 'Geen caption'}</span>
         </div>
         <div class="flex items-center gap-4">
-          ${c.has_video ? '<span class="text-xs text-success">Video</span>' : '<span class="text-xs text-muted">Geen video</span>'}
+          <span class="text-xs px-1.5 py-0.5 rounded bg-bg text-muted capitalize">${c.post_type || 'video'}</span>
           <span class="text-xs text-muted">${formatEUR(c.total_cost_usd)}</span>
           <span class="text-xs text-muted">${timeAgo(c.created_at)}</span>
         </div>
@@ -685,6 +688,11 @@ function showContentDetail(idx) {
       <span class="text-xs text-muted">${timeAgo(c.created_at)}</span>
       ${c.experiment_id ? `<span class="badge status-measuring">Experiment</span>` : ''}
     </div>
+
+    ${c.thumbnail_path ? `
+    <div class="mt-4">
+      <img src="${c.thumbnail_path}" alt="Afbeelding" class="w-full max-h-72 object-cover rounded-xl" onerror="this.style.display='none'">
+    </div>` : ''}
 
     ${c.idea_hook ? `
     <div class="mt-4">

@@ -3,34 +3,117 @@
   "app_name": "GLP Coach",
   "niche": "health",
   "url": "https://glpcoach.nl",
-  "tone_of_voice": "Eerlijk, motiverend en wetenschappelijk onderbouwd. Gericht op mensen die hun leefstijl veranderen met professionele begeleiding. Geen medische claims, wel echte resultaten door coaching.",
-  "target_audience": "Mensen 30-60 jaar met overgewicht die op zoek zijn naar professionele leefstijlbegeleiding. Hebben veel methodes geprobeerd, willen nu duurzame resultaten met echte coaching.",
-  "usp": "Persoonlijke leefstijlcoaching: voeding, beweging en mentale begeleiding gecombineerd voor duurzaam gewichtsverlies",
-  "visual_style": "Clean, professioneel, medisch betrouwbaar. Witte achtergrond, groene accenten. Echte mensen, geen stockfotos.",
-  "best_cta": "Gratis intake via link in bio",
-  "top_performing_hooks": [
-    "Dit veranderde alles voor mijn gewichtsverlies reis",
-    "Waarom 60% opgeeft na 3 maanden (en hoe je dat voorkomt)",
-    "De leefstijlverandering die niemand je vertelt"
+
+  "positionering": "Niet een dieet-app. Een gedragsveranderings-platform voor mensen die klaar zijn met methodes en klaar zijn voor echte begeleiding — met of zonder GLP-1 als startpunt. De enige Nederlandse lifestyle-app die de GLP-1 trend omarmt zonder medicijnen te verkopen, en expliciet richt op herval-preventie en lifestyle-opbouw die medicatie niet kan bieden.",
+
+  "tone_of_voice": "Eerlijk, warm, zonder sugarcoating. Geen 'je kunt het!' — wel 'we begrijpen precies waarom het steeds mislukt, en het ligt niet aan jou.' Direct maar nooit neerbuigend. Wetenschappelijk onderbouwd in gewone mensentaal. Spreektaal, korte zinnen, geen reclametaal.",
+
+  "target_audience": "30-60 jaar, overgewicht, hebben alles al geprobeerd: crashdiëten, keto, WW, shakes, bootcamps. Zijn klaar met methodes. Hebben een mislukkings-identiteit opgebouwd ('het werkt niet voor mij'). Voelen schaamte maar praten er niet over. Herkennen: 's avonds eten als het enige rustmoment van de dag. Zoeken iemand die hun innerlijk gesprek begrijpt — niet hun calorieën telt.",
+
+  "psychografisch_taalgebruik": {
+    "gebruik_deze_zinnen": [
+      "Ik heb alles geprobeerd",
+      "Het lukt me gewoon niet vol te houden",
+      "Ik weet het wel, maar ik doe het toch niet",
+      "Even mijn momentje",
+      "Ik ben zo moe van mezelf",
+      "Straks begin ik echt",
+      "Na de vakantie",
+      "Ik ben geen type voor diëten",
+      "Ik ben een emotie-eter",
+      "Mijn lichaam wil dit blijkbaar"
+    ],
+    "vermijd_altijd": [
+      "Gewoon", "simpelweg", "makkelijk",
+      "beste versie van jezelf",
+      "Calorieën tellen",
+      "Vóór/na-foto-framing als clickbait",
+      "Perfectie-taal",
+      "Garanties over gewichtsverlies"
+    ]
+  },
+
+  "usp": "Persoonlijke leefstijlcoaching: voeding, beweging en mindset gecombineerd voor blijvend resultaat. Geen dieet. Geen quick fix. Begeleiding voor mensen die de cyclus willen doorbreken.",
+
+  "markt_gap": "De GLP-1 sandwich-zone: niemand begeleidt de brug tussen medicatiegebruik en echte leefstijlverandering. GLP-1 is de kickstart — wij zijn het echte werk. Prijszone €49-79/maand is open: boven generieke apps (Noom/WW), ruim onder klinische trajecten (200+).",
+
+  "creator_persona": {
+    "naam": "Nadia",
+    "leeftijd": 38,
+    "achtergrond": "Zelf 22 kg afgevallen na jarenlang jojo-diëten — geen medicijnen, geen operatie. Nu gecertificeerd leefstijlcoach. Kent de mislukkings-cyclus van binnenuit. Begeleidt dagelijks mensen die vastlopen.",
+    "spreekstijl": "Direct, eerlijk, nuchter. Zegt wat anderen niet durven zeggen. Geen motivational-speaker-energie — meer een slimme vriendin die je de waarheid vertelt. Korte zinnen. Spreektaal. Geen hashtag-soep.",
+    "content_aanpak": "Begint altijd met een concrete stelling of herkenbaar feit — geen inleiding. Maakt het persoonlijk in regel 2 of 3. Geeft altijd één bruikbaar inzicht. Eindigt met een echte vraag die mensen laat nadenken, niet met een standaard call-to-action.",
+    "signature_stijl": "Normaliseert mislukkingen zonder ze goed te praten. Geeft wetenschappelijke duiding in gewone taal. Spreekt de schaamte aan zonder er gebruik van te maken.",
+    "verboden_zinnen": [
+      "Oke maar dit is echt schokkend!",
+      "Dit had ik eerder moeten weten!",
+      "Game changer!",
+      "Tag iemand die dit moet weten!",
+      "Laat het me weten in de comments!",
+      "Klinkt te mooi om waar te zijn?",
+      "Dit gaat je leven veranderen",
+      "Wist je dat...",
+      "Wow",
+      "Serieus?"
+    ]
+  },
+
+  "bewezen_hooks": [
+    "Je hebt het al honderd keer geprobeerd. Hier is waarom het NIET aan jou ligt.",
+    "Wat niemand je vertelt als je stopt met GLP-1.",
+    "Jij bent geen zwakkeling. Je hebt gewoon de verkeerde methode.",
+    "Dit is wat er echt gebeurt als je 's avonds koeken pakt als de kinderen slapen.",
+    "Dieet werkt niet. Dit wel.",
+    "Je eet niet te veel. Je eet op de verkeerde momenten.",
+    "Waarom 22 kg verliezen makkelijker was dan de eerste 5.",
+    "Je stofwisseling is niet kapot. Je aanpak wel.",
+    "Crashdiëten werken — totdat ze dat niet meer doen.",
+    "50 kilo kwijt en toch blij? Nee. Hier is het echte verhaal."
   ],
+
+  "high_resonance_topics": [
+    "Emotioneel eten herkennen zonder schaamte",
+    "Wat er biologisch gebeurt als je een dieet stopt (normalisering van herval)",
+    "Waarom wilskracht het probleem niet is — en wat dan wel",
+    "Spieropbouw als bescherming bij gewichtsverlies",
+    "Avondrituelen doorbreken: het troostmoment aanpakken",
+    "GLP-1: wat het doet, wat het niet doet, en wat daarna",
+    "Concrete mini-gewoontes die wél vol te houden zijn",
+    "De set-point theorie: waarom je lichaam terugvalt (biologisch, niet persoonlijk falen)"
+  ],
+
+  "visual_style": "Clean, echt, geen stockfotos. Witte achtergrond, groene accenten. Echte mensen in echte situaties — keuken, bank, sportschool. Geen glossy transformatiefoto's.",
+
+  "best_cta": "Gratis intake via link in bio",
+
   "avoided_topics": [
     "Specifieke medicijnnamen of doseringen",
     "Medische claims of diagnoses",
     "Negatief over artsen of apothekers",
-    "Garanties over gewichtsverlies"
+    "Garanties over gewichtsverlies",
+    "Body shaming — ook subtiel",
+    "Perfectie-framing"
   ],
+
   "content_formats": {
     "best_performing": "problem-solution",
     "secondary": "education",
     "experimental": "testimonial"
   },
+
+  "marktdata": {
+    "nl_overgewicht_volwassenen_pct": 50.6,
+    "obesitas_pct": 15.6,
+    "economische_schade_miljard_eur": 79,
+    "doelgroep_leeftijd_hoogste_prevalentie": "50-64 jaar",
+    "glp1_kosten_stijging_nl": "341% stijging naar 31,8 miljoen euro",
+    "herval_na_glp1_stoppen_pct": 50,
+    "gli_vergoed_basispakket": true,
+    "prijszone_open": "49-79 euro/maand"
+  },
+
   "performance_history": [],
-  "learned_insights": [
-    {
-      "date": "2026-04-11",
-      "insight": "Pipeline fout: Geen ideeën gegenereerd door AI"
-    }
-  ],
+  "learned_insights": [],
   "last_updated": "2026-04-11",
-  "description": "Leefstijl coaching app voor duurzaam gewichtsverlies via gepersonaliseerde voedings- en bewegingsprogrammas met professionele begeleiding"
+  "description": "Leefstijl coaching app voor duurzaam gewichtsverlies. Positionering: de brug tussen GLP-1 gebruik en echte blijvende leefstijlverandering."
 }

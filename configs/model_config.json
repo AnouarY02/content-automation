@@ -11,8 +11,9 @@
     "idea_generation": {
       "provider": "openai",
       "model": "gpt-4o-mini",
-      "max_tokens": 3000,
+      "max_tokens": 6000,
       "temperature": 0.95,
+      "response_format": "json_object",
       "use_cache": false
     },
     "script_writing": {
@@ -32,7 +33,7 @@
     },
     "caption_writing": {
       "provider": "openai",
-      "model": "gpt-4o-mini",
+      "model": "gpt-4o",
       "max_tokens": 1500,
       "temperature": 0.8,
       "use_cache": false

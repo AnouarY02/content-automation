@@ -123,6 +123,7 @@ if FRONTEND_DIR.exists():
 
 ASSETS_DIR = ensure_dir(ASSETS_DIR)
 ensure_dir(ASSETS_DIR / "videos")
+ensure_dir(ASSETS_DIR / "images")
 app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
 
 

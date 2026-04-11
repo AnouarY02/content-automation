@@ -14,11 +14,17 @@ def _build_persona_context(memory: dict) -> str:
     persona = memory.get("creator_persona", {})
     if not persona:
         return ""
-    return (
-        f"{persona.get('naam', '')}, {persona.get('leeftijd', '')} jaar. "
-        f"{persona.get('spreekstijl', '')} "
-        f"{persona.get('content_aanpak', '')}"
-    )
+    parts = [
+        f"{persona.get('naam', '')}, {persona.get('leeftijd', '')} jaar.",
+        persona.get('achtergrond', ''),
+        f"Spreekstijl: {persona.get('spreekstijl', '')}",
+        f"Content aanpak: {persona.get('content_aanpak', '')}",
+        f"Signature stijl: {persona.get('signature_stijl', '')}",
+    ]
+    verboden = persona.get('verboden_zinnen', [])
+    if verboden:
+        parts.append(f"VERBODEN ZINNEN (nooit gebruiken): {', '.join(verboden)}")
+    return "\n".join(p for p in parts if p.strip())
 
 
 class CaptionWriterAgent(BaseAgent):
@@ -41,15 +47,29 @@ class CaptionWriterAgent(BaseAgent):
         template = self._load_prompt("tasks/caption_writing.txt")
 
         scenes = script.get("scenes", [])
-        full_vo = script.get("full_voiceover_text", "") or " ".join(
-            s.get("voiceover", "") for s in scenes
-        )
-        script_summary = (
-            f"Hook: {scenes[0].get('voiceover', '') if scenes else ''}\n"
-            f"Kernboodschap: {script.get('title', '')}\n"
-            f"Volledige voiceover: {full_vo[:800]}\n"
-            f"CTA: {scenes[-1].get('voiceover', '') if scenes else ''}"
-        )
+        if scenes:
+            # Video: bouw summary van scenes
+            full_vo = script.get("full_voiceover_text", "") or " ".join(
+                s.get("voiceover", "") for s in scenes
+            )
+            script_summary = (
+                f"Hook: {scenes[0].get('voiceover', '') if scenes else ''}\n"
+                f"Kernboodschap: {script.get('title', '')}\n"
+                f"Volledige voiceover: {full_vo[:800]}\n"
+                f"CTA: {scenes[-1].get('voiceover', '') if scenes else ''}"
+            )
+        else:
+            # Tekst/foto post: bouw summary van idee-velden
+            script_summary = "\n".join(filter(None, [
+                f"Idee: {script.get('title', '')}",
+                f"Hook: {script.get('hook', '')}",
+                f"Invalshoek: {script.get('angle', '')}",
+                f"Psychologisch mechanisme: {script.get('psychological_mechanic', '')}",
+                f"Schokkend feit: {script.get('shocking_fact', '')}",
+                f"Kernboodschap: {script.get('core_message', '')}",
+                f"Comment trigger: {script.get('comment_trigger', '')}",
+                f"Emotionele arc: {script.get('emotional_arc', '')}",
+            ]))
 
         prompt = self._fill_template(
             template,

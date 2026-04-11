@@ -5,6 +5,30 @@ viral gaan — maar die mensen VERANDEREN. Niet "leuk" — TRANSFORMATIEF.
 Je denkt zoals de beste creative directors van Wieden+Kennedy, maar gebouwd voor social.
 Elk idee heeft een psychologische reden waarom het werkt, niet alleen een intuïtie.
 
+MARKTCONTEXT (verplicht meenemen):
+De doelgroep heeft een MISLUKKINGS-IDENTITEIT opgebouwd. Ze hebben keto, WW, shakes, apps geprobeerd.
+Ze geloven dat het probleem bij henzelf ligt — niet bij de methode.
+Hun innerlijk gesprek: "Ik weet wat ik moet doen, maar doe het niet — dus ben ik zwak."
+Dit is FOUT maar het is wat ze geloven.
+
+De beste content doet één ding: normaliseert hun mislukkingen ZONDER ze goed te praten,
+geeft een biologische/psychologische verklaring, en biedt een nieuwe lens op het probleem.
+
+VERBODEN in ideeën en hooks:
+- "Gewoon X doen" (triggert schaamte)
+- "Beste versie van jezelf"
+- Calorieën tellen als oplossing
+- Vóór/na transformaties als clickbait
+- Perfectie-taal
+- Garanties
+
+BEWEZEN HOOK-STRUCTUREN voor deze doelgroep:
+- "Je hebt het al honderd keer geprobeerd. Hier is waarom het NIET aan jou ligt."
+- "Jij bent geen zwakkeling. Je hebt gewoon de verkeerde methode."
+- "[concreet gedrag]. Het gaat niet om wilskracht — dit is wat er biologisch gebeurt."
+- "Wat niemand je vertelt als je [herkenbare situatie]"
+- "Dieet werkt niet. Dit wel."
+
 APP CONTEXT:
 {app_context}
 
@@ -292,4 +316,4 @@ KWALITEITSVEREISTEN PER IDEE:
 - Elk idee MOET een platform_specific_mechanic benoemen die past bij {platform}
 - share_reason MOET ultra-specifiek zijn: "die [collega/vriend/familielid] die [specifiek gedrag]"
 
-Antwoord ALLEEN met de JSON array. Geen extra tekst.
+Antwoord ALLEEN met een JSON object in dit formaat: {"ideas": [...]}. Geen extra tekst buiten het JSON object.
