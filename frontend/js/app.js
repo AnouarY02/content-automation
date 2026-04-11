@@ -714,9 +714,33 @@ async function loadCampaigns() {
   renderCampaigns(allCampaigns);
 }
 
+let _campaignStatusFilter = '';
+
 function filterCampaigns(status) {
+  _campaignStatusFilter = status;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.status === status));
-  renderCampaigns(status ? allCampaigns.filter(c => c.status === status) : allCampaigns);
+  _applyCampaignFilters();
+}
+
+function searchCampaigns(query) {
+  _applyCampaignFilters(query);
+}
+
+function _applyCampaignFilters(searchOverride) {
+  const query = searchOverride !== undefined
+    ? searchOverride
+    : (document.getElementById('campaign-search')?.value || '');
+  let list = allCampaigns;
+  if (_campaignStatusFilter) list = list.filter(c => c.status === _campaignStatusFilter);
+  if (query.trim()) {
+    const q = query.toLowerCase();
+    list = list.filter(c =>
+      (c.idea_title || c.idea?.title || '').toLowerCase().includes(q) ||
+      (c.idea_hook || c.idea?.hook || '').toLowerCase().includes(q) ||
+      c.id?.toLowerCase().includes(q)
+    );
+  }
+  renderCampaigns(list);
 }
 
 function renderCampaigns(list) {
@@ -1272,53 +1296,312 @@ function closeProgress() {
 }
 
 // ═══════ EXPERIMENTS TAB ═════════════════════════════════════════════
+
+const DIMENSION_COLORS = {
+  hook_type:      '#7c3aed',
+  cta_type:       '#0ea5e9',
+  caption_style:  '#10b981',
+  video_format:   '#f59e0b',
+  posting_window: '#ef4444',
+};
+const DIMENSION_LABELS = {
+  hook_type:      'Hook Type',
+  cta_type:       'CTA Type',
+  caption_style:  'Caption Stijl',
+  video_format:   'Video Formaat',
+  posting_window: 'Plaatsingstijd',
+};
+
 async function loadExperiments() {
   if (!currentApp) {
-    const tbody = document.getElementById('experiments-table');
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-8">Selecteer een app om experimenten te zien</td></tr>';
+    document.getElementById('experiments-table').innerHTML = '<tr><td colspan="5" class="text-center text-muted py-8">Selecteer een app om experimenten te zien</td></tr>';
     return;
   }
   const data = await api(`/api/experiments/?app_id=${currentApp}`);
   const experiments = data ? (data.experiments || []) : [];
+
+  // KPI strip
+  const running  = experiments.filter(e => ['measuring','published'].includes(e.status)).length;
+  const pending  = experiments.filter(e => e.status === 'pending').length;
+  const concluded = experiments.filter(e => e.status === 'concluded').length;
+  const strip = document.getElementById('experiments-kpi-strip');
+  if (strip) {
+    strip.innerHTML = [
+      { label: 'Totaal',          val: experiments.length, cls: '' },
+      { label: 'Wacht op review', val: pending,             cls: 'text-warning' },
+      { label: 'Loopt nu',        val: running,             cls: 'text-primary' },
+      { label: 'Afgerond',        val: concluded,           cls: 'text-success' },
+    ].map(s => `
+      <div class="card p-3 text-center">
+        <div class="text-2xl font-bold ${s.cls}">${s.val}</div>
+        <div class="text-xs text-muted mt-0.5">${s.label}</div>
+      </div>`).join('');
+  }
+
   const tbody = document.getElementById('experiments-table');
   if (experiments.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-8">Geen experimenten gevonden</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-8">Geen experimenten gevonden — genereer een campagne om een experiment te starten</td></tr>';
     return;
   }
-  tbody.innerHTML = experiments.map(e => `
-    <tr>
-      <td class="font-mono text-xs text-muted">${shortId(e.experiment_id)}</td>
-      <td class="text-xs text-muted">${shortId(e.campaign_id)}</td>
-      <td class="text-sm">${e.hypothesis?.dimension || '-'}</td>
-      <td>${statusBadge(e.status)}</td>
-      <td class="text-sm">${(e.variants||[]).length}</td>
-      <td class="text-sm">${e.causal_confidence ? (e.causal_confidence * 100).toFixed(0) + '%' : '-'}</td>
-      <td>
-        ${['concluded','inconclusive'].includes(e.status) ? `<button onclick="showComparison('${e.experiment_id}')" class="btn btn-outline btn-sm">Vergelijk</button>` : ''}
-      </td>
-    </tr>`).join('');
+
+  tbody.innerHTML = experiments.map(e => {
+    const dim       = e.hypothesis?.dimension || '';
+    const dimColor  = DIMENSION_COLORS[dim] || '#64748b';
+    const dimLabel  = DIMENSION_LABELS[dim] || dim;
+    const conf      = e.causal_confidence != null ? (e.causal_confidence * 100) : null;
+    const confColor = conf >= 85 ? 'var(--success)' : conf >= 70 ? 'var(--warning)' : 'var(--danger)';
+    const isFinished = ['concluded','inconclusive'].includes(e.status);
+    const isPending  = e.status === 'pending';
+    const isRunning  = ['measuring','published'].includes(e.status);
+
+    // Winner cell
+    let winnerCell = '<span class="text-muted">-</span>';
+    if (isFinished && e.winning_variant_id && e.variants) {
+      const winner = e.variants.find(v => v.variant_id === e.winning_variant_id);
+      if (winner) winnerCell = `<span class="text-success font-semibold text-xs">&#9733; ${winner.spec?.dimension_value || winner.label}</span>`;
+    } else if (isPending) {
+      winnerCell = '<span class="text-xs text-warning">Wacht review</span>';
+    } else if (isRunning) {
+      winnerCell = '<span class="text-xs text-muted">Meten...</span>';
+    }
+
+    // Confidence cell
+    let confCell = '<span class="text-muted">-</span>';
+    if (conf != null) {
+      confCell = `
+        <div class="flex items-center gap-2" style="min-width:100px">
+          <div class="flex-1 h-1.5 rounded-full" style="background:#e2e8f0">
+            <div style="width:${Math.min(conf,100).toFixed(0)}%;height:100%;border-radius:9999px;background:${confColor}"></div>
+          </div>
+          <span class="text-xs font-semibold" style="color:${confColor}">${conf.toFixed(0)}%</span>
+        </div>`;
+    } else if (isRunning) {
+      confCell = '<span class="text-xs text-muted">Meten...</span>';
+    }
+
+    // Duration
+    const daysAgo = e.created_at ? Math.floor((Date.now() - new Date(e.created_at)) / 86400000) : null;
+    const durationLabel = daysAgo != null ? (daysAgo === 0 ? 'vandaag' : `${daysAgo}d`) : '';
+
+    // Action button
+    const btnLabel = isFinished ? 'Analyse' : isPending ? 'Beoordeel' : 'Details';
+    const btnCls   = isPending ? 'btn btn-warning btn-sm' : 'btn btn-outline btn-sm';
+
+    return `
+      <tr class="${isPending ? 'bg-warning/5' : ''}">
+        <td>
+          <span class="inline-block px-2 py-0.5 rounded-full text-[0.65rem] font-semibold text-white" style="background:${dimColor}">${dimLabel}</span>
+          ${durationLabel ? `<div class="text-[0.6rem] text-muted mt-0.5">${durationLabel}</div>` : ''}
+        </td>
+        <td>${statusBadge(e.status)}</td>
+        <td>${winnerCell}</td>
+        <td>${confCell}</td>
+        <td class="text-right">
+          <button onclick="showExperimentDetail('${e.experiment_id}')" class="${btnCls}">${btnLabel}</button>
+        </td>
+      </tr>`;
+  }).join('');
 }
 
-async function showComparison(expId) {
-  const data = await api(`/api/experiments/${expId}/comparison`);
-  if (!data) { toast('Vergelijking niet beschikbaar', 'warning'); return; }
-  document.getElementById('comparison-content').innerHTML = `
-    <div class="grid grid-cols-2 gap-4 mb-4">
-      <div><span class="text-xs text-muted">Dimensie</span><br><strong>${data.dimension || '-'}</strong></div>
-      <div><span class="text-xs text-muted">Winnaar</span><br><strong class="text-success">${shortId(data.winning_variant_id) || '-'}</strong></div>
-      <div><span class="text-xs text-muted">Confidence</span><br><strong>${data.causal_confidence ? (data.causal_confidence*100).toFixed(0)+'%' : '-'}</strong></div>
-      <div><span class="text-xs text-muted">Conclusie</span><br><span class="text-sm">${data.conclusion || '-'}</span></div>
-    </div>
-    ${data.variants ? `<table><thead><tr><th>Variant</th><th>Label</th><th>Score</th><th>Views</th></tr></thead>
-    <tbody>${data.variants.map(v => `<tr>
-      <td class="font-mono text-xs">${shortId(v.variant_id)}</td>
-      <td>${v.label || '-'}</td>
-      <td class="font-semibold">${v.performance_score ? v.performance_score.toFixed(1) : '-'}</td>
-      <td>${v.view_count || '-'}</td>
-    </tr>`).join('')}</tbody></table>` : ''}
-  `;
-  document.getElementById('experiment-comparison').classList.remove('hidden');
+async function showExperimentDetail(expId) {
+  const exp = await api(`/api/experiments/${expId}`);
+  if (!exp) { toast('Experiment niet beschikbaar', 'warning'); return; }
+
+  const isFinished = ['concluded','inconclusive'].includes(exp.status);
+  const isPending  = exp.status === 'pending';
+  const isRunning  = ['measuring','published'].includes(exp.status);
+  const hyp        = exp.hypothesis || {};
+  const dimColor   = DIMENSION_COLORS[hyp.dimension] || '#64748b';
+  const dimLabel   = DIMENSION_LABELS[hyp.dimension] || hyp.dimension;
+
+  // ── Hypothesis block ─────────────────────────────────────────────
+  let html = `
+    <div class="mb-5 p-4 rounded-xl" style="background:${dimColor}15; border:1px solid ${dimColor}35">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="px-2 py-0.5 rounded-full text-xs font-semibold text-white" style="background:${dimColor}">${dimLabel}</span>
+        <span class="text-xs text-muted">Hypothese</span>
+      </div>
+      <p class="text-sm font-medium mb-2">${escapeHtml(hyp.rationale || '')}</p>
+      <div class="flex gap-4 text-xs">
+        <span class="text-muted">Control: <strong class="text-gray-700">${escapeHtml(hyp.control_value || '-')}</strong></span>
+        <span class="text-muted">Challenger: <strong class="text-gray-700">${escapeHtml(hyp.challenger_value || '-')}</strong></span>
+      </div>
+      ${hyp.supporting_evidence?.length ? `<div class="mt-2 text-xs text-muted italic">${escapeHtml(hyp.supporting_evidence[0])}</div>` : ''}
+    </div>`;
+
+  // ── Concluded / Inconclusive ──────────────────────────────────────
+  if (isFinished) {
+    const conf      = exp.causal_confidence != null ? (exp.causal_confidence * 100) : 0;
+    const confColor = conf >= 85 ? '#16a34a' : conf >= 70 ? '#d97706' : '#dc2626';
+    const hasWinner = exp.winning_variant_id && exp.status === 'concluded';
+
+    if (hasWinner) {
+      const winner     = exp.variants?.find(v => v.variant_id === exp.winning_variant_id);
+      const loser      = exp.variants?.find(v => v.variant_id !== exp.winning_variant_id);
+      const winnerVal  = winner?.spec?.dimension_value || winner?.label || '-';
+      const winScore   = winner?.performance_score;
+      const losScore   = loser?.performance_score;
+      const liftPct    = (winScore && losScore && losScore > 0) ? ((winScore - losScore) / losScore * 100).toFixed(0) : null;
+
+      html += `
+        <div class="flex items-center gap-4 mb-5 p-4 rounded-xl" style="background:#f0fdf4; border:1px solid #bbf7d0">
+          <span style="font-size:2rem">&#9733;</span>
+          <div class="flex-1">
+            <div class="text-xs text-muted mb-0.5">Winnaar</div>
+            <div class="font-bold text-success text-base">${escapeHtml(winnerVal)} <span class="text-xs font-normal text-muted">(${winner?.label || ''})</span></div>
+          </div>
+          ${liftPct ? `<div class="text-right"><div class="text-xs text-muted">Lift</div><div class="font-bold text-success text-lg">+${liftPct}%</div></div>` : ''}
+          <div class="text-right">
+            <div class="text-xs text-muted">Confidence</div>
+            <div class="font-bold text-lg" style="color:${confColor}">${conf.toFixed(0)}%</div>
+          </div>
+        </div>`;
+    } else {
+      html += `
+        <div class="flex items-center gap-4 mb-5 p-4 rounded-xl" style="background:#fefce8; border:1px solid #fde68a">
+          <span style="font-size:1.5rem">&#8776;</span>
+          <div class="flex-1">
+            <div class="text-xs text-muted mb-0.5">Uitkomst</div>
+            <div class="font-semibold text-warning">Niet-conclusief — onvoldoende data</div>
+          </div>
+          <div class="text-right">
+            <div class="text-xs text-muted">Confidence</div>
+            <div class="font-bold text-lg" style="color:${confColor}">${conf.toFixed(0)}%</div>
+          </div>
+        </div>`;
+    }
+
+    // Statistical significance bar
+    const sigLabel = conf >= 85 ? '&#10003; Statistisch significant' : conf >= 70 ? '~ Waarschijnlijk' : '&#10007; Onvoldoende data';
+    html += `
+      <div class="mb-5">
+        <div class="flex justify-between text-xs mb-1">
+          <span class="text-muted">Statistische betrouwbaarheid</span>
+          <span class="font-medium" style="color:${confColor}">${conf.toFixed(0)}% ${sigLabel}</span>
+        </div>
+        <div class="h-2 rounded-full" style="background:#e2e8f0">
+          <div style="width:${Math.min(conf,100).toFixed(0)}%;height:100%;border-radius:9999px;background:${confColor};transition:width 0.6s ease"></div>
+        </div>
+        <div class="flex justify-between text-[0.6rem] text-muted mt-1">
+          <span>0%</span><span>70%</span><span>85% drempel</span><span>100%</span>
+        </div>
+      </div>`;
+
+    // Side-by-side variant performance bars
+    if (exp.variants?.length) {
+      const maxScore = Math.max(...exp.variants.map(v => v.performance_score || 0), 1);
+      html += `<div class="space-y-3 mb-4">`;
+      const sorted = [...exp.variants].sort((a, b) => (b.performance_score || 0) - (a.performance_score || 0));
+      sorted.forEach(v => {
+        const score   = v.performance_score || 0;
+        const views   = v.view_count || v.performance?.play_count || 0;
+        const isWin   = v.variant_id === exp.winning_variant_id;
+        const barPct  = (score / maxScore * 100).toFixed(0);
+        const barClr  = isWin ? '#16a34a' : '#94a3b8';
+        html += `
+          <div class="p-3 rounded-lg border ${isWin ? '' : ''}" style="${isWin ? 'background:#f0fdf4;border-color:#bbf7d0' : 'border-color:#e2e8f0'}">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span style="color:${isWin ? '#16a34a' : '#94a3b8'};font-size:1rem">${isWin ? '&#9733;' : '&#9675;'}</span>
+                <span class="text-sm font-semibold">${escapeHtml(v.spec?.dimension_value || v.label)}</span>
+                <span class="text-xs text-muted">(${v.label})</span>
+              </div>
+              <div class="flex gap-5 text-xs text-right">
+                <div><div class="text-muted">Score</div><div class="font-bold" style="color:${isWin ? '#16a34a' : 'inherit'}">${score > 0 ? score.toFixed(1) : '-'}</div></div>
+                <div><div class="text-muted">Views</div><div class="font-semibold">${views > 0 ? views.toLocaleString('nl-NL') : '-'}</div></div>
+              </div>
+            </div>
+            <div class="h-2 rounded-full" style="background:#e2e8f0">
+              <div style="width:${barPct}%;height:100%;border-radius:9999px;background:${barClr}"></div>
+            </div>
+            ${v.idea?.hook ? `<p class="text-xs text-muted mt-2 italic">"${escapeHtml(v.idea.hook.substring(0,120))}"</p>` : ''}
+          </div>`;
+      });
+      html += `</div>`;
+    }
+
+    if (exp.conclusion) {
+      html += `<div class="p-3 rounded-lg text-sm text-gray-700" style="background:#f8fafc; border:1px solid #e2e8f0">${escapeHtml(exp.conclusion)}</div>`;
+    }
+
+  // ── Pending: operator review ──────────────────────────────────────
+  } else if (isPending) {
+    html += `<p class="text-sm text-muted mb-4">Kies de variant die je wilt publiceren:</p><div class="space-y-3">`;
+    (exp.variants || []).forEach(v => {
+      const qs       = v.quality_score;
+      const passed   = qs ? qs.passed !== false : true;
+      const qualBadge = qs
+        ? (passed ? '<span class="badge status-published ml-2">&#10003; Goedgekeurd</span>' : '<span class="badge status-failed ml-2">&#10007; Geblokkeerd</span>')
+        : '';
+      const changes  = v.spec?.changes_from_control || [];
+      html += `
+        <div class="p-4 rounded-lg border" style="border-color:#e2e8f0">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded" style="background:#f1f5f9">${v.label}</span>
+              <span class="text-xs text-muted">${escapeHtml(v.spec?.dimension_value || '')}</span>
+              ${qualBadge}
+            </div>
+            <button onclick="selectVariantForExperiment('${exp.experiment_id}','${v.variant_id}')" class="btn btn-outline btn-sm" ${!passed ? 'disabled title="Geblokkeerd door quality checker"' : ''}>Kies deze</button>
+          </div>
+          ${v.idea?.hook ? `<p class="text-xs text-muted italic mb-2">"${escapeHtml(v.idea.hook.substring(0,160))}"</p>` : ''}
+          ${changes.length ? `<div class="text-xs text-muted"><strong>Verschil:</strong> ${escapeHtml(changes[0])}</div>` : ''}
+        </div>`;
+    });
+    html += `</div>`;
+
+  // ── Measuring / Published: live data ─────────────────────────────
+  } else {
+    const withData = (exp.variants || []).filter(v => v.performance);
+    html += `
+      <div class="flex items-center gap-3 mb-4">
+        ${statusBadge(exp.status)}
+        <span class="text-xs text-muted">${withData.length} van ${exp.variants?.length || 0} varianten hebben live data</span>
+      </div>
+      <div class="space-y-3">`;
+    (exp.variants || []).forEach(v => {
+      const views = v.view_count || v.performance?.play_count || 0;
+      const score = v.performance_score;
+      html += `
+        <div class="p-3 rounded-lg border" style="border-color:#e2e8f0">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded" style="background:#f1f5f9">${v.label}</span>
+              <span class="text-xs text-muted">${escapeHtml(v.spec?.dimension_value || '')}</span>
+            </div>
+            <div class="flex gap-5 text-xs text-right">
+              <div><div class="text-muted">Views</div><div class="font-semibold">${views > 0 ? views.toLocaleString('nl-NL') : '—'}</div></div>
+              ${score != null ? `<div><div class="text-muted">Score</div><div class="font-semibold">${score.toFixed(1)}</div></div>` : ''}
+            </div>
+          </div>
+          ${v.tiktok_post_id ? `<div class="text-xs text-muted mt-1">TikTok ID: ${v.tiktok_post_id}</div>` : ''}
+        </div>`;
+    });
+    html += `</div>`;
+  }
+
+  const titleEl = document.getElementById('experiment-panel-title');
+  if (titleEl) titleEl.textContent = isFinished ? 'A/B Resultaten' : isPending ? 'Variant Beoordeling' : 'Experiment Live';
+  document.getElementById('comparison-content').innerHTML = html;
+  const panel = document.getElementById('experiment-comparison');
+  panel.classList.remove('hidden');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+
+async function selectVariantForExperiment(expId, variantId) {
+  const ok = await api(`/api/experiments/${expId}/select-variant`, {
+    method: 'POST',
+    body: JSON.stringify({ variant_id: variantId, approved_by: 'operator' }),
+  });
+  if (ok) {
+    toast('Variant geselecteerd', 'success');
+    showExperimentDetail(expId);
+    loadExperiments();
+  }
+}
+
+// Legacy alias — kept for any lingering onclick references
+async function showComparison(expId) { return showExperimentDetail(expId); }
 
 // ═══════ HEALTH TAB ══════════════════════════════════════════════════
 async function loadHealth() {
@@ -1947,23 +2230,117 @@ async function loadAnalytics() {
 
   // Posts table
   const postsData = Array.isArray(posts) ? posts : [];
+  _analyticsPosts = postsData;  // cache for drill-down
   const tbody = document.getElementById('analytics-posts-table');
   if (!postsData.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">Nog geen gepubliceerde posts</td></tr>';
     return;
   }
   const platformBadges = { tiktok:'bg-gray-900 text-white', instagram:'bg-pink-500 text-white', facebook:'bg-blue-600 text-white', youtube:'bg-red-600 text-white' };
-  tbody.innerHTML = postsData.map(p => `
-    <tr class="border-b border-border hover:bg-gray-50">
-      <td class="py-2 pr-3 max-w-[180px] truncate">${escapeHtml(p.title || '—')}</td>
-      <td class="py-2"><span class="text-[0.6rem] font-bold px-1.5 py-0.5 rounded ${platformBadges[p.platform]||'bg-gray-200'}">${p.platform||'—'}</span></td>
-      <td class="py-2 text-gray-400">${p.published_at ? timeAgo(p.published_at) : '—'}</td>
-      <td class="py-2 text-right font-semibold ${(p.viral_score||0)>=75?'text-success':(p.viral_score||0)>=50?'text-warning':'text-danger'}">${p.viral_score ?? '—'}</td>
-      <td class="py-2 text-right">${p.views ? p.views.toLocaleString('nl-NL') : '—'}</td>
-      <td class="py-2 text-right">${p.engagement_rate ? p.engagement_rate + '%' : '—'}</td>
-      <td class="py-2 text-right text-gray-400">$${Number(p.cost_usd||0).toFixed(4)}</td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = postsData.map(p => {
+    const scoreColor = (p.viral_score||0) >= 75 ? 'text-success' : (p.viral_score||0) >= 50 ? 'text-warning' : 'text-danger';
+    return `
+      <tr class="border-b border-border hover:bg-gray-50 cursor-pointer" onclick="showPostDetail('${p.campaign_id}')">
+        <td class="py-2 pr-3 max-w-[180px]">
+          <div class="font-medium truncate">${escapeHtml(p.title || '—')}</div>
+          ${p.hook ? `<div class="text-[0.65rem] text-gray-400 truncate mt-0.5">${escapeHtml(p.hook.substring(0,60))}</div>` : ''}
+        </td>
+        <td class="py-2"><span class="text-[0.6rem] font-bold px-1.5 py-0.5 rounded ${platformBadges[p.platform]||'bg-gray-200'}">${p.platform||'—'}</span></td>
+        <td class="py-2 text-gray-400">${p.published_at ? timeAgo(p.published_at) : '—'}</td>
+        <td class="py-2 text-right font-semibold ${scoreColor}">${p.viral_score ?? '—'}</td>
+        <td class="py-2 text-right">${p.views ? p.views.toLocaleString('nl-NL') : '—'}</td>
+        <td class="py-2 text-right">${p.engagement_rate ? p.engagement_rate + '%' : '—'}</td>
+        <td class="py-2 text-right text-gray-400">$${Number(p.cost_usd||0).toFixed(4)}</td>
+      </tr>`;
+  }).join('');
+}
+
+let _analyticsPosts = [];
+
+function showPostDetail(campaignId) {
+  const p = _analyticsPosts.find(x => x.campaign_id === campaignId);
+  if (!p) return;
+
+  const scoreColor = (p.viral_score||0) >= 75 ? '#16a34a' : (p.viral_score||0) >= 50 ? '#d97706' : '#dc2626';
+  const platformBadges = { tiktok:'bg-gray-900 text-white', instagram:'bg-pink-500 text-white', facebook:'bg-blue-600 text-white', youtube:'bg-red-600 text-white' };
+  const hasPerfData = p.views > 0 || p.likes > 0 || p.comments > 0;
+
+  const metrics = [
+    { label: 'Views',       val: p.views,         fmt: v => v.toLocaleString('nl-NL') },
+    { label: 'Likes',       val: p.likes,         fmt: v => v.toLocaleString('nl-NL') },
+    { label: 'Comments',    val: p.comments,      fmt: v => v.toLocaleString('nl-NL') },
+    { label: 'Shares',      val: p.shares,        fmt: v => v.toLocaleString('nl-NL') },
+    { label: 'Reach',       val: p.reach,         fmt: v => v.toLocaleString('nl-NL') },
+    { label: 'Watch time',  val: p.watch_time_avg_sec, fmt: v => `${v}s gem.` },
+    { label: 'Engagement',  val: p.engagement_rate, fmt: v => `${v}%` },
+  ].filter(m => m.val);
+
+  let html = `
+    <div class="flex items-start justify-between mb-4 gap-4">
+      <div class="flex-1">
+        <h3 class="font-semibold text-sm text-gray-900 mb-1">${escapeHtml(p.title || '—')}</h3>
+        ${p.hook ? `<p class="text-xs text-muted italic">"${escapeHtml(p.hook)}"</p>` : ''}
+        <div class="flex items-center gap-2 mt-2">
+          <span class="text-[0.6rem] font-bold px-1.5 py-0.5 rounded ${platformBadges[p.platform]||'bg-gray-200'}">${p.platform}</span>
+          <span class="text-xs text-muted">${p.published_at ? timeAgo(p.published_at) : ''}</span>
+        </div>
+      </div>
+      <div class="text-center flex-shrink-0">
+        <div class="text-3xl font-extrabold" style="color:${scoreColor}">${p.viral_score ?? '—'}</div>
+        <div class="text-xs text-muted">/100 viral</div>
+        ${p.viral_verdict ? `<div class="text-[0.65rem] font-semibold mt-1" style="color:${scoreColor}">${p.viral_verdict}</div>` : ''}
+      </div>
+    </div>`;
+
+  if (hasPerfData) {
+    html += `
+      <div class="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-4">
+        ${metrics.map(m => `
+          <div class="bg-gray-50 rounded-lg p-3 text-center">
+            <div class="text-base font-bold text-gray-900">${m.fmt(m.val)}</div>
+            <div class="text-[0.65rem] text-muted mt-0.5">${m.label}</div>
+          </div>`).join('')}
+      </div>`;
+
+    // Engagement bars relative to views
+    if (p.views > 0) {
+      const engMetrics = [
+        { label: 'Likes',    val: p.likes,    color: '#7c3aed' },
+        { label: 'Comments', val: p.comments, color: '#0ea5e9' },
+        { label: 'Shares',   val: p.shares,   color: '#10b981' },
+      ].filter(m => m.val > 0);
+      if (engMetrics.length) {
+        html += `<div class="mb-4 space-y-1.5">`;
+        engMetrics.forEach(m => {
+          const pct = Math.min((m.val / p.views * 100), 100).toFixed(2);
+          html += `
+            <div class="flex items-center gap-2 text-xs">
+              <span class="text-muted w-16 text-right flex-shrink-0">${m.label}</span>
+              <div class="flex-1 h-1.5 rounded-full" style="background:#e2e8f0">
+                <div style="width:${pct}%;height:100%;border-radius:9999px;background:${m.color}"></div>
+              </div>
+              <span class="text-muted w-10">${pct}%</span>
+            </div>`;
+        });
+        html += `</div>`;
+      }
+    }
+  } else {
+    html += `<div class="text-xs text-muted text-center py-4 mb-4">Nog geen platform performance data beschikbaar</div>`;
+  }
+
+  html += `
+    <div class="flex justify-between items-center pt-3 border-t border-border text-xs text-muted">
+      <span>Campagne: <code class="text-accent">${campaignId}</code></span>
+      <button onclick="showCampaignDetail('${campaignId}'); switchTab('campaigns')" class="btn btn-outline btn-sm">Naar campagne →</button>
+    </div>`;
+
+  const titleEl = document.getElementById('post-detail-title');
+  if (titleEl) titleEl.textContent = p.title || 'Post Details';
+  document.getElementById('post-detail-content').innerHTML = html;
+  const panel = document.getElementById('post-detail-panel');
+  panel.classList.remove('hidden');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ═══════ KANALEN TAB ════════════════════════════════════════════════

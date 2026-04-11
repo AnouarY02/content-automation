@@ -330,13 +330,14 @@
       <!-- TAB: CAMPAIGNS -->
       <section id="tab-campaigns" class="tab-content hidden space-y-4 fade-in">
         <div class="flex justify-between items-center flex-wrap gap-2">
-          <div class="flex gap-1.5 flex-wrap">
+          <div class="flex gap-1.5 flex-wrap items-center">
             <button onclick="filterCampaigns('')" class="filter-btn active" data-status="">Alle</button>
             <button onclick="filterCampaigns('generating')" class="filter-btn" data-status="generating">Genereren</button>
             <button onclick="filterCampaigns('pending_approval')" class="filter-btn" data-status="pending_approval">Review</button>
             <button onclick="filterCampaigns('approved')" class="filter-btn" data-status="approved">Goedgekeurd</button>
             <button onclick="filterCampaigns('published')" class="filter-btn" data-status="published">Gepubliceerd</button>
             <button onclick="filterCampaigns('failed')" class="filter-btn" data-status="failed">Mislukt</button>
+            <input id="campaign-search" type="search" placeholder="Zoeken..." oninput="searchCampaigns(this.value)" class="text-xs px-2.5 py-1 border border-border rounded-md" style="min-width:150px; height:28px;">
           </div>
           <div class="flex gap-1.5">
             <button onclick="batchApproveAll()" class="btn btn-outline btn-sm" id="btn-batch-approve" title="Keur alle pending campagnes goed">
@@ -368,17 +369,18 @@
 
       <!-- TAB: EXPERIMENTS -->
       <section id="tab-experiments" class="tab-content hidden space-y-4 fade-in">
+        <div id="experiments-kpi-strip" class="grid grid-cols-4 gap-3"></div>
         <div class="card overflow-hidden">
           <div class="overflow-x-auto">
             <table>
-              <thead><tr><th>Experiment</th><th>Campaign</th><th>Dimensie</th><th>Status</th><th>Varianten</th><th>Confidence</th><th></th></tr></thead>
-              <tbody id="experiments-table"><tr><td colspan="7" class="py-3"><div class="skeleton h-8 rounded"></div></td></tr></tbody>
+              <thead><tr><th>Dimensie</th><th>Status</th><th>Winnaar</th><th>Confidence</th><th class="text-right"></th></tr></thead>
+              <tbody id="experiments-table"><tr><td colspan="5" class="py-3"><div class="skeleton h-8 rounded"></div></td></tr></tbody>
             </table>
           </div>
         </div>
         <div id="experiment-comparison" class="card hidden">
           <div class="flex justify-between items-center p-4" style="border-bottom:1px solid #e4e4e7;">
-            <h3 class="text-xs font-semibold text-muted uppercase tracking-widest">Experiment Vergelijking</h3>
+            <h3 id="experiment-panel-title" class="text-xs font-semibold text-muted uppercase tracking-widest">Experiment Details</h3>
             <button onclick="closePanel('experiment-comparison')" class="text-muted hover:text-gray-900 transition-colors text-xl leading-none">&times;</button>
           </div>
           <div id="comparison-content" class="p-5"></div>
@@ -650,6 +652,15 @@
               </tbody>
             </table>
           </div>
+        </div>
+
+        <!-- Post Detail Panel -->
+        <div id="post-detail-panel" class="card hidden">
+          <div class="flex justify-between items-center p-4" style="border-bottom:1px solid #e4e4e7;">
+            <h4 id="post-detail-title" class="text-xs font-semibold text-muted uppercase tracking-widest">Post Details</h4>
+            <button onclick="closePanel('post-detail-panel')" class="text-muted hover:text-gray-900 transition-colors text-xl leading-none">&times;</button>
+          </div>
+          <div id="post-detail-content" class="p-5"></div>
         </div>
       </section>
 
