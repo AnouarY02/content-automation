@@ -3,10 +3,11 @@ Video Engine Orchestrator.
 Kiest de juiste video-provider op basis van video-type en beschikbare API keys.
 
 Provider prioriteit:
-1. D-ID provider (talking head UGC) — als DID_API_KEY + video_type == talking_head
-2. Pro Video provider (stock footage + TTS voiceover) — als OPENAI_API_KEY
-3. OpenAI Image provider (AI-gegenereerde beelden + FFmpeg)
-4. FFmpeg provider (gradient + tekst, gratis fallback)
+1. VisionStory provider (talking head) — als DID_API_KEY=sk-vs-... + video_type == talking_head
+2. D-ID provider (talking head UGC) — als DID_API_KEY (niet sk-vs-) + video_type == talking_head
+3. Pro Video provider (stock footage + TTS voiceover) — als OPENAI_API_KEY
+4. OpenAI Image provider (AI-gegenereerde beelden + FFmpeg)
+5. FFmpeg provider (gradient + tekst, gratis fallback)
 """
 
 import os
@@ -52,7 +53,13 @@ class VideoOrchestrator:
         logger.info(f"[VideoEngine] Produceer '{video_type}' via '{provider_name}'")
 
         try:
-            if provider_name == "did":
+            if provider_name == "visionstory":
+                from video_engine.providers.visionstory_provider import VisionStoryProvider
+                provider = VisionStoryProvider()
+                video_path = provider.produce(script, memory, output_dir)
+                self.total_cost_usd += provider.total_cost_usd
+
+            elif provider_name == "did":
                 from video_engine.providers.d_id_provider import DIDProvider
                 provider = DIDProvider()
                 video_path = provider.produce(script, memory, output_dir)
@@ -90,12 +97,24 @@ class VideoOrchestrator:
             self.last_error = f"{provider_name}: {e}"
             logger.error(f"[VideoEngine] Productie mislukt ({provider_name}): {e}")
 
-            # Fallback keten: pro → openai_image → ffmpeg
+            # Fallback keten: visionstory/did → pro → openai_image → ffmpeg
             fallbacks = self._get_fallbacks(provider_name)
             for fb_name in fallbacks:
                 logger.info(f"[VideoEngine] Probeer fallback: {fb_name}")
                 try:
-                    if fb_name == "pro":
+                    if fb_name == "visionstory":
+                        from video_engine.providers.visionstory_provider import VisionStoryProvider
+                        fb = VisionStoryProvider()
+                        path = fb.produce(script, memory, output_dir)
+                        self.total_cost_usd += fb.total_cost_usd
+                        return path
+                    elif fb_name == "did":
+                        from video_engine.providers.d_id_provider import DIDProvider
+                        fb = DIDProvider()
+                        path = fb.produce(script, memory, output_dir)
+                        self.total_cost_usd += fb.total_cost_usd
+                        return path
+                    elif fb_name == "pro":
                         from video_engine.providers.pro_video_provider import ProVideoProvider
                         fb = ProVideoProvider(
                             voice=self.voice, tts_speed=self.tts_speed,
@@ -158,29 +177,49 @@ class VideoOrchestrator:
         )
         return any(value and len(value.strip()) >= 10 for value in keys)
 
+    @staticmethod
+    def _has_visionstory() -> bool:
+        """VisionStory: DID_API_KEY dat begint met sk-vs-, of aparte VISIONSTORY_API_KEY."""
+        vs_key = os.getenv("VISIONSTORY_API_KEY", "").strip()
+        if vs_key and vs_key.startswith("sk-vs-"):
+            return True
+        did_key = os.getenv("DID_API_KEY", "").strip()
+        return did_key.startswith("sk-vs-")
+
+    @staticmethod
+    def _has_did() -> bool:
+        """Echte D-ID key (base64-encoded, niet sk-vs-)."""
+        key = os.getenv("DID_API_KEY", "").strip()
+        return bool(key) and not key.startswith("sk-vs-")
+
     def _select_provider(self, video_type: str) -> str:
         """Selecteer de beste beschikbare provider.
 
         Prioriteit:
-        1. D-ID: talking_head type + DID_API_KEY → beste avatar-kwaliteit
-        2. Pro (Pexels): stock footage ziet er realistischer uit dan AI-beelden voor UGC
-        3. OpenAI Image: fallback als geen Pexels key
-        4. FFmpeg: gratis fallback (gradient + tekst)
+        1. VisionStory: talking_head + sk-vs- key → moderne AI avatar
+        2. D-ID: talking_head + echte D-ID key → UGC avatar
+        3. Pro (Pexels): stock footage — authentieker dan AI-beelden
+        4. OpenAI Image: fallback zonder Pexels key
+        5. FFmpeg: gratis gradient+tekst fallback
         """
         if os.getenv("FAST_VIDEO_MODE", "").lower() == "true":
             return "ffmpeg"
 
-        # 1. D-ID voor talking head met expliciete key
-        has_did = bool(os.getenv("DID_API_KEY"))
         did_skip = os.getenv("DID_SKIP", "false").lower() == "true"
-        if has_did and video_type == "talking_head" and not did_skip:
-            return "did"
 
-        # 2. Pro (Pexels stock footage) — echte UGC-beelden zijn authentieker dan AI
+        if video_type == "talking_head" and not did_skip:
+            # 1. VisionStory (sk-vs- key)
+            if self._has_visionstory():
+                return "visionstory"
+            # 2. D-ID (echte D-ID key)
+            if self._has_did():
+                return "did"
+
+        # 3. Pro (Pexels stock footage)
         if self._has_pexels():
             return "pro"
 
-        # 3. OpenAI Image als fallback zonder Pexels
+        # 4. OpenAI Image als fallback
         if self._has_openai():
             return "openai_image"
 
@@ -189,22 +228,34 @@ class VideoOrchestrator:
     def _get_fallbacks(self, failed_provider: str) -> list[str]:
         """Geef fallback providers na een gefaalde provider."""
         allow_degraded = self._allow_degraded_video()
-
         low_mem = self._is_low_memory_env()
 
         if not allow_degraded:
             # Productie: alleen waardige fallbacks, geen gradient-slideshow
-            if failed_provider == "did":
-                return ["openai_image"] if self._has_openai() else ([] if low_mem else (["pro"] if self._has_pexels() else []))
+            if failed_provider in ("visionstory", "did"):
+                if self._has_openai():
+                    return ["openai_image"]
+                if self._has_pexels() and not low_mem:
+                    return ["pro"]
+                return []
             if failed_provider == "openai_image":
-                # Pro is te zwaar voor Railway 512MB — skip naar ffmpeg
                 if low_mem:
                     return ["ffmpeg"]
                 return ["pro"] if self._has_pexels() else []
             return []
 
-        # Development/low-mem: volledige fallback keten maar skip pro op Railway
-        if failed_provider == "did":
+        # Development: volledige fallback keten
+        if failed_provider == "visionstory":
+            chain = []
+            if self._has_did():
+                chain.append("did")
+            if self._has_openai():
+                chain.append("openai_image")
+            if self._has_pexels() and not low_mem:
+                chain.append("pro")
+            chain.append("ffmpeg")
+            return chain
+        elif failed_provider == "did":
             chain = []
             if self._has_openai():
                 chain.append("openai_image")
@@ -214,7 +265,7 @@ class VideoOrchestrator:
             return chain
         elif failed_provider == "openai_image":
             if low_mem:
-                return ["ffmpeg"]  # pro OOM-killed op Railway 512MB
+                return ["ffmpeg"]
             return (["pro", "ffmpeg"] if self._has_pexels() else ["ffmpeg"])
         elif failed_provider == "pro":
             return ["ffmpeg"]
