@@ -158,9 +158,11 @@ class VisionStoryProvider:
         if not api_key or len(api_key) < 10:
             return None
 
-        # Voorkeur: gekloonde Nadia-stem, anders default ElevenLabs stem
+        # Gebruik VISIONSTORY_ELEVENLABS_VOICE_ID als expliciet ingesteld,
+        # anders de standaard ELEVENLABS_VOICE_ID (vrouwelijk, past bij default avatar)
+        # NIET de clone-stem — die is mannelijk en past niet bij de vrouwelijke avatar
         voice_id = (
-            os.getenv("ELEVENLABS_CLONE_VOICE_ID", "").strip()
+            os.getenv("VISIONSTORY_ELEVENLABS_VOICE_ID", "").strip()
             or os.getenv("ELEVENLABS_VOICE_ID", "9BWtsMINqrJLrRacOk9x").strip()
         )
 
