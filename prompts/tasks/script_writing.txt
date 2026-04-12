@@ -769,6 +769,66 @@ VERPLICHT IN JE OUTPUT:
 VISUAL DESCRIPTION — AFHANKELIJK VAN VIDEO TYPE
 ═══════════════════════════════════════════════════
 
+═══════════════════════════════════════════════════
+TALKING HEAD MODE — LEES DIT ALS video_type = "talking_head"
+═══════════════════════════════════════════════════
+
+Als video_type = "talking_head" gelden ANDERE REGELS dan voor stock footage video's.
+Nadia staat LETTERLIJK op scherm. Ze praat RECHTSTREEKS naar de camera. Zij IS het verhaal.
+
+DIT VERANDERT ALLES AAN HET SCRIPT:
+
+1. SCHRIJF VANUIT NADIA'S LICHAAM
+   Niet: "iemand die ..." of "de creator die ..."
+   Wel: schrijf het script AS IF Nadia op haar slaapkamer dit opneemt op haar telefoon.
+   Ze staat er. Ze kijkt je aan. Ze vertelt dit omdat ze het zelf heeft meegemaakt.
+
+2. GEBRUIK NADIA'S ACHTERGROND CONCREET
+   Ze heeft zelf 22 kilo afgevallen na jarenlang jojo-diëten. Gebruik dat.
+   ZWAK: "Ik ken dit gevoel heel goed."
+   STERK: "Ik was 38 en ik had het voor — ik weet niet meer hoe vaak — de zoveelste keer opgegeven.
+           Die zondagavond was ik echt klaar. Niet boos meer, gewoon... leeg."
+
+3. COACHING INZICHT ALS BRON
+   Nadia begeleidt dagelijks mensen. Haar beste content komt van echte coaching-momenten.
+   "Vorige week zei een mevrouw tegen me iets wat ik niet meer uit mijn hoofd krijg.
+   Ze zei: 'Ik weet wat ik moet doen. Maar ik doe het toch niet. Dus ben ik gewoon zwak.'
+   En ik dacht: dit is het. Dit is precies het probleem — en ze heeft er zo naast."
+
+4. DIRECTE AANWEZIGHEID — ZE IS ER
+   In een talking head video kan Nadia reageren, lachen, even stoppen.
+   Schrijf die momenten in:
+   "En dan— [pause] — dan vraag je jezelf af: hoe kan ik zo moe zijn van mezelf?"
+   "Nee wacht, ik moet dit goed vertellen want dit is het punt."
+   "Kijk, ik lach er nu om, maar op dat moment was ik echt—"
+
+5. DE HOOK IS EEN STATEMENT UIT HAAR LEVEN
+   Niet een statistiek. Niet "wist je dat".
+   Wel: iets wat ze zelf heeft gedacht, gezegd, of gehoord van een client.
+   ZWAK: "Vijftig procent van de GLP-1 gebruikers komt alles terug."
+   STERK: "Mijn cliënte belde me huilend. Ze was gestopt met haar GLP-1 en drie weken later
+           was alles terug. Alles. En ze zei: zie je wel, het werkt toch niet voor mij."
+
+6. EMOTIONELE ARC IS NADIA'S ARC
+   Hook: Ze zegt iets wat raakt — een moment uit haar coachingpraktijk of eigen leven
+   Problem: Ze legt uit WAAROM dat zo pijnlijk is — de biologie, de psychologie
+   Solution: Ze laat zien wat ze DEEd — niet wat de app doet, maar wat SIJ deed
+   CTA: Ze praat als de slimme vriendin die je de waarheid vertelt
+
+7. VERBODEN BIJ TALKING HEAD:
+   - "In deze video ga ik je laten zien..." ← presenter-jargon, NOOIT
+   - Statistieken die je van een website plukt ← ze praat vanuit EIGEN ERVARING
+   - Perfecte structuur die klinkt als een pitch ← ze is GEEN verkoper
+   - Enthousiaste toon ("dit is geweldig!") ← Nadia is nuchter en direct
+   - CTA die klinkt als een advertentie ← ze is een vriendin die een tip geeft
+
+ZELFCHECK VOOR TALKING HEAD:
+□ Klinkt het alsof Nadia dit opneemt op haar telefoon, in haar eigen woorden?
+□ Bevat het MINSTENS één moment uit haar eigen leven OF een coaching-moment?
+□ Is er een moment van twijfel of kwetsbaarheid?
+□ Zou een vriendin van 38 dit LETTERLIJK zo zeggen?
+ALS 1 ANTWOORD "NEE" → herschrijf. Een talking head met generieke voiceover is geen talking head.
+
 Als video_type = "talking_head":
   De creator (persona) praat RECHTSTREEKS naar de camera.
   Visual descriptions beschrijven de STEMMING en EXPRESSIE van de creator, geen stock footage.

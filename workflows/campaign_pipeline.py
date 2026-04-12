@@ -219,10 +219,24 @@ def run_pipeline(
                 recent_titles = [t for t in recent_titles if t]
             except Exception:
                 pass  # Niet kritiek — ideeën worden alsnog gegenereerd
+            # Voeg format-specifieke brief toe als forced_content_format opgegeven is
+            effective_brief = custom_brief or ""
+            if forced_content_format == "talking-head":
+                talking_head_brief = (
+                    "Genereer uitsluitend ideeën voor TALKING HEAD format — Nadia staat op scherm en praat "
+                    "rechtstreeks naar de camera. Ideeën moeten gebaseerd zijn op: (1) een persoonlijk moment "
+                    "uit Nadia's eigen afvall-traject (22kg, jojo-diëten, coachingpraktijk), (2) een concreet "
+                    "coaching-moment met een echte cliënte (geen naam, wel specifiek scenario), of (3) een "
+                    "mythe die ze doorprikt vanuit eigen ervaring. Alle 5 ideeën moeten content_format='talking-head' "
+                    "hebben. Hooks vanuit eerste persoon ('Ik was...', 'Mijn cliënte zei...', 'Na mijn twintigste "
+                    "poging...'). Geen statistieken als hook — alleen persoonlijke momenten."
+                )
+                effective_brief = f"{talking_head_brief}\n\n{effective_brief}".strip()
+
             with ThreadPoolExecutor(max_workers=1) as _pool:
                 _f = _pool.submit(idea_agent.run, app=app, memory=memory,
                                   platform=platform, recent_titles=recent_titles,
-                                  custom_brief=custom_brief,
+                                  custom_brief=effective_brief,
                                   market_research=market_research_str)
                 try:
                     ideas = _f.result(timeout=120)
@@ -264,6 +278,18 @@ def run_pipeline(
 
         video_type = _determine_video_type(chosen_idea, app=app, memory=memory, forced_content_format=forced_content_format)
 
+        # Extra instructie voor talking head: Nadia staat op scherm, schrijf persoonlijk
+        talking_head_extra = ""
+        if video_type == "talking_head":
+            talking_head_extra = (
+                "VIDEO TYPE = TALKING HEAD. Nadia staat LETTERLIJK op scherm. "
+                "Schrijf het script vanuit haar lichaam — ze praat rechtstreeks naar de camera. "
+                "VERPLICHT: gebruik minstens één moment uit haar eigen traject (22kg afgevallen, "
+                "jojo-diëten, coachingpraktijk) OF een specifiek coaching-moment met een cliënte. "
+                "De voiceover moet klinken als een spraakbericht aan een vriendin — niet als een "
+                "presentatie of reclame. Gebruik de TALKING HEAD MODE instructies in het prompt."
+            )
+
         def _generate_and_score(idx: int) -> tuple[dict, dict, float, float]:
             """Genereer één script + viral check. Retourneert (script, viral_result, script_cost, viral_cost)."""
             agent = ScriptWriterAgent()
@@ -274,6 +300,7 @@ def run_pipeline(
                     platform=platform,
                     target_duration_sec=PIPELINE_DEFAULT_DURATION_SEC,
                     video_type=video_type,
+                    extra_instruction=talking_head_extra,
                 )
                 if not isinstance(s, dict) or not s.get("scenes"):
                     return {}, {}, agent.total_cost_usd, 0.0
