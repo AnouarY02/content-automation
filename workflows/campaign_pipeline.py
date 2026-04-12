@@ -29,6 +29,7 @@ from agents.market_researcher import MarketResearchAgent
 from agents.script_writer import ScriptWriterAgent
 from agents.caption_writer import CaptionWriterAgent
 from agents.viral_checker import ViralCheckerAgent
+from agents.realness_checker import RealnessCheckerAgent
 from agents import brand_memory as bm
 from backend.constants import PIPELINE_DEFAULT_DURATION_SEC
 from backend.cost_guardrails import CostGuardrails, BudgetExceededError
@@ -612,6 +613,63 @@ def run_pipeline(
         # Geheugen vrijmaken na tournament voordat zware video-encode start
         import gc
         gc.collect()
+
+        # Realness check — vang nep-content vóór video-productie
+        progress("Stap 4b/7: Realness check (nep-detector)...")
+        try:
+            realness_agent = RealnessCheckerAgent()
+            realness_result = realness_agent.run(script=script, app=app, memory=memory)
+            total_cost += realness_agent.total_cost_usd
+            guardrails.record_cost(realness_agent.total_cost_usd, "RealnessCheckerAgent", bundle.id)
+            realness_score = realness_result.get("realness_score", 100)
+            realness_verdict = realness_result.get("verdict", "ACCEPTABEL")
+            progress(f"  > Realness: {realness_score}/100 → {realness_verdict}")
+
+            # Herschrijven als te nep
+            if realness_agent.should_rewrite(realness_result):
+                logger.info(f"[Pipeline] Script te nep ({realness_score}/100) — realness rewrite")
+                rewrite_instructions = realness_result.get("rewrite_instructions", "")
+                fake_lines = realness_result.get("fake_lines", [])
+                fake_line_fixes = "\n".join(
+                    f'- "{fl["original"]}" → "{fl["rewrite"]}"'
+                    for fl in fake_lines[:3]
+                ) if fake_lines else ""
+                extra_instruction = (
+                    f"Het script klinkt te nep/marketing-achtig. "
+                    f"Herschrijf zodat het authentiek klinkt als een echt persoon.\n\n"
+                    f"INSTRUCTIES:\n{rewrite_instructions}\n\n"
+                    f"SPECIFIEKE FIXES:\n{fake_line_fixes}"
+                ).strip()
+                rewrite_agent = ScriptWriterAgent()
+                script = rewrite_agent.run(
+                    idea=chosen_idea, app=app, memory=memory,
+                    platform=platform,
+                    target_duration_sec=PIPELINE_DEFAULT_DURATION_SEC,
+                    video_type=video_type,
+                    extra_instruction=extra_instruction,
+                ) or script
+                total_cost += rewrite_agent.total_cost_usd
+                guardrails.record_cost(rewrite_agent.total_cost_usd, "ScriptWriterAgent-realness-rewrite", bundle.id)
+                if script.get("scenes"):
+                    script = _enforce_echo_loop(script)
+                    bundle.script = script
+                    # Hercheck realness
+                    recheck = RealnessCheckerAgent()
+                    realness_result = recheck.run(script=script, app=app, memory=memory)
+                    total_cost += recheck.total_cost_usd
+                    realness_score = realness_result.get("realness_score", 100)
+                    realness_verdict = realness_result.get("verdict", "ACCEPTABEL")
+                    progress(f"  > Realness na rewrite: {realness_score}/100 → {realness_verdict}")
+
+            # Sla realness score op in bundle
+            bundle.viral_score = {
+                **bundle.viral_score,
+                "realness_score": realness_score,
+                "realness_verdict": realness_verdict,
+                "realness_summary": realness_result.get("summary", ""),
+            }
+        except Exception as realness_err:
+            logger.warning(f"[Pipeline] Realness check mislukt (niet-blokkerend): {realness_err}")
 
         # Stap 5+6: Video produceren EN caption schrijven (parallel)
         vs_info = f", stability={voice_settings['stability']}" if voice_settings else ""
