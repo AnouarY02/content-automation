@@ -305,16 +305,28 @@ def run_pipeline(
                 logger.warning(f"[Pipeline] Marktonderzoek mislukt (niet kritiek): {research_err}")
                 # Niet kritiek — pipeline gaat door zonder research
 
-            # Stap 2a-extra: Echte gebruikersverhalen (Reddit story seeds) laden
+            # Stap 2a-extra: Echte gebruikersverhalen + problemen laden als context
             try:
                 from workflows.story_miner import load_story_seeds, format_seeds_for_prompt
-                seeds = load_story_seeds(app_id, limit=5)
+                from workflows.comment_miner import load_problem_seeds, format_problems_for_prompt
+
+                story_context = ""
+                problem_context = ""
+
+                seeds = load_story_seeds(app_id, limit=4)
                 if seeds:
                     story_context = format_seeds_for_prompt(seeds)
-                    market_research_str = f"{story_context}\n\n{market_research_str}".strip()
-                    progress(f"  > {len(seeds)} echte gebruikersverhalen geladen als context")
+
+                problems = load_problem_seeds(app_id, limit=5)
+                if problems:
+                    problem_context = format_problems_for_prompt(problems)
+
+                if story_context or problem_context:
+                    extra = "\n\n".join(filter(None, [problem_context, story_context]))
+                    market_research_str = f"{extra}\n\n{market_research_str}".strip()
+                    progress(f"  > {len(seeds)} verhalen + {len(problems)} echte problemen geladen als context")
             except Exception as seed_err:
-                logger.debug(f"[Pipeline] Story seeds laden mislukt (niet kritiek): {seed_err}")
+                logger.debug(f"[Pipeline] Seeds laden mislukt (niet kritiek): {seed_err}")
 
             # Stap 2b: Ideeën genereren met marktonderzoek als context
             progress("Stap 2/7: Campagne-ideeën genereren...")
@@ -385,7 +397,7 @@ def run_pipeline(
         import concurrent.futures as _cf
 
         TOURNAMENT_SIZE = 2   # 2 scripts parallel = snellere selectie, nog steeds goedkoop
-        TARGET_SCORE = 75     # Verlaagd: 75 is goed genoeg, voorkomt re-write loops
+        TARGET_SCORE = 80     # Kwaliteitsdrempel: alleen sterke content gaat door
 
         progress("Stap 3/7: Video-script genereren...")
 

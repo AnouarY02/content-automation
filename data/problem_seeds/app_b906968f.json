@@ -1,0 +1,104 @@
+{
+  "app_id": "app_b906968f",
+  "mined_at": "2026-04-12T12:00:00Z",
+  "sources": ["bokt.nl forum", "getwellis.com", "mijnmedicijn.nl", "medshadow.org"],
+  "count": 12,
+  "problems": [
+    {
+      "id": "p001",
+      "problem": "Ik ben bang dat ik alles wat ik verloren heb terugkom als ik stop met de medicatie",
+      "exact_quote": "wanneer je stopt je weer aankomt — het is dus de sport om kleine beetjes te blijven eten",
+      "theme": "weight_regain",
+      "frequency_signal": "zeer vaak",
+      "content_angle": "Wat echt werkt na het stoppen: de gewoonten die je opbouwt TIJDENS het gebruik bepalen alles"
+    },
+    {
+      "id": "p002",
+      "problem": "Er zit een stemmetje in mijn hoofd dat zegt dat ik meer moet eten, ook als ik het niet nodig heb",
+      "exact_quote": "Mijn valkuil is gewoon dat ik afval, en dan alles in mijn hoofd roept dat ik meer moet eten. En just dat stemmetje hoop ik te smoren",
+      "theme": "emotional_eating",
+      "frequency_signal": "zeer vaak",
+      "content_angle": "Dat stemmetje heeft een naam: het zijn je hersenen die je beschermen tegen 'hongersnood'. Zo zet je het uit"
+    },
+    {
+      "id": "p003",
+      "problem": "De kosten zijn veel te hoog — begeleiding + medicatie samen is niet te betalen",
+      "exact_quote": "De kosten voor het eerste half jaar 1100 euro alleen voor de begeleiding. Daar komen de spuiten dus nog bij ca 250 euro per maand. Dit is mij echt te gek",
+      "theme": "cost_barrier",
+      "frequency_signal": "zeer vaak",
+      "content_angle": "Wat je krijgt voor die investering: een coach die ziet wat jij niet ziet, op het moment dat het telt"
+    },
+    {
+      "id": "p004",
+      "problem": "Ik ben op een plateau — ik val al weken niet meer af terwijl ik alles doe wat ik moet doen",
+      "exact_quote": "Klanten hebben vragen over wat er gebeurt als je je streefgewicht hebt bereikt",
+      "theme": "plateau",
+      "frequency_signal": "vaak",
+      "content_angle": "Een plateau is geen falen — het is je lichaam dat bijstelt. Dit is wat je nu doet"
+    },
+    {
+      "id": "p005",
+      "problem": "Ik heb last van bijwerkingen en weet niet of het normaal is of dat ik moet stoppen",
+      "exact_quote": "heb al een paar patienten voorbij zien komen met ernstige bijwerkingen",
+      "theme": "side_effects",
+      "frequency_signal": "vaak",
+      "content_angle": "Misselijkheid week 1-2 = normaal. Dit zijn de signalen dat je MOET stoppen"
+    },
+    {
+      "id": "p006",
+      "problem": "Ik eet de hele dag door zonder echt honger te hebben — ik weet niet hoe ik moet stoppen",
+      "exact_quote": "food noise — de constante gedachten over eten verdwijnen bijna volledig",
+      "theme": "emotional_eating",
+      "frequency_signal": "zeer vaak",
+      "content_angle": "Eten uit gewoonte vs eten uit honger: hoe je het verschil leert voelen"
+    },
+    {
+      "id": "p007",
+      "problem": "Mijn dokter schrijft het niet voor maar ik heb het echt nodig — wat kan ik doen?",
+      "exact_quote": "je de spuiten ook kunt kopen online zonder verdere begeleiding. Maar daar voel ik mij niet goed bij",
+      "theme": "access",
+      "frequency_signal": "vaak",
+      "content_angle": "Wat een coach doet wat je dokter niet kan: begeleiding op de momenten dat het moeilijk is"
+    },
+    {
+      "id": "p008",
+      "problem": "Ik slaap slecht en merk dat dit mijn afval saboteert — maar hoe los ik dat op?",
+      "exact_quote": "Slechte slaapkwaliteit — minder dan 7-9 uur verstoort hongerhormonen en verhoogt cortisol",
+      "theme": "lifestyle",
+      "frequency_signal": "vaak",
+      "content_angle": "De slaap-honger connectie: hoe 1 uur meer slaap je cravings de volgende dag halveert"
+    },
+    {
+      "id": "p009",
+      "problem": "Ik ben gestrest en merk dat ik dan toch weer naar eten grijp — ook met de medicatie",
+      "exact_quote": "Chronische stress zorgt voor buikvet en trek in ongezond eten",
+      "theme": "stress_eating",
+      "frequency_signal": "zeer vaak",
+      "content_angle": "Stress-eten op medicatie: waarom het nog steeds gebeurt en de 3-minuten techniek die helpt"
+    },
+    {
+      "id": "p010",
+      "problem": "Ik beweeg te weinig maar mijn gewrichten doen pijn — hoe begin ik toch met sporten?",
+      "exact_quote": "Onvoldoende beweging — de 150-300 minuten per week die nodig zijn voor echt vetverlies",
+      "theme": "exercise",
+      "frequency_signal": "vaak",
+      "content_angle": "Beginnen met bewegen als je lichaam pijn doet: dit is de volgorde die werkt"
+    },
+    {
+      "id": "p011",
+      "problem": "Ik val snel af maar ik eet eigenlijk bijna niks meer — is dat gezond?",
+      "exact_quote": "Zonder leefstijlaanpassingen is de medicatie minder effectief — processed foods en suikers ondermijnen het effect",
+      "theme": "nutrition",
+      "frequency_signal": "vaak",
+      "content_angle": "Te weinig eten is ook verkeerd: waarom 1200 calorieën je herstel saboteert"
+    },
+    {
+      "id": "p012",
+      "problem": "Ik ben bang voor jojo-effect als ik stop — mijn hele leven heb ik al gejojood",
+      "exact_quote": "Klanten vragen wat er gebeurt na het stoppen en of ze dan ontzettend gaan jojo-en",
+      "theme": "weight_regain",
+      "frequency_signal": "zeer vaak",
+      "content_angle": "Jojo-diëten veroorzaken meer schade dan overgewicht: wat je lichaam nodig heeft om écht te resetten"
+    }
+  ]
+}
