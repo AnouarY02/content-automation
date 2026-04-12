@@ -66,7 +66,10 @@ def schedule_post_check(
     campaign_id: str,
     app_id: str,
     published_at: datetime,
+    platform: str = "tiktok",
     experiment_tags: ExperimentTags | None = None,
+    predicted_viral_score: float | None = None,
+    predicted_realness_score: float | None = None,
 ) -> None:
     """
     Registreer een gepubliceerde post voor toekomstige analytics.
@@ -90,7 +93,10 @@ def schedule_post_check(
         "checked_24h": False,
         "checked_48h": False,
         "checked_7d": False,
+        "platform": platform,
         "experiment_tags": experiment_tags.model_dump() if experiment_tags else None,
+        "predicted_viral_score": predicted_viral_score,
+        "predicted_realness_score": predicted_realness_score,
         "registered_at": datetime.utcnow().isoformat(),
     }
 
@@ -127,20 +133,35 @@ def run_due_checks(app_id: str | None = None) -> dict:
         post_id = check["post_id"]
         published_at = datetime.fromisoformat(check["published_at"])
 
+        from analytics.models import Platform as AnalyticsPlatform
+        platform_str = check.get("platform", "tiktok")
+        try:
+            platform = AnalyticsPlatform(platform_str)
+        except ValueError:
+            platform = AnalyticsPlatform.TIKTOK
+
         experiment_tags = None
         if check.get("experiment_tags"):
             experiment_tags = ExperimentTags(**check["experiment_tags"])
 
+        predicted_viral = check.get("predicted_viral_score")
+        predicted_realness = check.get("predicted_realness_score")
+
+        _check_kwargs = dict(
+            post_id=post_id,
+            campaign_id=check["campaign_id"],
+            app_id=check_app_id,
+            published_at=published_at,
+            platform=platform,
+            experiment_tags=experiment_tags,
+            predicted_viral_score=predicted_viral,
+            predicted_realness_score=predicted_realness,
+        )
+
         # 24u check
         if not check["checked_24h"] and now >= datetime.fromisoformat(check["check_at_24h"]):
             try:
-                engine.process_single_post(
-                    post_id=post_id,
-                    campaign_id=check["campaign_id"],
-                    app_id=check_app_id,
-                    published_at=published_at,
-                    experiment_tags=experiment_tags,
-                )
+                engine.process_single_post(**_check_kwargs)
                 check["checked_24h"] = True
                 results["checks_run"] += 1
                 logger.info(f"[FeedbackLoop] 24u check klaar voor {post_id}")
@@ -150,13 +171,7 @@ def run_due_checks(app_id: str | None = None) -> dict:
         # 48u check
         elif check["checked_24h"] and not check["checked_48h"] and now >= datetime.fromisoformat(check["check_at_48h"]):
             try:
-                engine.process_single_post(
-                    post_id=post_id,
-                    campaign_id=check["campaign_id"],
-                    app_id=check_app_id,
-                    published_at=published_at,
-                    experiment_tags=experiment_tags,
-                )
+                engine.process_single_post(**_check_kwargs)
                 check["checked_48h"] = True
                 results["checks_run"] += 1
                 logger.info(f"[FeedbackLoop] 48u check klaar voor {post_id}")
@@ -166,13 +181,7 @@ def run_due_checks(app_id: str | None = None) -> dict:
         # 7d check
         elif check["checked_48h"] and not check["checked_7d"] and now >= datetime.fromisoformat(check["check_at_7d"]):
             try:
-                engine.process_single_post(
-                    post_id=post_id,
-                    campaign_id=check["campaign_id"],
-                    app_id=check_app_id,
-                    published_at=published_at,
-                    experiment_tags=experiment_tags,
-                )
+                engine.process_single_post(**_check_kwargs)
                 check["checked_7d"] = True
                 results["checks_run"] += 1
                 logger.info(f"[FeedbackLoop] 7d check klaar voor {post_id}")

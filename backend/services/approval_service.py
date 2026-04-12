@@ -125,11 +125,15 @@ def _publish_now(bundle: CampaignBundle) -> CampaignBundle:
         # Registreer voor automatische analytics checks (24h, 48h, 7d)
         try:
             from workflows.feedback_loop import schedule_post_check
+            viral_data = bundle.viral_score or {}
             schedule_post_check(
                 post_id=post_id,
                 campaign_id=bundle.id,
                 app_id=bundle.app_id,
                 published_at=bundle.published_at,
+                platform=platform,
+                predicted_viral_score=viral_data.get("composite_score"),
+                predicted_realness_score=viral_data.get("realness_score"),
             )
         except Exception as fb_err:
             logger.warning(f"Feedback registratie mislukt (niet kritiek): {fb_err}")

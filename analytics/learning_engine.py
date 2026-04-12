@@ -29,6 +29,8 @@ from analytics.models import (
     Platform,
 )
 from channels.tiktok.analytics_fetcher import TikTokAnalyticsFetcher
+from channels.facebook.analytics_fetcher import FacebookAnalyticsFetcher
+from channels.instagram.analytics_fetcher import InstagramAnalyticsFetcher
 from agents.analyst_agent import AnalystAgent
 
 ROOT = Path(__file__).parent.parent
@@ -41,8 +43,15 @@ class LearningEngine:
 
     def __init__(self):
         self.metrics_store = MetricsStore()
-        self.fetcher = TikTokAnalyticsFetcher()
+        self._fetchers = {
+            Platform.TIKTOK: TikTokAnalyticsFetcher(),
+            Platform.FACEBOOK: FacebookAnalyticsFetcher(),
+            Platform.INSTAGRAM: InstagramAnalyticsFetcher(),
+        }
         self.analyst = AnalystAgent()
+
+    def _get_fetcher(self, platform: Platform):
+        return self._fetchers.get(platform, self._fetchers[Platform.TIKTOK])
 
     def run_cycle(
         self,
@@ -151,7 +160,10 @@ class LearningEngine:
         campaign_id: str,
         app_id: str,
         published_at: datetime,
+        platform: Platform = Platform.TIKTOK,
         experiment_tags: ExperimentTags | None = None,
+        predicted_viral_score: float | None = None,
+        predicted_realness_score: float | None = None,
     ) -> PostAnalysis | None:
         """
         Verwerk één post handmatig (bijv. direct na publicatie plannen).
@@ -161,8 +173,10 @@ class LearningEngine:
             "campaign_id": campaign_id,
             "published_at": published_at,
             "experiment_tags": experiment_tags,
+            "predicted_viral_score": predicted_viral_score,
+            "predicted_realness_score": predicted_realness_score,
         }
-        analysis = self._process_post(post_info, app_id, Platform.TIKTOK)
+        analysis = self._process_post(post_info, app_id, platform)
         if analysis:
             self.metrics_store.save_post_analysis(analysis)
             self._update_benchmark(analysis)
@@ -184,8 +198,9 @@ class LearningEngine:
         if isinstance(published_at, str):
             published_at = datetime.fromisoformat(published_at)
 
-        # Fetch raw metrics
-        raw = self.fetcher.fetch(
+        # Fetch raw metrics via platform-specifieke fetcher
+        fetcher = self._get_fetcher(platform)
+        raw = fetcher.fetch(
             post_id=post_id,
             campaign_id=campaign_id,
             app_id=app_id,
@@ -206,6 +221,12 @@ class LearningEngine:
         # Experiment tags laden of default gebruiken
         tags = post_info.get("experiment_tags") or _default_experiment_tags(post_info)
 
+        llm_insights: dict = {}
+        if post_info.get("predicted_viral_score") is not None:
+            llm_insights["predicted_viral_score"] = post_info["predicted_viral_score"]
+        if post_info.get("predicted_realness_score") is not None:
+            llm_insights["predicted_realness_score"] = post_info["predicted_realness_score"]
+
         analysis = PostAnalysis(
             campaign_id=campaign_id,
             app_id=app_id,
@@ -215,6 +236,7 @@ class LearningEngine:
             normalized=normalized,
             score=score,
             tags=tags,
+            llm_insights=llm_insights,
         )
 
         logger.info(
