@@ -112,20 +112,21 @@ class StartCampaignRequest(BaseModel):
     tenant_id: str = "default"
     voice: str = "roos"       # ElevenLabs default — native NL vrouwelijk
     tts_speed: float = 1.0
-    voice_stability: float = 0.58      # 0.0-1.0 — hoger = consistenter
-    voice_similarity: float = 0.92     # 0.0-1.0 — hoger = dichter bij originele stem
-    voice_style: float = 0.45          # 0.0-1.0 — hoger = meer expressief
+    voice_stability: float = 0.65      # 0.0-1.0 — hoger = consistenter; 0.65 = vloeiend zonder robotica
+    voice_similarity: float = 0.85     # 0.0-1.0 — hoger = dichter bij originele stem; 0.85 = naturel
+    voice_style: float = 0.10          # 0.0-1.0 — hoger = meer expressief; 0.10 = conversationeel, niet theatraal
     chosen_idea: dict | None = None  # Pre-gekozen idee (skip idee-generatie)
     custom_brief: str | None = None  # Optionele extra instructies voor de pipeline
+    content_format: str | None = None  # Forceer content format (bijv. "talking-head")
 
 
 class VoicePreviewRequest(BaseModel):
     voice: str = "nova"
     speed: float = 1.0
     text: str = "Hallo! Dit is een test van de stemkeuze."
-    stability: float = 0.58
-    similarity_boost: float = 0.92
-    style: float = 0.45
+    stability: float = 0.65
+    similarity_boost: float = 0.85
+    style: float = 0.10
 
 
 class CampaignResponse(BaseModel):
@@ -377,6 +378,7 @@ def start_campaign(req: StartCampaignRequest, background_tasks: BackgroundTasks)
                     chosen_idea=req.chosen_idea,
                     campaign_id=campaign_id,
                     custom_brief=req.custom_brief,
+                    forced_content_format=req.content_format,
                 )
             on_progress("__DONE__")
         except Exception as e:

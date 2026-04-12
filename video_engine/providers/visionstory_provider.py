@@ -15,6 +15,7 @@ Post-processing pipeline:
 Credits: ~2 credits per 30 sec video (€10/maand = 130+ credits)
 """
 
+import base64
 import os
 import random
 import shutil
@@ -151,6 +152,47 @@ class VisionStoryProvider:
             text = " ".join(s.get("voiceover", "") for s in scenes if s.get("voiceover"))
         return text.strip()
 
+    def _generate_elevenlabs_audio(self, text: str) -> bytes | None:
+        """Genereer audio met ElevenLabs — Nadia stem voor GLP Coach."""
+        api_key = os.getenv("ELEVENLABS_API_KEY", "").strip()
+        if not api_key or len(api_key) < 10:
+            return None
+
+        # Voorkeur: gekloonde Nadia-stem, anders default ElevenLabs stem
+        voice_id = (
+            os.getenv("ELEVENLABS_CLONE_VOICE_ID", "").strip()
+            or os.getenv("ELEVENLABS_VOICE_ID", "9BWtsMINqrJLrRacOk9x").strip()
+        )
+
+        logger.info(f"[VisionStory] ElevenLabs TTS genereren (voice={voice_id[:8]}...)...")
+        try:
+            tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}?output_format=mp3_44100_192"
+            resp = httpx.post(
+                tts_url,
+                headers={"xi-api-key": api_key, "Content-Type": "application/json"},
+                json={
+                    "text": text,
+                    "model_id": "eleven_multilingual_v2",
+                    "voice_settings": {
+                        "stability": 0.65,
+                        "similarity_boost": 0.85,
+                        "style": 0.10,
+                        "use_speaker_boost": True,
+                    },
+                    "apply_text_normalization": "auto",
+                },
+                timeout=60,
+            )
+            resp.raise_for_status()
+            if len(resp.content) < 2000:
+                logger.warning(f"[VisionStory] ElevenLabs response te klein ({len(resp.content)} bytes)")
+                return None
+            logger.info(f"[VisionStory] ElevenLabs audio klaar: {len(resp.content) // 1024} KB")
+            return resp.content
+        except Exception as e:
+            logger.warning(f"[VisionStory] ElevenLabs TTS mislukt: {e}")
+            return None
+
     def _create_video(self, text: str, memory: dict) -> str:
         avatar_id = os.getenv("VISIONSTORY_AVATAR_ID", _DEFAULT_AVATAR_ID)
         voice_id = os.getenv("VISIONSTORY_VOICE_ID", _DEFAULT_VOICE_ID)
@@ -159,17 +201,34 @@ class VisionStoryProvider:
         if len(text) > 1800:
             text = text[:1800].rsplit(" ", 1)[0] + "..."
 
-        payload = {
-            "avatar_id": avatar_id,
-            "text_script": {
-                "text": text,
-                "voice_id": voice_id,
-            },
-            "aspect_ratio": "9:16",
-            "emotion": "marketing",
-        }
+        # Probeer ElevenLabs audio te gebruiken voor betere stem + lipsync
+        el_audio = self._generate_elevenlabs_audio(text)
 
-        logger.debug(f"[VisionStory] Maak video met avatar={avatar_id}, voice={voice_id}")
+        if el_audio:
+            audio_b64 = base64.b64encode(el_audio).decode("utf-8")
+            payload = {
+                "avatar_id": avatar_id,
+                "audio_script": {
+                    "inline_data": {
+                        "mime_type": "audio/mpeg",
+                        "data": audio_b64,
+                    },
+                },
+                "aspect_ratio": "9:16",
+                "emotion": "marketing",
+            }
+            logger.info(f"[VisionStory] Maak video met avatar={avatar_id}, ElevenLabs audio")
+        else:
+            payload = {
+                "avatar_id": avatar_id,
+                "text_script": {
+                    "text": text,
+                    "voice_id": voice_id,
+                },
+                "aspect_ratio": "9:16",
+                "emotion": "marketing",
+            }
+            logger.info(f"[VisionStory] Maak video met avatar={avatar_id}, voice={voice_id} (VisionStory TTS)")
 
         with httpx.Client(timeout=60) as client:
             response = client.post(

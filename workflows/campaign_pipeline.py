@@ -112,6 +112,7 @@ def run_pipeline(
     chosen_idea: dict | None = None,
     campaign_id: str | None = None,
     custom_brief: str | None = None,
+    forced_content_format: str | None = None,
 ) -> CampaignBundle:
     """
     Voer de volledige campagne-pipeline uit voor een app.
@@ -261,7 +262,7 @@ def run_pipeline(
 
         progress("Stap 3/7: Video-script genereren...")
 
-        video_type = _determine_video_type(chosen_idea, app=app, memory=memory)
+        video_type = _determine_video_type(chosen_idea, app=app, memory=memory, forced_content_format=forced_content_format)
 
         def _generate_and_score(idx: int) -> tuple[dict, dict, float, float]:
             """Genereer één script + viral check. Retourneert (script, viral_result, script_cost, viral_cost)."""
@@ -968,6 +969,7 @@ def _determine_video_type(
     idea: dict,
     app: dict | None = None,
     memory: dict | None = None,
+    forced_content_format: str | None = None,
 ) -> str:
     """
     Bepaal video-type op basis van content format en beschikbare providers.
@@ -977,6 +979,11 @@ def _determine_video_type(
       de bestaande demo- en screenshot-flow actief kan worden
     - talking_head alleen als dat format expliciet gevraagd wordt
     """
+    # Geforceerd format overschrijft het idee's eigen format (bijv. via API content_format param)
+    if forced_content_format:
+        idea = dict(idea or {})
+        idea["content_format"] = forced_content_format
+
     content_format = (idea.get("content_format", "problem-solution") or "").lower()
     app_url = (
         (memory or {}).get("url")
