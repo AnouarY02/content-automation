@@ -305,6 +305,17 @@ def run_pipeline(
                 logger.warning(f"[Pipeline] Marktonderzoek mislukt (niet kritiek): {research_err}")
                 # Niet kritiek — pipeline gaat door zonder research
 
+            # Stap 2a-extra: Echte gebruikersverhalen (Reddit story seeds) laden
+            try:
+                from workflows.story_miner import load_story_seeds, format_seeds_for_prompt
+                seeds = load_story_seeds(app_id, limit=5)
+                if seeds:
+                    story_context = format_seeds_for_prompt(seeds)
+                    market_research_str = f"{story_context}\n\n{market_research_str}".strip()
+                    progress(f"  > {len(seeds)} echte gebruikersverhalen geladen als context")
+            except Exception as seed_err:
+                logger.debug(f"[Pipeline] Story seeds laden mislukt (niet kritiek): {seed_err}")
+
             # Stap 2b: Ideeën genereren met marktonderzoek als context
             progress("Stap 2/7: Campagne-ideeën genereren...")
             idea_agent = IdeaGeneratorAgent()

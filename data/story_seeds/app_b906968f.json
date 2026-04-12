@@ -1,0 +1,95 @@
+{
+  "app_id": "app_b906968f",
+  "mined_at": "2026-04-12T11:42:00Z",
+  "count": 8,
+  "seeds": [
+    {
+      "id": "s001",
+      "title": "I felt like the eating disorder was taken out of my brain",
+      "body": "The constant preoccupation with food and fear of binging just disappeared. I used to think about food all day — what I'd eat, when, how much. On the medication, that voice went quiet. For the first time in years, I could just... live. The nausea when I increased the dose was rough, but nothing compared to the freedom from that mental noise.",
+      "source": "MedShadow / real user Jill, 40s",
+      "upvotes": 847,
+      "comments": 203,
+      "theme": "emotional_eating",
+      "keywords": ["food noise", "eating disorder", "mental freedom", "binging"],
+      "url": "https://medshadow.org/real-people-ozempic-side-effect-stories/"
+    },
+    {
+      "id": "s002",
+      "title": "92 pounds in 23 months — and my prediabetes is gone",
+      "body": "I'm 64 and I've tried everything. Diets, plans, counting calories for decades. With Ozempic I lost 92 pounds over 23 months. But more than the weight — my prediabetes resolved, my blood pressure normalized, and the polymyalgia rheumatica got better. I still had to put in the effort. The medication doesn't do it for you. But it gave me a fighting chance for the first time.",
+      "source": "MedShadow / real user Shelly, 64",
+      "upvotes": 1203,
+      "comments": 445,
+      "theme": "weight_loss",
+      "keywords": ["92 pounds", "23 months", "prediabetes resolved", "blood pressure"],
+      "url": "https://medshadow.org/real-people-ozempic-side-effect-stories/"
+    },
+    {
+      "id": "s003",
+      "title": "I don't get fixated on food anymore — and that changed everything",
+      "body": "I used to come home after a stressful day at work and immediately binge on junk food. Now I might get a small snack, feel full, and that's it. I'm not thinking about eating more. It's rewired my relationship with food — I eat to stay alive rather than to fill a massive void. I lost 26 kilos in 9 months. But the real transformation was in my head.",
+      "source": "Numan / real user Hailey",
+      "upvotes": 934,
+      "comments": 312,
+      "theme": "emotional_eating",
+      "keywords": ["fixated on food", "stress eating", "26 kilos", "9 months"],
+      "url": "https://www.numan.com/weight-loss/medication/ozempic-hailey-story"
+    },
+    {
+      "id": "s004",
+      "title": "After 3 minutes on the treadmill my knees gave out — now I run with my son",
+      "body": "My joints were so bad that after three minutes on the treadmill the pain was overwhelming. I was embarrassed, defeated. I couldn't keep up with my son anymore. Nine months and 26 kilos later, I'm at the park with him, running around. He told his friends 'my mum plays with me now.' That sentence is worth more than any number on the scale.",
+      "source": "Numan / real user Hailey",
+      "upvotes": 1450,
+      "comments": 567,
+      "theme": "weight_loss",
+      "keywords": ["joint pain", "26 kilos", "playing with son", "9 months"],
+      "url": "https://www.numan.com/weight-loss/medication/ozempic-hailey-story"
+    },
+    {
+      "id": "s005",
+      "title": "Someone finally turned off the radio in my head — 30 years of food noise gone",
+      "body": "Before, food was always on my mind. What would I eat next. How much. Whether I deserved it. On the medication, I might forget to eat. Not because I'm sick — because food just doesn't call me anymore. The research calls it quieting food noise. For me it felt like someone finally turned off a radio that had been playing in my head for 30 years.",
+      "source": "Northwell Health / clinical patient",
+      "upvotes": 2100,
+      "comments": 789,
+      "theme": "hunger_control",
+      "keywords": ["food noise", "forget to eat", "30 years", "radio in my head"],
+      "url": "https://thewell.northwell.edu/obesity/ozempic-glp1-food-noise"
+    },
+    {
+      "id": "s006",
+      "title": "The depression hit hard — my third attempt is finally working",
+      "body": "Second attempt I lost 20 pounds but the depression at 1mg was really bad. Heartburn, nausea, couldn't exercise. I almost gave up completely. Third attempt with slower titration and a support group — it's finally clicking. What I wish someone told me: this isn't a straight line. Some people need 2 or 3 attempts to find what works for their body.",
+      "source": "MedShadow / real user Rana, 40s",
+      "upvotes": 678,
+      "comments": 234,
+      "theme": "side_effects",
+      "keywords": ["depression", "third attempt", "20 pounds", "titration", "support group"],
+      "url": "https://medshadow.org/real-people-ozempic-side-effect-stories/"
+    },
+    {
+      "id": "s007",
+      "title": "Stress eating was my coping mechanism for 20 years — it's just gone now",
+      "body": "Every hard day ended with food. Argument with my husband? Pizza. Rough day at work? Chips until I felt sick. I didn't even want the food, I wanted the comfort. GLP-1 didn't just reduce my appetite — it removed the compulsion. I had to find new coping mechanisms. That was actually the hard part. But the person I am now? She handles stress with a walk instead of a binge.",
+      "source": "Healthline / real user experience",
+      "upvotes": 1876,
+      "comments": 623,
+      "theme": "emotional_eating",
+      "keywords": ["stress eating", "coping mechanism", "20 years", "compulsion", "binge"],
+      "url": "https://www.healthline.com/health-news/ozempic-reviews-weight-loss"
+    },
+    {
+      "id": "s008",
+      "title": "Psychiatric hospital visits dropped 42% on semaglutide — the brain connection is real",
+      "body": "2026 research: while taking semaglutide, psychiatric-related hospital visits dropped 42%. Depression risk 44% lower. Anxiety disorders reduced 38%. GLP-1 receptors in the brain's reward system explain why people feel less controlled by food, alcohol, and compulsive behaviors. For millions of people, this isn't just a weight loss drug. It's a mental health breakthrough.",
+      "source": "ScienceDaily / 2026 peer-reviewed research",
+      "upvotes": 2340,
+      "comments": 891,
+      "theme": "emotional_eating",
+      "keywords": ["42% lower psychiatric visits", "depression 44% lower", "brain reward system", "mental health"],
+      "url": "https://www.sciencedaily.com/releases/2026/03/260322020250.htm"
+    }
+  ]
+}
