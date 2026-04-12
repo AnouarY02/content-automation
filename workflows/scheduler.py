@@ -108,6 +108,74 @@ def job_weekly_analysis():
             logger.error(f"[Scheduler] Wekelijkse analyse mislukt voor {app_id}: {e}")
 
 
+def _pick_post_type(app_id: str, slot: str, tenant_id: str = "default") -> str:
+    """
+    Kies het post type voor dit slot met rotatie-logica.
+    Nooit hetzelfde format 2x achter elkaar.
+
+    Voorkeursvolgorde per slot:
+      morning   → text (fallback: photo)
+      afternoon → photo (fallback: text)
+      evening   → video (fallback: photo)
+    """
+    slot_primary = {"morning": "text", "afternoon": "photo", "evening": "video"}
+    slot_fallback = {"morning": "photo", "afternoon": "text", "evening": "photo"}
+
+    primary = slot_primary.get(slot, "video")
+
+    try:
+        from data.repositories.campaign_repo import get_campaign_repo
+        repo = get_campaign_repo(tenant_id=tenant_id)
+        recent = repo.list(tenant_id=tenant_id)
+        # Kijk naar de laatste 3 posts voor dit app
+        app_recent = [
+            c for c in reversed(recent)
+            if isinstance(c, dict) and c.get("app_id") == app_id
+        ][:3]
+        last_types = [c.get("post_type", "") for c in app_recent]
+
+        # Als de laatste post hetzelfde type was, gebruik de fallback
+        if last_types and last_types[0] == primary:
+            fallback = slot_fallback.get(slot, "photo")
+            logger.info(f"[Scheduler] Rotatie: laatste post was '{primary}', switch naar '{fallback}'")
+            return fallback
+    except Exception:
+        pass  # Rotatie niet kritiek
+
+    return primary
+
+
+def _pick_video_content_format(app_id: str, tenant_id: str = "default") -> str | None:
+    """
+    Roteer video content format: talking-head ↔ mixed (B-roll + TTS).
+    Nooit 2x achter elkaar hetzelfde format.
+    """
+    try:
+        from data.repositories.campaign_repo import get_campaign_repo
+        repo = get_campaign_repo(tenant_id=tenant_id)
+        recent = repo.list(tenant_id=tenant_id)
+        app_videos = [
+            c for c in reversed(recent)
+            if isinstance(c, dict)
+            and c.get("app_id") == app_id
+            and c.get("post_type") == "video"
+        ][:3]
+
+        last_formats = [
+            c.get("idea", {}).get("content_format", "") or ""
+            for c in app_videos
+            if isinstance(c, dict)
+        ]
+
+        # Als laatste video een talking-head was, wissel naar mixed (en vice versa)
+        if last_formats and last_formats[0] == "talking-head":
+            return None  # Laat de pipeline zelf kiezen (mixed/b-roll)
+        else:
+            return "talking-head"
+    except Exception:
+        return "talking-head"  # Default: talking head
+
+
 def job_produce_content(slot: str = "morning"):
     """
     Produceer content voor alle actieve apps en publiceer (of stuur ter goedkeuring).
@@ -115,19 +183,13 @@ def job_produce_content(slot: str = "morning"):
     Slots: morning (07:00), afternoon (13:00), evening (19:00)
     Gecontroleerd via DAILY_POSTS_PER_APP (standaard 2 — morning + evening).
 
-    Post type per slot:
-      morning   → text post
-      afternoon → photo post
-      evening   → video post (volledige pipeline)
+    Post type per slot (met rotatie — nooit 2x hetzelfde format achter elkaar):
+      morning   → text post (fallback: photo)
+      afternoon → photo post (fallback: text)
+      evening   → video post (fallback: photo)
+    Video format roteert: talking-head ↔ mixed
     """
     from workflows.campaign_pipeline import run_post_pipeline
-
-    # Slot → post type mapping
-    slot_post_type = {
-        "morning": "text",
-        "afternoon": "photo",
-        "evening": "video",
-    }
 
     daily_posts = int(os.getenv("DAILY_POSTS_PER_APP", "2"))
 
@@ -140,23 +202,29 @@ def job_produce_content(slot: str = "morning"):
     if slot not in active_slots:
         return  # Dit slot is niet actief vandaag
 
-    post_type = slot_post_type.get(slot, "video")
-
     apps_raw = get_app_repo(tenant_id="default").list_apps()
     active_apps = [a for a in apps_raw if a.get("active", True)]
-    logger.info(f"[Scheduler] Content productie gestart — slot={slot}, post_type={post_type}, apps={len(active_apps)}")
 
     for app in active_apps:
         app_id = app["id"]
-        # Gebruik het eerste actieve kanaal van de app (facebook vóór tiktok als beschikbaar)
         channels = app.get("active_channels", ["tiktok"])
         platform = channels[0] if channels else "tiktok"
+
+        # Roterend format kiezen
+        post_type = _pick_post_type(app_id, slot)
+        content_format = _pick_video_content_format(app_id) if post_type == "video" else None
+
+        logger.info(
+            f"[Scheduler] Produceer {post_type} post voor {app_id} ({slot}) op {platform}"
+            + (f" [format={content_format}]" if content_format else "")
+        )
+
         try:
-            logger.info(f"[Scheduler] Produceer {post_type} post voor {app_id} ({slot}) op {platform}")
             bundle = run_post_pipeline(
                 app_id=app_id,
                 platform=platform,
                 post_type=post_type,
+                content_format=content_format,
                 on_progress=lambda msg: logger.info(f"  {msg}"),
             )
             logger.success(

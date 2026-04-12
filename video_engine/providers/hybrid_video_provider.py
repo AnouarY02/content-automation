@@ -148,7 +148,7 @@ class HybridVideoProvider:
             # Alleen problem (1) en solution (2) scenes krijgen B-roll
             if idx not in (1, 2):
                 continue
-            query = self._extract_broll_query(scene, memory)
+            query = self._extract_broll_query(scene, memory, scene_idx=idx)
             if not query:
                 continue
             clip = self._download_pexels_clip(query, idx, work_dir, api_key)
@@ -157,14 +157,63 @@ class HybridVideoProvider:
 
         return clips
 
-    def _extract_broll_query(self, scene: dict, memory: dict) -> str:
-        """Haal visual_search_query op uit scene, vertaal naar Engelse Pexels query."""
-        query = scene.get("visual_search_query", "") or scene.get("visual_description", "")
-        if not query:
-            return ""
-        # Gebruik de eerste 4 woorden van de query
-        words = query.strip().split()[:4]
-        return " ".join(words)
+    # GLP/gezondheid B-roll queries per scene type — realistisch, emotioneel
+    _GLP_BROLL_QUERIES = {
+        # Problem scenes (idx 1) — herkenbare struggle
+        "problem": [
+            "woman overwhelmed stress eating alone",
+            "person sad looking fridge night",
+            "woman exhausted couch unhealthy food",
+            "person frustrated weight scale",
+            "woman emotional eating comfort food",
+            "person tired overweight morning",
+        ],
+        # Solution scenes (idx 2) — transformatie, resultaat, hoop
+        "solution": [
+            "woman healthy lifestyle morning routine",
+            "person confident smiling weight loss",
+            "woman cooking healthy meal kitchen",
+            "person running outdoors sunrise",
+            "woman buying healthy groceries",
+            "person feeling energetic confident",
+        ],
+    }
+
+    def _extract_broll_query(self, scene: dict, memory: dict, scene_idx: int = 1) -> str:
+        """
+        Bepaal de beste Pexels query voor een B-roll scene.
+        Gebruik script visual query als die specifiek genoeg is, anders GLP-specifieke fallbacks.
+        """
+        import random
+
+        raw_query = scene.get("visual_search_query", "") or scene.get("visual_description", "")
+
+        # Als de query specifiek genoeg is (>3 woorden, bevat emotionele context), gebruik die
+        if raw_query and len(raw_query.split()) >= 3:
+            # Vertaal NL naar EN voor Pexels (simpele keyword vervanging)
+            nl_en = {
+                "vrouw": "woman", "man": "man", "persoon": "person",
+                "eten": "eating", "voedsel": "food", "gezond": "healthy",
+                "gewicht": "weight", "afvallen": "weight loss", "stress": "stress",
+                "vermoeid": "tired", "blij": "happy", "zelfvertrouwen": "confident",
+                "koken": "cooking", "sporten": "exercising", "rennen": "running",
+                "moe": "exhausted", "verdrietig": "sad", "lachen": "smiling",
+                "keuken": "kitchen", "ochtend": "morning", "thuis": "home",
+            }
+            words = raw_query.lower().split()[:6]
+            translated = []
+            for w in words:
+                translated.append(nl_en.get(w, w))
+            query = " ".join(translated)
+            # Haal stopwoorden weg
+            stopwords = {"een", "de", "het", "van", "in", "op", "met", "a", "the", "of", "with"}
+            query_words = [w for w in query.split() if w not in stopwords]
+            if len(query_words) >= 2:
+                return " ".join(query_words[:5])
+
+        # Fallback: gebruik GLP-specifieke queries op basis van scene positie
+        pool_key = "solution" if scene_idx == 2 else "problem"
+        return random.choice(self._GLP_BROLL_QUERIES[pool_key])
 
     def _download_pexels_clip(
         self, query: str, idx: int, work_dir: Path, api_key: str

@@ -746,6 +746,7 @@ def run_post_pipeline(
     on_progress: Callable[[str], None] | None = None,
     campaign_id: str | None = None,
     custom_brief: str | None = None,
+    content_format: str | None = None,
 ) -> CampaignBundle:
     """
     Lichtgewicht pipeline voor tekst-, foto- en videoposts.
@@ -754,6 +755,7 @@ def run_post_pipeline(
         app_id:     ID van de app (uit app_registry.json)
         platform:   Doelplatform ("facebook", "tiktok", ...)
         post_type:  "text" | "photo" | "video"
+        content_format: optioneel "talking-head" voor video posts
         tenant_id:  Tenant isolatie
         on_progress: Optionele voortgangs-callback
 
@@ -762,7 +764,8 @@ def run_post_pipeline(
     """
     if post_type == "video":
         bundle = run_pipeline(app_id=app_id, platform=platform, tenant_id=tenant_id,
-                              on_progress=on_progress, campaign_id=campaign_id, custom_brief=custom_brief)
+                              on_progress=on_progress, campaign_id=campaign_id,
+                              custom_brief=custom_brief, forced_content_format=content_format)
         bundle.post_type = "video"
         save_bundle(bundle, tenant_id=tenant_id)
         return bundle
