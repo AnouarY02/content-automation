@@ -124,7 +124,7 @@ class VisionStoryProvider:
 
         # Stap 1: VisionStory video genereren
         vs_video_id = self._create_video(voiceover_text, memory)
-        video_url = self._poll_video(vs_video_id)
+        video_url = self._poll_video(vs_video_id, max_wait_sec=900)
         self._download_video(video_url, raw_path)
 
         # Stap 2: TikTok post-processing (upscale, captions, muziek)

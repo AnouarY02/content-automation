@@ -65,7 +65,7 @@ class HybridVideoProvider:
             logger.info("[Hybrid] Stap 1: Genereer talking head via VisionStory...")
             voiceover = self._vs._extract_voiceover(script)
             vs_id = self._vs._create_video(voiceover, memory)
-            video_url = self._vs._poll_video(vs_id)
+            video_url = self._vs._poll_video(vs_id, max_wait_sec=900)
             self._vs._download_video(video_url, th_raw)
             self._vs._upscale_to_portrait(th_raw, th_upscaled)
             th_raw.unlink(missing_ok=True)
