@@ -3,11 +3,12 @@ Video Engine Orchestrator.
 Kiest de juiste video-provider op basis van video-type en beschikbare API keys.
 
 Provider prioriteit:
-1. VisionStory provider (talking head) — als DID_API_KEY=sk-vs-... + video_type == talking_head
-2. D-ID provider (talking head UGC) — als DID_API_KEY (niet sk-vs-) + video_type == talking_head
-3. Pro Video provider (stock footage + TTS voiceover) — als OPENAI_API_KEY
-4. OpenAI Image provider (AI-gegenereerde beelden + FFmpeg)
-5. FFmpeg provider (gradient + tekst, gratis fallback)
+1. Hybrid provider (VisionStory avatar + Pexels B-roll) — talking_head + sk-vs- + Pexels key
+2. VisionStory provider (talking head) — als DID_API_KEY=sk-vs-... + video_type == talking_head
+3. D-ID provider (talking head UGC) — als DID_API_KEY (niet sk-vs-) + video_type == talking_head
+4. Pro Video provider (stock footage + TTS voiceover) — als OPENAI_API_KEY
+5. OpenAI Image provider (AI-gegenereerde beelden + FFmpeg)
+6. FFmpeg provider (gradient + tekst, gratis fallback)
 """
 
 import os
@@ -53,7 +54,13 @@ class VideoOrchestrator:
         logger.info(f"[VideoEngine] Produceer '{video_type}' via '{provider_name}'")
 
         try:
-            if provider_name == "visionstory":
+            if provider_name == "hybrid":
+                from video_engine.providers.hybrid_video_provider import HybridVideoProvider
+                provider = HybridVideoProvider()
+                video_path = provider.produce(script, memory, output_dir)
+                self.total_cost_usd += provider.total_cost_usd
+
+            elif provider_name == "visionstory":
                 from video_engine.providers.visionstory_provider import VisionStoryProvider
                 provider = VisionStoryProvider()
                 video_path = provider.produce(script, memory, output_dir)
@@ -97,12 +104,18 @@ class VideoOrchestrator:
             self.last_error = f"{provider_name}: {e}"
             logger.error(f"[VideoEngine] Productie mislukt ({provider_name}): {e}")
 
-            # Fallback keten: visionstory/did → pro → openai_image → ffmpeg
+            # Fallback keten: hybrid → visionstory/did → pro → openai_image → ffmpeg
             fallbacks = self._get_fallbacks(provider_name)
             for fb_name in fallbacks:
                 logger.info(f"[VideoEngine] Probeer fallback: {fb_name}")
                 try:
-                    if fb_name == "visionstory":
+                    if fb_name == "hybrid":
+                        from video_engine.providers.hybrid_video_provider import HybridVideoProvider
+                        fb = HybridVideoProvider()
+                        path = fb.produce(script, memory, output_dir)
+                        self.total_cost_usd += fb.total_cost_usd
+                        return path
+                    elif fb_name == "visionstory":
                         from video_engine.providers.visionstory_provider import VisionStoryProvider
                         fb = VisionStoryProvider()
                         path = fb.produce(script, memory, output_dir)
@@ -186,6 +199,11 @@ class VideoOrchestrator:
         did_key = os.getenv("DID_API_KEY", "").strip()
         return did_key.startswith("sk-vs-")
 
+    @classmethod
+    def _has_hybrid(cls) -> bool:
+        """Hybrid vereist: VisionStory (avatar) + Pexels (B-roll)."""
+        return cls._has_visionstory() and cls._has_pexels()
+
     @staticmethod
     def _has_did() -> bool:
         """Echte D-ID key (base64-encoded, niet sk-vs-)."""
@@ -208,10 +226,13 @@ class VideoOrchestrator:
         did_skip = os.getenv("DID_SKIP", "false").lower() == "true"
 
         if video_type == "talking_head" and not did_skip:
-            # 1. VisionStory (sk-vs- key)
+            # 1. Hybrid: avatar + B-roll combinatie (best of both worlds)
+            if self._has_hybrid():
+                return "hybrid"
+            # 2. VisionStory only (sk-vs- key, geen Pexels)
             if self._has_visionstory():
                 return "visionstory"
-            # 2. D-ID (echte D-ID key)
+            # 3. D-ID (echte D-ID key)
             if self._has_did():
                 return "did"
 
@@ -232,6 +253,11 @@ class VideoOrchestrator:
 
         if not allow_degraded:
             # Productie: alleen waardige fallbacks, geen gradient-slideshow
+            if failed_provider == "hybrid":
+                # Hybrid faalt → probeer pure visionstory als fallback
+                if self._has_visionstory():
+                    return ["visionstory"]
+                return []
             if failed_provider in ("visionstory", "did"):
                 if self._has_openai():
                     return ["openai_image"]
@@ -245,7 +271,18 @@ class VideoOrchestrator:
             return []
 
         # Development: volledige fallback keten
-        if failed_provider == "visionstory":
+        if failed_provider == "hybrid":
+            # Hybrid faalt → probeer pure visionstory, dan B-roll, dan rest
+            chain = []
+            if self._has_visionstory():
+                chain.append("visionstory")
+            if self._has_pexels() and not low_mem:
+                chain.append("pro")
+            if self._has_openai():
+                chain.append("openai_image")
+            chain.append("ffmpeg")
+            return chain
+        elif failed_provider == "visionstory":
             chain = []
             if self._has_did():
                 chain.append("did")
