@@ -100,6 +100,108 @@ def list_pending_campaigns(tenant_id: str = "default") -> list[CampaignBundle]:
     return repo.list_pending(tenant_id=tenant_id)
 
 
+def _build_photo_post(search_query: str, hook_text: str, output_path) -> None:
+    """
+    Bouw een foto post: Pexels stockfoto + tekst overlay.
+    Realistisch, geen AI-gegenereerde beelden.
+    """
+    import os
+    import io
+    import textwrap
+    import requests
+    from pathlib import Path
+    from PIL import Image, ImageDraw, ImageFont, ImageFilter
+
+    output_path = Path(output_path)
+
+    # --- 1. Pexels foto ophalen ---
+    pexels_key = os.getenv("PEXELS_API_KEY", "")
+    photo_path = output_path.parent / f"_pexels_{output_path.stem}.jpg"
+
+    if pexels_key and len(pexels_key) >= 10:
+        try:
+            resp = requests.get(
+                "https://api.pexels.com/v1/search",
+                headers={"Authorization": pexels_key},
+                params={"query": search_query[:100], "per_page": 10, "orientation": "square"},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            photos = resp.json().get("photos", [])
+            if photos:
+                import random
+                photo = random.choice(photos[:5])
+                img_url = photo["src"].get("large2x") or photo["src"]["large"]
+                img_data = requests.get(img_url, timeout=30)
+                img_data.raise_for_status()
+                photo_path.write_bytes(img_data.content)
+        except Exception as e:
+            logger.warning(f"[PhotoPost] Pexels ophalen mislukt: {e}")
+
+    # --- 2. Basisafbeelding laden of gradient fallback ---
+    size = (1080, 1080)
+    if photo_path.exists():
+        img = Image.open(photo_path).convert("RGBA")
+        img = img.resize(size, Image.LANCZOS)
+    else:
+        # Gradient fallback als Pexels faalt
+        import numpy as np
+        arr = np.zeros((size[1], size[0], 4), dtype=np.uint8)
+        for y in range(size[1]):
+            t = y / size[1]
+            arr[y, :, 0] = int(20 + 40 * t)   # R
+            arr[y, :, 1] = int(10 + 30 * t)   # G
+            arr[y, :, 2] = int(50 + 80 * t)   # B
+            arr[y, :, 3] = 255
+        img = Image.fromarray(arr, "RGBA")
+
+    # --- 3. Donkere overlay voor leesbaarheid ---
+    overlay = Image.new("RGBA", size, (0, 0, 0, 0))
+    draw_ov = ImageDraw.Draw(overlay)
+    # Gradient van transparant (boven) naar donker (onder)
+    for y in range(size[1]):
+        alpha = int(180 * (y / size[1]) ** 0.8)
+        draw_ov.line([(0, y), (size[0], y)], fill=(0, 0, 0, alpha))
+    img = Image.alpha_composite(img, overlay)
+
+    # --- 4. Tekst overlay ---
+    draw = ImageDraw.Draw(img)
+
+    # Font laden (fallback naar default als niet beschikbaar)
+    font_size_hook = 72
+    font_size_sub = 38
+    try:
+        font_bold = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size_hook)
+        font_reg = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size_sub)
+    except Exception:
+        font_bold = ImageFont.load_default()
+        font_reg = font_bold
+
+    # Hook tekst (groot, wit, onderaan)
+    wrapped = textwrap.wrap(hook_text[:120], width=22)
+    text_y = size[1] - 60 - (len(wrapped) * (font_size_hook + 12))
+
+    for line in wrapped:
+        bbox = draw.textbbox((0, 0), line, font=font_bold)
+        w = bbox[2] - bbox[0]
+        x = (size[0] - w) // 2
+        # Schaduw
+        draw.text((x + 3, text_y + 3), line, font=font_bold, fill=(0, 0, 0, 180))
+        draw.text((x, text_y), line, font=font_bold, fill=(255, 255, 255, 255))
+        text_y += font_size_hook + 12
+
+    # Branding label (klein, linksboven)
+    brand = "GLP Coach"
+    draw.text((28, 28), brand, font=font_reg, fill=(255, 255, 255, 200))
+
+    # --- 5. Opslaan als PNG ---
+    img.convert("RGB").save(str(output_path), "PNG", optimize=True)
+
+    # Opruimen temp bestand
+    if photo_path.exists():
+        photo_path.unlink(missing_ok=True)
+
+
 def run_pipeline(
     app_id: str,
     platform: str = "tiktok",
@@ -721,47 +823,30 @@ def run_post_pipeline(
         bundle.idea = chosen_idea
         progress(f"  > Idee: '{chosen_idea.get('title', '?')}'")
 
-        # Stap 2b (foto): één DALL-E afbeelding genereren
+        # Stap 2b (foto): Pexels stockfoto + tekst overlay (realistisch, geen AI-beeld)
         if post_type == "photo":
-            progress("Stap 2b/3: Afbeelding genereren (DALL-E)...")
+            progress("Stap 2b/3: Realistische foto ophalen + tekst overlay...")
             try:
-                import openai as _openai
-                _client = _openai.OpenAI()
-                visual_prompt = (
-                    chosen_idea.get("visual_description")
+                from utils.runtime_paths import get_generated_assets_dir, ensure_dir
+                img_dir = ensure_dir(get_generated_assets_dir() / "images")
+                img_path = img_dir / f"{bundle.id}.png"
+                hook_text = (
+                    chosen_idea.get("hook_options", [None])[0]
                     or chosen_idea.get("hook", "")
                     or chosen_idea.get("title", "")
                 )
-                image_resp = _client.images.generate(
-                    model="dall-e-3",
-                    prompt=f"{visual_prompt[:900]} — high quality, social media marketing photo",
-                    size="1024x1024",
-                    quality="standard",
-                    n=1,
+                search_query = (
+                    chosen_idea.get("pexels_query")
+                    or chosen_idea.get("visual_description")
+                    or chosen_idea.get("title", "")
                 )
-                image_url = image_resp.data[0].url
-                # Download afbeelding lokaal zodat de URL niet verloopt
-                try:
-                    import requests as _requests
-                    from utils.runtime_paths import get_generated_assets_dir, ensure_dir
-                    img_dir = ensure_dir(get_generated_assets_dir() / "images")
-                    img_path = img_dir / f"{bundle.id}.png"
-                    img_data = _requests.get(image_url, timeout=30)
-                    img_data.raise_for_status()
-                    img_path.write_bytes(img_data.content)
-                    local_url = f"/assets/images/{bundle.id}.png"
-                    bundle.thumbnail_path = local_url
-                    bundle.idea = {**chosen_idea, "image_url": local_url}
-                except Exception as dl_err:
-                    logger.warning(f"[Pipeline] Afbeelding downloaden mislukt, gebruik tijdelijke URL: {dl_err}")
-                    bundle.thumbnail_path = image_url
-                    bundle.idea = {**chosen_idea, "image_url": image_url}
-                # DALL-E 3 standaard kosten: ~$0.04 per afbeelding
-                total_cost += 0.04
-                guardrails.record_cost(0.04, "DALL-E-3", bundle.id)
-                progress(f"  > Afbeelding gegenereerd")
+                _build_photo_post(search_query, hook_text, img_path)
+                local_url = f"/assets/images/{bundle.id}.png"
+                bundle.thumbnail_path = local_url
+                bundle.idea = {**chosen_idea, "image_url": local_url}
+                progress(f"  > Foto + overlay klaar")
             except Exception as img_err:
-                logger.warning(f"[Pipeline] DALL-E afbeelding mislukt (niet kritiek): {img_err}")
+                logger.warning(f"[Pipeline] Foto post mislukt (niet kritiek): {img_err}")
 
         # Stap 3: Caption schrijven
         progress("Stap 3/3: Caption schrijven...")
